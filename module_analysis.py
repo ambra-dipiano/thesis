@@ -8,6 +8,9 @@ import cscripts
 from astropy.io import fits
 import numpy as np
 import os.path
+import panda as pd
+from scipy.interpolate import interp1d
+
 
 # EXTRACT SPECTRUM ---!
 def extract_spectrum(template, model, Nt, Ne, tbin_stop, energy, spectra, ebl=None, tau=None, if_ebl=True, pathout=None) :
@@ -112,6 +115,25 @@ def load_template(template, tmax, extract_spec=False, model=None, pathout=None) 
     extract_spectrum(template, model, Nt, Ne, tbin_stop, energy=energy, spectra=spectra, if_ebl=if_ebl, pathout=pathout)
 
   return t, tbin_stop
+
+# ADD EBL TO TEMPLATE ---!
+def add_ebl(table, z, time, energy, spectra) :
+
+  df = pd.read_csv(table)
+  cols = list(df.columns)
+  df.dropna()
+  # interpolate ---!
+  tau = np.array(df[z])
+  E = np.array(df[cols[0]])/1e3  # MeV --> GeV
+  ylin = interp1d(E, tau)
+  tau_gilmore = np.array(ylin(energy))
+  ebl_gilmore = np.empty_like(spectra)
+  # compute ---!
+  for i in range(len(time)):
+    for j in range(len(energy)):
+      ebl_gilmore[j] = spectra[i][j] * np.exp(-tau_gilmore[j])
+
+  return ebl_gilmore
 
 # SIMULATE EVENT LIST ---!
 def simulate_event(model, event, t=[0, 2000], e=[0.03, 150.0], caldb='prod2', irf='South_0.5h', roi=5, pointing=[83.63, 22.01], seed=1) :
@@ -253,3 +275,29 @@ def degrade_IRF(irf, degraded_irf, factor=2) :
     hdul.flush
 
   return
+
+# CREATE EBL FITS MODEL ---!
+def fits_ebl(template, template_ebl, table, zfetch=True, z=None) :
+
+  with fits.open(template) as hdul:
+    # energybins [GeV] ---!
+    energy = np.array(hdul[1].data)
+    # timebins [s] ---!
+    time = np.array(hdul[2].data)
+    # spectra ---!
+    spectra = np.array(hdul[3].data)
+    # redshift ---!
+    z = hdul[0].header['REDSHIFT'] if zfetch==True else None
+    # retrive the ebl ---!
+    ebl = add_ebl(table, z, time, energy, spectra)
+    # update fits ---!
+    hdu = fits.BinTableHDU(name='EBL Gilmore', data=ebl)
+    header = hdu.header
+    header.set('UNITS', 'ph/cm2/s/GeV', ' ')
+    hdu = fits.BinTableHDU(name='EBL Gilmore', data=ebl, header=header)
+    hdul.append(hdu)
+    # save to new ---!
+    os.system('rm ' + template_ebl)
+    hdul.writeto(template_ebl, overwrite=False)
+
+  return template_ebl
