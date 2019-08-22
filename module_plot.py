@@ -29,8 +29,6 @@ def handleReg(reg, col='black') :
 
   return r
 
-
-
 def showSkymap(skymap, reg='none', col='black', suffix='none', title='none', show=True):
   ''''
   :param:
@@ -89,8 +87,6 @@ def showSkymap(skymap, reg='none', col='black', suffix='none', title='none', sho
 
   return
 
-
-
 def showResmap(resmap, reg='none', col='black', suffix='none', title='none', show=True):
   '''
   :param:
@@ -143,8 +139,6 @@ def showResmap(resmap, reg='none', col='black', suffix='none', title='none', sho
   plt.close()
 
   return
-
-
 
 def showResiduals(residuals, scaleY='log', title='none', show=True):
   '''
@@ -210,8 +204,6 @@ def showResiduals(residuals, scaleY='log', title='none', show=True):
 
   return
 
-
-
 def showButterfly(diagram, flux_pnts=0.0, fluxEn_pnts=0.0, suffix='none', title='none', show=True):
   '''
   :param
@@ -263,8 +255,6 @@ def showButterfly(diagram, flux_pnts=0.0, fluxEn_pnts=0.0, suffix='none', title=
   plt.close()
 
   return
-
-
 
 def showSpectrum(spectrum, title='none', show=True) :
   '''
@@ -339,8 +329,6 @@ def showSpectrum(spectrum, title='none', show=True) :
   plt.close()
 
   return
-
-
 
 # WITH UPPER LIMITS v01 ---!
 def showLightcurve(lightcurve, axisLim ='auto', title='none', show = True):
@@ -440,8 +428,6 @@ def showLightcurve(lightcurve, axisLim ='auto', title='none', show = True):
   plt.close()
 
   return
-
-
 
 # WITH UPPER LIMITS v02 ---!
 def showLightcurve_v02(lightcurve, axisLim ='auto', title='none', ax_scale='lin', show = True):
@@ -554,8 +540,6 @@ def showLightcurve_v02(lightcurve, axisLim ='auto', title='none', ax_scale='lin'
 
   return
 
-
-
 # WIP ---!
 def showTSmap(tsmap, reg='none', col='black', suffix='none', title='none', show=True):
   '''
@@ -609,8 +593,6 @@ def showTSmap(tsmap, reg='none', col='black', suffix='none', title='none', show=
   plt.close()
 
   return
-
-
 
 # v02 ---!
 def showButterfly_v02(diagram, spectrum, axisLim='auto', suffix='none', title='none', show=True):
@@ -682,7 +664,7 @@ def showButterfly_v02(diagram, spectrum, axisLim='auto', suffix='none', title='n
 
   return
 
-
+# V01 ---!
 def degradedIRF_3d(x, y, z, xlabel='x', ylabel='y', zlabel='z', title=None, c=['b'],
                    fontsize=14, zlim=(0,1), alpha=[1], label=None, savefig=None, show=True) :
 
@@ -708,4 +690,23 @@ def degradedIRF_3d(x, y, z, xlabel='x', ylabel='y', zlabel='z', title=None, c=['
 
   return
 
+# V01 ---!
+def interp_ebl(x, y, savefig, kind='linear', xlabel='x', ylabel='y', title='title',
+               label=['y', 'y2'], fontsize=12, show=True) :
 
+  fig = plt.figure()
+  plt.rc('text', usetex=True)
+  sns.set()
+
+  ax = plt.subplot(111, xscale='log', yscale='log')
+  ax.plot(x[0], y[0], '.', label=label[0], c='g')
+  ax.plot(x[1], y[1], 'o', c='k', markeredgecolor='k', markerfacecolor='none', label=label[1])
+  ax.set_ylabel(ylabel, fontsize=fontsize)
+  ax.set_xlabel(xlabel, fontsize=fontsize)
+  ax.set_title(title, fontsize=fontsize)
+  ax.legend(loc=0)
+
+  fig.savefig(savefig)
+  plt.show() if show==True else None
+
+  return
