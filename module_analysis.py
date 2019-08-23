@@ -1,8 +1,3 @@
-<<<<<<< HEAD
-#!/bin/python3.6
-
-=======
->>>>>>> 620d34c4f29370e844e6d3556dc5c307ce76c438
 # ============================ #
 # MODULE OF ANALYSIS FUNCTIONS #
 # ============================ #
@@ -13,18 +8,12 @@ import cscripts
 from astropy.io import fits
 import numpy as np
 import os.path
-<<<<<<< HEAD
-
-# EXTRACT SPECTRUM ---!
-def extract_spectrum(template, model, Nt, Ne, tbin_stop, energy, spectra, ebl=None, if_ebl=True, pathout=None) :
-=======
 import panda as pd
 from scipy.interpolate import interp1d
 
 
 # EXTRACT SPECTRUM ---!
 def extract_spectrum(template, model, Nt, Ne, tbin_stop, energy, spectra, ebl=None, tau=None, if_ebl=True, pathout=None) :
->>>>>>> 620d34c4f29370e844e6d3556dc5c307ce76c438
   print('work in progress')
 
   for i in range(tbin_stop):
@@ -45,12 +34,8 @@ def extract_spectrum(template, model, Nt, Ne, tbin_stop, energy, spectra, ebl=No
       out_file = open(outfile,'a')
       for j in range(Ne):
        #write spectral data in E [MeV] and I [ph/cm2/s/MeV]
-<<<<<<< HEAD
-       out_file.write(str(energy[j][0]*1000.0)+' '+str(ebl[j][i]/1000.0)+"\n")
-=======
        out_file.write(str(energy[j][0]*1000.0)+' '+str(ebl[j][i]/1000.0)+"\n") if ebl!= None else None
        out_file.write(str(energy[j][0]*1000.0)+' '+str((spectra[i][j]/1000.0)*np.exp(-tau[j]))+"\n") if ebl== None else None
->>>>>>> 620d34c4f29370e844e6d3556dc5c307ce76c438
       out_file.close()
 
       os.system('cp '+model+' '+pathout+'template_ebl_tbin'+str(i)+'.xml')  
@@ -131,8 +116,6 @@ def load_template(template, tmax, extract_spec=False, model=None, pathout=None) 
 
   return t, tbin_stop
 
-<<<<<<< HEAD
-=======
 # ADD EBL TO TEMPLATE ---!
 def add_ebl(table, z, time, energy, spectra) :
 
@@ -152,7 +135,6 @@ def add_ebl(table, z, time, energy, spectra) :
 
   return ebl_gilmore
 
->>>>>>> 620d34c4f29370e844e6d3556dc5c307ce76c438
 # SIMULATE EVENT LIST ---!
 def simulate_event(model, event, t=[0, 2000], e=[0.03, 150.0], caldb='prod2', irf='South_0.5h', roi=5, pointing=[83.63, 22.01], seed=1) :
   sim = ctools.ctobssim()
@@ -282,8 +264,6 @@ def integrated_flux(event_selected, results, srcname='Src001', caldb='prod2', ir
 
   return
 
-<<<<<<< HEAD
-=======
 # DEGRADE IRF ---!
 def degrade_IRF(irf, degraded_irf, factor=2) :
   with fits.open(irf) as hdul:
@@ -321,4 +301,3 @@ def fits_ebl(template, template_ebl, table, zfetch=True, z=None) :
     hdul.writeto(template_ebl, overwrite=False)
 
   return template_ebl
->>>>>>> 620d34c4f29370e844e6d3556dc5c307ce76c438

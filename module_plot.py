@@ -1,29 +1,18 @@
-<<<<<<< HEAD
-#!/bin/python3.6
-
-=======
->>>>>>> 620d34c4f29370e844e6d3556dc5c307ce76c438
 # ============================ #
 # MODULE OF PLOTTING FUNCTIONS #
 # ============================ #
 
 # IMPORTS ---!
 import matplotlib.pyplot as plt
-<<<<<<< HEAD
-=======
 import seaborn as sns
->>>>>>> 620d34c4f29370e844e6d3556dc5c307ce76c438
+
 from astropy.io import fits
 from matplotlib.colors import SymLogNorm
 from matplotlib import rc
 import numpy as np
-<<<<<<< HEAD
-import pyregion
-=======
 #import pyregion
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.patches import Rectangle
->>>>>>> 620d34c4f29370e844e6d3556dc5c307ce76c438
 
 # WIP ---!
 def handleReg(reg, col='black') :
@@ -693,8 +682,7 @@ def showButterfly_v02(diagram, spectrum, axisLim='auto', suffix='none', title='n
   plt.close()
 
   return
-<<<<<<< HEAD
-=======
+
 
 
 def degradedIRF_3d(x, y, z, xlabel='x', ylabel='y', zlabel='z', title=None, c=['b'],
@@ -723,4 +711,3 @@ def degradedIRF_3d(x, y, z, xlabel='x', ylabel='y', zlabel='z', title=None, c=['
   return
 
 
->>>>>>> 620d34c4f29370e844e6d3556dc5c307ce76c438
