@@ -24,4 +24,8 @@ fiducial = pathebl + 'gilmore_tau_fiducial.csv'
 
 fits_ebl(template, template_ebl, fiducial, zfetch=False, z='0.10', plot=False)
 
+with fits.open(template_ebl) as hdul :
+  print(hdul.info())
+  print(hdul[4].header)
+
 print('done')

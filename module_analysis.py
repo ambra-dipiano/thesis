@@ -12,11 +12,13 @@ import pandas as pd
 from scipy.interpolate import interp1d
 
 # EXTRACT SPECTRUM ---!
-def extract_spectrum(template, model, Nt, Ne, tbin_stop, energy, spectra, ebl=None, tau=None, if_ebl=True, pathout=None) :
-  print('work in progress')
+def extract_spectrum(template, model, Nt, Ne, tbin_stop, energy, spectra, if_ebl=False, ebl=None, pathout=None) :
 
   for i in range(tbin_stop):
-    filename=pathout+'spec_tbin'+str(i)+'.out'
+    if if_ebl is False :
+      filename=pathout+'spec_tbin'+str(i)+'.out'
+    else :
+      filename=pathout+'spec_ebl_tbin'+str(i)+'.out'
 
     if os.path.isfile(filename):
       os.system('rm '+filename)
@@ -33,14 +35,13 @@ def extract_spectrum(template, model, Nt, Ne, tbin_stop, energy, spectra, ebl=No
       out_file = open(outfile,'a')
       for j in range(Ne):
        #write spectral data in E [MeV] and I [ph/cm2/s/MeV]
-       out_file.write(str(energy[j][0]*1000.0)+' '+str(ebl[j][i]/1000.0)+"\n") if ebl!=None else None
-       out_file.write(str(energy[j][0]*1000.0)+' '+str((spectra[i][j]/1000.0)*np.exp(-tau[j]))+"\n") if ebl==None else None
+       out_file.write(str(energy[j][0]*1000.0)+' '+str(ebl[i][j]/1000.0)+"\n") 
       out_file.close()
 
-      os.system('cp '+model+' '+pathout+'template_ebl_tbin'+str(i)+'.xml')  
-      s = open(pathout+'template_ebl_tbin'+str(i)+'.xml').read() 
-      s = s.replace('data/spec_ebl','spec_ebl_tbin'+str(i))  
-      f = open(pathout+'template_ebl_tbin'+str(i)+'.xml','w') 
+      os.system('cp '+model+' '+pathout+'run0406_ID000126_ebl_tbin'+str(i)+'.xml')  
+      s = open(pathout+'run0406_ID000126_ebl_tbin'+str(i)+'.xml').read() 
+      s = s.replace('data/spec','spec_ebl_tbin'+str(i))  
+      f = open(pathout+'run0406_ID000126_ebl_tbin'+str(i)+'.xml','w') 
       f.write(s)
       f.close()
 
@@ -64,7 +65,7 @@ def extract_spectrum(template, model, Nt, Ne, tbin_stop, energy, spectra, ebl=No
   return
 
 # LOAD TEMPLATE ---!
-def load_template(template, tmax, extract_spec=False, model=None, pathout=None) :
+def load_template(template, tmax, extract_spec=False, if_ebl=False, model=None, pathout=None) :
   # open template ---!
   hdul = fits.open(template)
   # energybins [GeV] ---!
@@ -110,8 +111,12 @@ def load_template(template, tmax, extract_spec=False, model=None, pathout=None) 
   # Emax in last bin ---!
   en[Ne] = energy[Ne - 1][0] + (energy[Ne - 1][0] - en[Ne - 1])
 
-  if extract_spec == True :
+  if extract_spec is True and if_ebl is True :
+    extract_spectrum(template, model, Nt, Ne, tbin_stop, energy=energy, spectra=spectra, ebl=ebl, if_ebl=if_ebl, pathout=pathout)
+  elif extract_spec is True and if_ebl is False :
     extract_spectrum(template, model, Nt, Ne, tbin_stop, energy=energy, spectra=spectra, if_ebl=if_ebl, pathout=pathout)
+  else :
+    None
 
   return t, tbin_stop
 

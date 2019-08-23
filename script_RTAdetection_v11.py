@@ -37,7 +37,8 @@ csvpath = runpath + 'csv/'
 detpath = runpath + 'detection_all/'
 
 # inputs ---!
-template = workdir + 'run0406_ID000126.fits' 
+template = workdir + 'run0406_ID000126_ebl.fits' 
+model = workdir + 'run0406_ID000126.xml'
 
 # ctools/cscripts parameters ---!
 caldb = 'prod3b'
@@ -69,20 +70,25 @@ pointRA = trueRa + offmax[0] # (deg)
 pointDEC = trueDec + offmax[1] # (deg)
 
 # others ---!
-fileroot = 'run0406_'
+checks = False
+if_ebl = True
+if if_ebl is False :
+  fileroot = 'run0406_'
+else :
+  fileroot = 'run0406ebl_'
 
 # =====================
 # !!! LOAD TEMPLATE !!!
 # =====================
 
-t, tbin_stop = load_template(template, tmax)
-print('!!! check ---- tbin_stop=', tbin_stop)
+t, tbin_stop = load_template(template, tmax, extract_spec=True, if_ebl=if_ebl, model=model, pathout=datapath)
+print('!!! check ---- tbin_stop=', tbin_stop) if checks is True else None
 
 for k in range(trials) :
   count += 1
   # attach ID to fileroot ---!
   f = fileroot + 'sim%06d' % (count)
-  print('!!! check ---- file=', f)
+  print('!!! check ---- file=', f) if checks is True else None
 
   # ====================
   # !!! SIMULATE GRB !!!
@@ -92,16 +98,20 @@ for k in range(trials) :
 
   # simulate ---!
   for i in range(tbin_stop):
-    model = datapath + 'run0406_ID000126_tbin%d.xml' % i
-    event = simpath + f + "_tbin%02d.fits" % i
+    if if_ebl is False :
+      model = datapath + 'run0406_ID000126_tbin%d.xml' % i # !!
+      event = simpath + f + "_tbin%02d.fits" % i
+    else :
+      model = datapath + 'run0406_ID000126_ebl_tbin%d.xml' % i # !!
+      event = simpath + f + "_ebl_tbin%02d.fits" % i
     event_bins.append(event)
     if not os.path.isfile(event) :
-      simulate_event(model=model, event=event, t=[t[i], t[1+i]], tbin_stop=tbin_stop, e=[elow, ehigh], caldb=caldb, irf=irf, pointing=[pointRA, pointDEC], seed=count) 
+      simulate_event(model=model, event=event, t=[t[i], t[1+i]], e=[elow, ehigh], caldb=caldb, irf=irf, pointing=[pointRA, pointDEC], seed=count) 
 
   # observation list ---!
   eventList = simpath + 'obs_%s.xml' % f
   if not os.path.isfile(eventList) :
-    observation_list(event=event_bins, eventList=eventList, obsname=f, tbin_stop=tbin_stop) 
+    observation_list(event=event_bins, eventList=eventList, obsname=f) 
 
   # ============================
   # !!! EVENT LIST SELECTION !!!
@@ -115,7 +125,7 @@ for k in range(trials) :
     if not os.path.isfile(selectedEvents[i]) :
       select_event(eventList=eventList, event_selected=selectedEvents[i], prefix=prefix, t=[tmin, tmax[i]], e=[emin, emax])   
 
-  print('!!! check --- selection: ', selectedEvents)
+  print('!!! check --- selection: ', selectedEvents) if checks is True else None
 
   # ========================
   # !!! SELECTION SKYMAP !!!
@@ -128,7 +138,7 @@ for k in range(trials) :
     if not os.path.isfile(skymapName[i]) :
       skymap_event(event_selected=selectedEvents[i], sky=skymapName[i], e=[emin, emax], caldb=caldb, irf=irf, wbin=wbin, nbin=nbin)
 
-  print('!!! check --- skymaps: ', skymapName)
+  print('!!! check --- skymaps: ', skymapName) if checks is True else None
 
   # ==============================
   # !!! DETECTION AND MODELING !!!
@@ -144,7 +154,7 @@ for k in range(trials) :
     detReg.append(reg)
     pos.append(coord)
 
-    print('\n\n==========\n\n!!! check --- detection.............', texp[i],'s done\n\n!!! coords:', pos, '\n\n ==========\n\n')
+    print('\n\n==========\n\n!!! check --- detection.............', texp[i],'s done\n\n!!! coords:', pos, '\n\n ==========\n\n') if checks is True else None
 
   # =========================
   # !!! DETECTED RA & DEC !!!
@@ -158,11 +168,11 @@ for k in range(trials) :
     raDet.append(pos[i][0][0]) if len(pos[i][0]) > 0 else raDet.append(np.nan)
     decDet.append(pos[i][1][0]) if len(pos[i][1]) > 0 else decDet.append(np.nan)
     Ndet.append(len(pos[i][0]))
-    print('!!! check number of detections in trial', k+1, ' ====== ', Ndet)
+    print('!!! check number of detections in trial', k+1, ' ====== ', Ndet) if checks is True else None
  
   raSrc001 = raDet
   decSrc001 = decDet
-  print('!!! check ------- 1° src DETECTED RA:', raSrc001, ' and DEC:', decSrc001)
+  print('!!! check ------- 1° src DETECTED RA:', raSrc001, ' and DEC:', decSrc001) if checks is True else None
 
   # ==================
   # !!! LIKELIHOOD !!!
@@ -175,7 +185,7 @@ for k in range(trials) :
     if Ndet[i] > 0 :
       if not os.path.isfile(resultsName[i]) :
         max_likelihood(event_selected=selectedEvents[i], detection_model=detXml[i], results=resultsName[i], caldb=caldb, irf=irf)
-  print('!!! check --- max likelihoods: ', resultsName)
+  print('!!! check --- max likelihoods: ', resultsName) if checks is True else None
 
   # ======================
   # !!! LIKELIHOOD TSV !!!
@@ -189,14 +199,14 @@ for k in range(trials) :
     else:
       tsList.append([np.nan])
 
-  print('!!! check --- TSV List for each texp: ', tsList)
+  print('!!! check --- TSV List for each texp: ', tsList) if checks is True else None
 
   # only first elem ---!
   tsv = []
   for i in range(len(tsList)) :
     tsv.append(tsList[i][0])
 
-  print('!!! check --- SRC001 TSV for each texp:', tsv)
+  print('!!! check --- SRC001 TSV for each texp:', tsv) if checks is True else None
 
   # =================
   # !!! N SOURCES !!!
@@ -212,7 +222,7 @@ for k in range(trials) :
 
     Nsrc.append(n) 
   
-    print('!!! check ---- SRC NUMBER with TS > 9 for trial ', k+1, ' ===== ', Nsrc[i], ' for texp ==== ', texp[i])
+    print('!!! check ---- SRC NUMBER with TS > 9 for trial ', k+1, ' ===== ', Nsrc[i], ' for texp ==== ', texp[i]) if checks is True else None
 
   # ===========================
   # !!! ASYMMETRICAL ERRORS !!!
@@ -225,7 +235,7 @@ for k in range(trials) :
     if Ndet[i] > 0:
       if not os.path.isfile(errorsName[i]) :
         errors_conf = confidence_lv(event_selected=selectedEvents[i], results=resultsName[i], asym_errors=errorsName[i], caldb=caldb, irf=irf)
-  print('!!! check --- asym errors: ', errors_conf) 
+  print('!!! check --- asym errors: ', errors_conf) if checks is True else None
 
   # ===========================
   # !!! LIKELIHOOD RA & DEC !!!
@@ -250,8 +260,8 @@ for k in range(trials) :
     raFit.append(raList[i][0])
     decFit.append(decList[i][0])
 
-  print('!!! check --- RA FIT for each texp: ', raList, '\n\nand RA SRC001 for each texp:', raFit)
-  print('!!! check --- DEC FIT for each texp: ', decList, '\n\nand DEC SRC001 for each texp:', decFit)
+  print('!!! check --- RA FIT for each texp: ', raList, '\n\nand RA SRC001 for each texp:', raFit) if checks is True else None
+  print('!!! check --- DEC FIT for each texp: ', decList, '\n\nand DEC SRC001 for each texp:', decFit) if checks is True else None
 
   # ==================================
   # !!! LIKELIHOOD SPECTRAL PARAMS !!!
@@ -289,9 +299,9 @@ for k in range(trials) :
     Pref_err.append(prefErr[i][0])
     Index_err.append(indexErr[i][0])
 
-  print('!!! check ----- prefactor:', Pref) 
-  print('!!! check ----- index:', Index) 
-  print('!!! check ----- pivot:', Pivot) 
+  print('!!! check ----- prefactor:', Pref) if checks is True else None
+  print('!!! check ----- index:', Index) if checks is True else None 
+  print('!!! check ----- pivot:', Pivot) if checks is True else None 
 
   # ====================
   # !!! COMPUTE FLUX !!!
@@ -363,26 +373,26 @@ for k in range(trials) :
         w.writerows(row)
         f.close()
     
-  print('!!! check --- data file: ', csvName)
+  print('!!! check --- data file: ', csvName) if checks is True else None
 
   # ==================== #
   # !!! DELETE SIM FILES #
   # ==================== #
 
-  print('!!! check --- ', count, ') trial done...')
+  print('!!! check --- ', count, ') trial done...') if checks is True else None
  
   if count > 4 :
     os.system('rm ' + simpath + '*sim%06d*' % count)
     os.system('rm ' + selectpath + '*sim%06d*' % count)
     os.system('rm ' + detpath + '*sim%06d*' % count)
 
-print('!!! check end\n\ndone......chunk ', chunk, 'sim id from ', trials*(chunk-1)+1, ' to ', count)
-print('!!! check end\n\ndone...... removed all files in sim, selected_sim and detection_all')
+print('!!! check end\n\ndone......chunk ', chunk, 'sim id from ', trials*(chunk-1)+1, ' to ', count) if checks is True else None
+print('!!! check end\n\ndone...... removed all files in sim, selected_sim and detection_all except seeds from 1 to 4') if checks is True else None
 
 
 
 
-print('\n\n\n\n\n\n\ndone\n\n\n\n\n\n\n\n')
+print('\n\n\n\n\n\n\ndone\n\n\n\n\n\n\n\n') if checks is True else None
 
 
 
