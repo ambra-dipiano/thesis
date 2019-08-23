@@ -8,9 +8,8 @@ import cscripts
 from astropy.io import fits
 import numpy as np
 import os.path
-import panda as pd
+import pandas as pd
 from scipy.interpolate import interp1d
-
 
 # EXTRACT SPECTRUM ---!
 def extract_spectrum(template, model, Nt, Ne, tbin_stop, energy, spectra, ebl=None, tau=None, if_ebl=True, pathout=None) :
@@ -34,8 +33,8 @@ def extract_spectrum(template, model, Nt, Ne, tbin_stop, energy, spectra, ebl=No
       out_file = open(outfile,'a')
       for j in range(Ne):
        #write spectral data in E [MeV] and I [ph/cm2/s/MeV]
-       out_file.write(str(energy[j][0]*1000.0)+' '+str(ebl[j][i]/1000.0)+"\n") if ebl!= None else None
-       out_file.write(str(energy[j][0]*1000.0)+' '+str((spectra[i][j]/1000.0)*np.exp(-tau[j]))+"\n") if ebl== None else None
+       out_file.write(str(energy[j][0]*1000.0)+' '+str(ebl[j][i]/1000.0)+"\n") if ebl!=None else None
+       out_file.write(str(energy[j][0]*1000.0)+' '+str((spectra[i][j]/1000.0)*np.exp(-tau[j]))+"\n") if ebl==None else None
       out_file.close()
 
       os.system('cp '+model+' '+pathout+'template_ebl_tbin'+str(i)+'.xml')  
@@ -115,25 +114,6 @@ def load_template(template, tmax, extract_spec=False, model=None, pathout=None) 
     extract_spectrum(template, model, Nt, Ne, tbin_stop, energy=energy, spectra=spectra, if_ebl=if_ebl, pathout=pathout)
 
   return t, tbin_stop
-
-# ADD EBL TO TEMPLATE ---!
-def add_ebl(table, z, time, energy, spectra) :
-
-  df = pd.read_csv(table)
-  cols = list(df.columns)
-  df.dropna()
-  # interpolate ---!
-  tau = np.array(df[z])
-  E = np.array(df[cols[0]])/1e3  # MeV --> GeV
-  ylin = interp1d(E, tau)
-  tau_gilmore = np.array(ylin(energy))
-  ebl_gilmore = np.empty_like(spectra)
-  # compute ---!
-  for i in range(len(time)):
-    for j in range(len(energy)):
-      ebl_gilmore[j] = spectra[i][j] * np.exp(-tau_gilmore[j])
-
-  return ebl_gilmore
 
 # SIMULATE EVENT LIST ---!
 def simulate_event(model, event, t=[0, 2000], e=[0.03, 150.0], caldb='prod2', irf='South_0.5h', roi=5, pointing=[83.63, 22.01], seed=1) :
@@ -276,8 +256,30 @@ def degrade_IRF(irf, degraded_irf, factor=2) :
 
   return
 
-# CREATE EBL FITS MODEL ---!
-def fits_ebl(template, template_ebl, table, zfetch=True, z=None) :
+# ADD EBL TO TEMPLATE ---!
+def add_ebl(table, z, time, energy, spectra, plot=False) :
+
+  df = pd.read_csv(table)
+  cols = list(df.columns)
+  df.dropna()
+  # interpolate ---!
+  tau = np.array(df[z])
+  E = np.array(df[cols[0]])/1e3  # MeV --> GeV
+  interp = interp1d(E, tau)
+  tau_gilmore = np.array(interp(energy))
+  ebl_gilmore = np.empty_like(spectra)
+  # compute ---!
+  for i in range(len(time)):
+    for j in range(len(energy)):
+      ebl_gilmore[j] = spectra[i][j] * np.exp(-tau_gilmore[j])
+
+  if plot is True :
+    return ebl_gilmore, E, energy, tau, tau_gilmore
+  else :
+    return ebl_gilmore
+
+# CREATE EBL FITS MODEL [WIP] ---!
+def fits_ebl(template, template_ebl, table, zfetch=True, z=None, plot=False) :
 
   with fits.open(template) as hdul:
     # energybins [GeV] ---!
@@ -286,10 +288,14 @@ def fits_ebl(template, template_ebl, table, zfetch=True, z=None) :
     time = np.array(hdul[2].data)
     # spectra ---!
     spectra = np.array(hdul[3].data)
-    # redshift ---!
-    z = hdul[0].header['REDSHIFT'] if zfetch==True else None
+    # redshift [must approx to chose the column] ---!
+    if zfetch is True :
+      z = hdul[0].header['REDSHIFT']
     # retrive the ebl ---!
-    ebl = add_ebl(table, z, time, energy, spectra)
+    if plot is True :
+      ebl, x, x2, y, y2 = add_ebl(table, z, time, energy, spectra, plot=plot)
+    else :
+      ebl = add_ebl(table, z, time, energy, spectra, plot=plot)
     # update fits ---!
     hdu = fits.BinTableHDU(name='EBL Gilmore', data=ebl)
     header = hdu.header
@@ -297,7 +303,10 @@ def fits_ebl(template, template_ebl, table, zfetch=True, z=None) :
     hdu = fits.BinTableHDU(name='EBL Gilmore', data=ebl, header=header)
     hdul.append(hdu)
     # save to new ---!
-    os.system('rm ' + template_ebl)
+    os.system('rm ' + template_ebl) if os.path.isfile(template_ebl) is True else None
     hdul.writeto(template_ebl, overwrite=False)
 
-  return template_ebl
+  if plot is True :
+    return template_ebl, x, y, x2, y2
+  else :
+    return template_ebl
