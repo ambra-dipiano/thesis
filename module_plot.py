@@ -1,16 +1,29 @@
+<<<<<<< HEAD
 #!/bin/python3.6
 
+=======
+>>>>>>> 620d34c4f29370e844e6d3556dc5c307ce76c438
 # ============================ #
 # MODULE OF PLOTTING FUNCTIONS #
 # ============================ #
 
 # IMPORTS ---!
 import matplotlib.pyplot as plt
+<<<<<<< HEAD
+=======
+import seaborn as sns
+>>>>>>> 620d34c4f29370e844e6d3556dc5c307ce76c438
 from astropy.io import fits
 from matplotlib.colors import SymLogNorm
 from matplotlib import rc
 import numpy as np
+<<<<<<< HEAD
 import pyregion
+=======
+#import pyregion
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib.patches import Rectangle
+>>>>>>> 620d34c4f29370e844e6d3556dc5c307ce76c438
 
 # WIP ---!
 def handleReg(reg, col='black') :
@@ -680,3 +693,34 @@ def showButterfly_v02(diagram, spectrum, axisLim='auto', suffix='none', title='n
   plt.close()
 
   return
+<<<<<<< HEAD
+=======
+
+
+def degradedIRF_3d(x, y, z, xlabel='x', ylabel='y', zlabel='z', title=None, c=['b'],
+                   fontsize=14, zlim=(0,1), alpha=[1], label=None, savefig=None, show=True) :
+
+  fig = plt.figure(figsize=(6, 6))
+  plt.rc('text', usetex=True)
+  sns.set_style("whitegrid", {'axes.grid': False})
+  ax = fig.add_subplot(111, projection='3d', zscale='linear')
+
+  curve = []
+  for i in range(len(z)) :
+    ax.plot_surface(x, y, z[i], alpha=alpha[i], color=c[i], label=label[i])
+    curve.append(Rectangle((0, 0), 1, 1, fc=c[i], fill=True))
+
+  ax.set_zlim(zlim)
+  ax.set_xlabel(xlabel, fontsize=fontsize)
+  ax.set_ylabel(ylabel, fontsize=fontsize)
+  ax.set_zlabel(zlabel, fontsize=fontsize)
+  ax.set_title(title, fontsize=fontsize) if title != None else None
+  ax.legend(curve, label, loc=0) if label != None else None
+
+  fig.savefig(savefig) if savefig != None else None
+  plt.show() if show != False else None
+
+  return
+
+
+>>>>>>> 620d34c4f29370e844e6d3556dc5c307ce76c438

@@ -1,10 +1,16 @@
+<<<<<<< HEAD
 #!/bin/python3.6
 
+=======
+>>>>>>> 620d34c4f29370e844e6d3556dc5c307ce76c438
 # ================================ #
 # MODULE OF XML HANDLING FUNCTIONS #
 # ================================ #
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 620d34c4f29370e844e6d3556dc5c307ce76c438
 # IMPORT ---!
 #import xml.etree.ElementTree as ET
 #import lxml.etree as ET
@@ -13,7 +19,10 @@ import numpy as np
 import cscripts
 
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 620d34c4f29370e844e6d3556dc5c307ce76c438
 # RETRIVES TSV v01 ---!
 def getTSV(likeXml) :
   '''

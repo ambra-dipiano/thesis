@@ -1,5 +1,8 @@
+<<<<<<< HEAD
 #!/bin/python3.6
 
+=======
+>>>>>>> 620d34c4f29370e844e6d3556dc5c307ce76c438
 # ============================ #
 # MODULE OF ANALYSIS FUNCTIONS #
 # ============================ #
@@ -10,9 +13,18 @@ import cscripts
 from astropy.io import fits
 import numpy as np
 import os.path
+<<<<<<< HEAD
 
 # EXTRACT SPECTRUM ---!
 def extract_spectrum(template, model, Nt, Ne, tbin_stop, energy, spectra, ebl=None, if_ebl=True, pathout=None) :
+=======
+import panda as pd
+from scipy.interpolate import interp1d
+
+
+# EXTRACT SPECTRUM ---!
+def extract_spectrum(template, model, Nt, Ne, tbin_stop, energy, spectra, ebl=None, tau=None, if_ebl=True, pathout=None) :
+>>>>>>> 620d34c4f29370e844e6d3556dc5c307ce76c438
   print('work in progress')
 
   for i in range(tbin_stop):
@@ -33,7 +45,12 @@ def extract_spectrum(template, model, Nt, Ne, tbin_stop, energy, spectra, ebl=No
       out_file = open(outfile,'a')
       for j in range(Ne):
        #write spectral data in E [MeV] and I [ph/cm2/s/MeV]
+<<<<<<< HEAD
        out_file.write(str(energy[j][0]*1000.0)+' '+str(ebl[j][i]/1000.0)+"\n")
+=======
+       out_file.write(str(energy[j][0]*1000.0)+' '+str(ebl[j][i]/1000.0)+"\n") if ebl!= None else None
+       out_file.write(str(energy[j][0]*1000.0)+' '+str((spectra[i][j]/1000.0)*np.exp(-tau[j]))+"\n") if ebl== None else None
+>>>>>>> 620d34c4f29370e844e6d3556dc5c307ce76c438
       out_file.close()
 
       os.system('cp '+model+' '+pathout+'template_ebl_tbin'+str(i)+'.xml')  
@@ -114,6 +131,28 @@ def load_template(template, tmax, extract_spec=False, model=None, pathout=None) 
 
   return t, tbin_stop
 
+<<<<<<< HEAD
+=======
+# ADD EBL TO TEMPLATE ---!
+def add_ebl(table, z, time, energy, spectra) :
+
+  df = pd.read_csv(table)
+  cols = list(df.columns)
+  df.dropna()
+  # interpolate ---!
+  tau = np.array(df[z])
+  E = np.array(df[cols[0]])/1e3  # MeV --> GeV
+  ylin = interp1d(E, tau)
+  tau_gilmore = np.array(ylin(energy))
+  ebl_gilmore = np.empty_like(spectra)
+  # compute ---!
+  for i in range(len(time)):
+    for j in range(len(energy)):
+      ebl_gilmore[j] = spectra[i][j] * np.exp(-tau_gilmore[j])
+
+  return ebl_gilmore
+
+>>>>>>> 620d34c4f29370e844e6d3556dc5c307ce76c438
 # SIMULATE EVENT LIST ---!
 def simulate_event(model, event, t=[0, 2000], e=[0.03, 150.0], caldb='prod2', irf='South_0.5h', roi=5, pointing=[83.63, 22.01], seed=1) :
   sim = ctools.ctobssim()
@@ -243,3 +282,43 @@ def integrated_flux(event_selected, results, srcname='Src001', caldb='prod2', ir
 
   return
 
+<<<<<<< HEAD
+=======
+# DEGRADE IRF ---!
+def degrade_IRF(irf, degraded_irf, factor=2) :
+  with fits.open(irf) as hdul:
+    aeff = hdul['EFFECTIVE AREA'].data['EFFAREA'][:]
+
+  with fits.open(degraded_irf, mode='update') as hdul:
+    hdul['EFFECTIVE AREA'].data['EFFAREA'][:] = aeff / factor
+    # save changes ---!
+    hdul.flush
+
+  return
+
+# CREATE EBL FITS MODEL ---!
+def fits_ebl(template, template_ebl, table, zfetch=True, z=None) :
+
+  with fits.open(template) as hdul:
+    # energybins [GeV] ---!
+    energy = np.array(hdul[1].data)
+    # timebins [s] ---!
+    time = np.array(hdul[2].data)
+    # spectra ---!
+    spectra = np.array(hdul[3].data)
+    # redshift ---!
+    z = hdul[0].header['REDSHIFT'] if zfetch==True else None
+    # retrive the ebl ---!
+    ebl = add_ebl(table, z, time, energy, spectra)
+    # update fits ---!
+    hdu = fits.BinTableHDU(name='EBL Gilmore', data=ebl)
+    header = hdu.header
+    header.set('UNITS', 'ph/cm2/s/GeV', ' ')
+    hdu = fits.BinTableHDU(name='EBL Gilmore', data=ebl, header=header)
+    hdul.append(hdu)
+    # save to new ---!
+    os.system('rm ' + template_ebl)
+    hdul.writeto(template_ebl, overwrite=False)
+
+  return template_ebl
+>>>>>>> 620d34c4f29370e844e6d3556dc5c307ce76c438
