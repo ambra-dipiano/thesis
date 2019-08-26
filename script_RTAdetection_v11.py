@@ -81,7 +81,7 @@ else :
 # !!! LOAD TEMPLATE !!!
 # =====================
 
-t, tbin_stop = load_template(template, tmax, extract_spec=True, if_ebl=if_ebl, model=model, pathout=datapath)
+t, tbin_stop = load_template(template, tmax, extract_spec=False, if_ebl=if_ebl, model=model, pathout=datapath)
 print('!!! check ---- tbin_stop=', tbin_stop) if checks is True else None
 
 for k in range(trials) :
