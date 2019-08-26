@@ -28,7 +28,7 @@ trials = int(sys.argv[2]) # number of trials
 count = int(sys.argv[3]) # starting count  
 
 # work with absolute paths ---!
-workdir = '/mnt/nvme0n1p1/piano_analysis/working-dir/run0406_test/'
+workdir = '/mnt/nvme0n1p1/piano_analysis/working-dir/run0406/'
 runpath = workdir + 'run0406_ID000126/'
 simpath = runpath + 'sim/'
 selectpath = runpath + 'selected_sim/'
@@ -322,10 +322,10 @@ for k in range(trials) :
       integ_erg = (emax*1e6)
 
       flux.append(cost * integ)  # convert E (MeV)
-      print('!!! check ----- next is gammalib.plaw_photon_flux')
+      print('!!! check ----- next is gammalib.plaw_photon_flux') if checks is True else None
       flux_ph.append(Pref[i] * gammalib.plaw_photon_flux(emin, emax, Pivot[i], Index[i]))  # takes E (TeV)
       flux_erg.append(cost_erg * integ_erg)  # convert E (erg)
-      print('!!! check ----- next is gammalib.plaw_energy_flux')
+      print('!!! check ----- next is gammalib.plaw_energy_flux') if checks is True else None
       flux_en.append(Pref[i] * gammalib.plaw_energy_flux(emin, emax, Pivot[i], Index[i]))  # takes E (TeV)
     else :
       flux.append(np.nan)
@@ -359,7 +359,7 @@ for k in range(trials) :
     row = []
     row.append([ID,texp[i],sigma,Ndet[i],Nsrc[i],raSrc001[i],decSrc001[i],raFit[i],decFit[i],tsv[i],flux[i],flux_ph[i],flux_erg[i],flux_en[i]])
 
-    print('!!! check row --- iter', i, '=====', row)
+    print('!!! check row --- iter', i, '=====', row) if checks is True else None
 
     if os.path.isfile(csvName[i]) == True :
       with open(csvName[i], 'a') as f:
