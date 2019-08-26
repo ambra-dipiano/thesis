@@ -710,3 +710,23 @@ def interp_ebl(x, y, savefig, kind='linear', xlabel='x', ylabel='y', title='titl
   plt.show() if show==True else None
 
   return
+
+# SENSITIVITY ---!
+def showSensitivity(x, y, savefig, xlabel='x', ylabel='y', label=['y'], title='none', fontsize=12, marker=['.'], show=True) :
+
+  fig = plt.figure()
+  plt.rc('text', usetex=True)
+  sns.set()
+
+  ax = plt.subplot(111, xscale='log', yscale='log')
+  for i in range(len(y)) :
+    ax.plot(x[i], y[i], marker=marker[i], label=label[i])
+  ax.set_ylabel(ylabel, fontsize=fontsize)
+  ax.set_xlabel(xlabel, fontsize=fontsize)
+  ax.set_title(title, fontsize=fontsize) if title!='none' else None
+  ax.legend(loc=0)
+
+  fig.savefig(savefig)
+  plt.show() if show==True else None
+
+  return
