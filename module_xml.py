@@ -13,7 +13,6 @@ import cscripts
 # RETRIVES TSV v01 ---!
 def getTSV(likeXml) :
   '''
-
   :param likeXml: likelihood result model definition xml file (str)
   :return: tsv: list of TSV for each src (list of float)
   '''
@@ -33,8 +32,6 @@ def getTSV(likeXml) :
 
   file.close()
   return tsvList
-
-
 
 # RETRIVES RA & DEC v01 ---!
 def getRaDec(likeXml) :
@@ -66,8 +63,6 @@ def getRaDec(likeXml) :
 
   return pos
 
-
-
 # RETRIVES RA & DEC ERRORS v01 ---!
 def getRaDec_errors(likeXml) :
   '''
@@ -98,12 +93,8 @@ def getRaDec_errors(likeXml) :
 
   return err
 
-
-
 # RETRIVES CONFIDENCE LEVEL ERRORS v01 ---!
 def getConfInt_gauss(errors) :
-  '''
-  '''
 
   file = open(errors)
   srcLib = ET.parse(file)
@@ -130,7 +121,6 @@ def getConfInt_gauss(errors) :
   file.close()
 
   return err
-
 
 # RETRIVES SPECTRAL VALUES v01 ---!
 def getSpectral(likeXml) :
@@ -171,7 +161,6 @@ def getSpectral(likeXml) :
   file.close()
 
   return val, err
-
 
 # RUN DETECTION AND MODEL SPECTRAL COMPONENTS v09 ---!
 def srcDetection_spcModeling(skymap, sigma=5, instr='CTA', bkgType='Irf', src_attrib='none', bkg_attrib='none', tsv=True, maxSrc=20, exclrad = 0.5) :
@@ -277,8 +266,6 @@ def srcDetection_spcModeling(skymap, sigma=5, instr='CTA', bkgType='Irf', src_at
       raList.append(src.find('spatialModel/parameter[@name="RA"]').attrib['value'])
       decList.append(src.find('spatialModel/parameter[@name="DEC"]').attrib['value'])
 
-
-
     # background ---!
     else:
       # set bkg attributes ---!
@@ -311,8 +298,6 @@ def srcDetection_spcModeling(skymap, sigma=5, instr='CTA', bkgType='Irf', src_at
 
   return detectionXml, detectionReg, posList
 
-
-
 # MODELING XML DETECTION FILE HES TYPE v01 ---!
 def getAttribs_spcModel(instr='CTA', bkgType='Irf', srcType='Powerlaw'):
   ''''
@@ -340,8 +325,6 @@ def getAttribs_spcModel(instr='CTA', bkgType='Irf', srcType='Powerlaw'):
     Att_Index = {'name':'Index', 'scale':'-1', 'value':'2.4', 'min':'0', 'max':'5.0', 'free':'1'}
     Att_PivotEn = {'name':'PivotEnergy', 'scale':'1e6', 'value':'0.3', 'min':'1e-07', 'max':'1000.0', 'free':'0'}
 
-
-
   # BACKGROUND ---!
   if instr.upper() == 'HESS' and bkgType.capitalize() == 'Aeff' :
 
@@ -357,13 +340,10 @@ def getAttribs_spcModel(instr='CTA', bkgType='Irf', srcType='Powerlaw'):
     Bkg_Index = {'name':'Index', 'scale':'1', 'value':'0.0', 'min':'-5', 'max':'+5.0', 'free':'1'}
     Bkg_PivotEn = {'name':'PivotEnergy', 'scale':'1e6', 'value':'1', 'min':'0.01', 'max':'1000.0', 'free':'0'}
 
-
   srcAtt = [Att_Prefactor, Att_Index, Att_PivotEn]
   bkgAtt = [Bkg_Prefactor, Bkg_Index, Bkg_PivotEn]
 
   return bkgAtt, srcAtt
-
-
 
 # ON/OFF MODEL v01 ---!
 def writeXml_onoffModel(modelXml):
@@ -396,12 +376,9 @@ def writeXml_onoffModel(modelXml):
 
   return srcLib, modelXml_mod
 
-
-
 # FREE PARAMS v01 ---!
 def freeParams(modelXml, spt_prms='none', spc_prms='none', free_bkg=False, bkg_prms='none') :
   '''
-
   :param modelXml: which file to parse (str)
   :param spc_prms, spt_prms: which parameters to free (list)
   :return:
@@ -435,12 +412,9 @@ def freeParams(modelXml, spt_prms='none', spc_prms='none', free_bkg=False, bkg_p
 
   return
 
-
-
 # FIX PARAMS v01 ---!
 def fixParams(modelXml, spt_prms='none', spc_prms='none', fix_bkg=False, bkg_prms='none') :
   '''
-
   :param modelXml: which file to parse (str)
   :param spc_prms, spt_prms: which parameters to free (list)
   :return:
@@ -480,7 +454,6 @@ def fixParams(modelXml, spt_prms='none', spc_prms='none', fix_bkg=False, bkg_prm
 # BKG MODELING ---!
 def bkgModeling(modelXml, bkgXml, spectral=True, spatial=False) :
   '''
-
   :param modelXml: model definition XML file to modify (str)
   :param bkgXml:  model definition XML file of backgroun (str)
   :param spectral, spatial: parameters to modify if True (bool)
@@ -519,9 +492,6 @@ def bkgModeling(modelXml, bkgXml, spectral=True, spatial=False) :
   file_bkg.close()
 
   return filename
-
-
-
 
 # CREATE MODEL v01 ---!
 def writeXml_obsModel_bkgIrf(simNum, Nsrc=1):

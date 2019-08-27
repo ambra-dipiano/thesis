@@ -282,10 +282,9 @@ def add_ebl(table, z, time, energy, spectra, plot=False) :
     return ebl_gilmore, E, energy, tau, tau_gilmore
   else :
     return ebl_gilmore
-
+ 
 # CREATE EBL FITS MODEL [WIP] ---!
 def fits_ebl(template, template_ebl, table, zfetch=True, z=None, plot=False) :
-
   with fits.open(template) as hdul:
     # energybins [GeV] ---!
     energy = np.array(hdul[1].data)
@@ -315,3 +314,27 @@ def fits_ebl(template, template_ebl, table, zfetch=True, z=None, plot=False) :
     return template_ebl, x, y, x2, y2
   else :
     return template_ebl
+
+# CTA SENSITIVITY ---!
+def sensitivity(model, event, output, caldb='prod2', irf='South_0.5h', t=100, e=[0.03, 150.0], roi=5, srcName='Crab',
+                sigma=5, bins=20, npix=200, binsz=0.05, type='Differential') :
+  sens = cscripts.cssens()
+  sens['inobs'] = event
+  sens['inmodel'] = model
+  sens['srcname'] = srcName
+  sens['caldb'] = caldb
+  sens['irf'] = irf
+  sens['outfile'] = output
+  sens['duration'] = t
+  sens['rad'] = roi
+  sens['emin'] = e[0]
+  sens['emax'] = e[1]
+  sens['bins'] = bins
+  sens['sigma'] = sigma
+  sens['type'] = type
+  sens['npix'] = npix
+  sens['binsz'] = binsz
+  sens['logfile'] = output.replace('', '.log')
+  sens.execute()
+
+  return
