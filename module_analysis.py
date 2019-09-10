@@ -271,19 +271,19 @@ def integrated_flux(event_selected, results, srcname='Src001', caldb='prod2', ir
 def degrade_IRF(irf, degraded_irf, factor=3) :
   extension = ['EFFECTIVE AREA', 'BACKGROUND']
   field = [4, 6]
-#  field = ['EFFAREA', 'BKG']
-  inv = 1/factor
+  #  field = ['EFFAREA', 'BKG']
+  inv = 1 / factor
   with fits.open(irf) as hdul:
-    col = [[],[]]
+    col = [[], []]
     for i in range(len(extension)):
-      col[i].append(hdul[extension[i]].data.field(field[i])[:])
+      col[i].append(hdul[extension[i]].data.field(field[i])[:].astype(float))
 
-  a = col[0] * inv
-  b = col[1] / col[0] * (col[0] * inv)
+  a = [i * inv for i in col[0]]
+  b = [i / j * (j * inv) for i in col[1] for j in col[0]]
   tmp = [a, b]
 
   with fits.open(degraded_irf, mode='update') as hdul:
-    for i in range(len(extension)) :
+    for i in range(len(extension)):
       hdul[extension[i]].data.field(field[i])[:] = tmp[i]
     # save changes ---!
     hdul.flush
