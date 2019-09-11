@@ -79,6 +79,7 @@ class xmlMng :
     self.maxSrc = 10
     self.corr_rad = 0.1
     self.exclrad = 0.5
+    self.default_model = True
     self.srcAtt = [[], [], []]
     self.bkgAtt = [[], [], []]
 
@@ -186,17 +187,24 @@ class xmlMng :
 
     return
 
+  def __setModel(self) :
+    if self.default_model is False :
+      Att_Prefactor = {'name':'Prefactor', 'scale':'1e-16', 'value':'5.7', 'min':'1e-07', 'max':'1000.0', 'free':'1'}
+      Att_Index = {'name':'Index', 'scale':'-1', 'value':'2.4', 'min':'0', 'max':'5.0', 'free':'1'}
+      Att_PivotEn = {'name':'PivotEnergy', 'scale':'1e6', 'value':'1', 'min':'1e-07', 'max':'1000.0', 'free':'0'}
+      Bkg_Prefactor = {'name':'Prefactor', 'scale':'1', 'value':'1', 'min':'1e-03', 'max':'1e+3', 'free':'1'}
+      Bkg_Index = {'name':'Index', 'scale':'1', 'value':'0.0', 'min':'-5', 'max':'+5.0', 'free':'1'}
+      Bkg_PivotEn = {'name':'PivotEnergy', 'scale':'1e6', 'value':'1', 'min':'0.01', 'max':'1000.0', 'free':'0'}
+
+      self.srcAtt = [Att_Prefactor, Att_Index, Att_PivotEn]
+      self.bkgAtt = [Bkg_Prefactor, Bkg_Index, Bkg_PivotEn]
+      return self.srcAtt, self.bkgAtt
+    else :
+      pass
+
   def modXml(self, skymap) :
     self.__runDetection(skymap)
-
-    Att_Prefactor = {'name':'Prefactor', 'scale':'1e-16', 'value':'5.7', 'min':'1e-07', 'max':'1000.0', 'free':'1'}
-    Att_Index = {'name':'Index', 'scale':'-1', 'value':'2.4', 'min':'0', 'max':'5.0', 'free':'1'}
-    Att_PivotEn = {'name':'PivotEnergy', 'scale':'1e6', 'value':'1', 'min':'1e-07', 'max':'1000.0', 'free':'0'}
-    self.srcAtt = [Att_Prefactor, Att_Index, Att_PivotEn]
-    Bkg_Prefactor = {'name':'Prefactor', 'scale':'1', 'value':'1', 'min':'1e-03', 'max':'1e+3', 'free':'1'}
-    Bkg_Index = {'name':'Index', 'scale':'1', 'value':'0.0', 'min':'-5', 'max':'+5.0', 'free':'1'}
-    Bkg_PivotEn = {'name':'PivotEnergy', 'scale':'1e6', 'value':'1', 'min':'0.01', 'max':'1000.0', 'free':'0'}
-    self.bkgAtt = [Bkg_Prefactor, Bkg_Index, Bkg_PivotEn]
+    self.__setModel()
 
 
     return
