@@ -9,7 +9,7 @@ from astropy.io import fits
 import numpy as np
 import os.path
 import pandas as pd
-from scipy.interpolate import interp1d
+from scipy.interpolate import interp1d, interp2d
 
 
 # EXTRACT SPECTRUM ---!
@@ -274,12 +274,16 @@ def degrade_IRF(irf, degraded_irf, factor=3) :
   #  field = ['EFFAREA', 'BKG']
   inv = 1 / factor
   with fits.open(irf) as hdul:
-    col = [[], []]
+    col = []
     for i in range(len(extension)):
-      col[i].append(hdul[extension[i]].data.field(field[i])[:].astype(float))
+      np.array(col.append(hdul[extension[i]].data.field(field[i])[:].astype(float)))
 
-  a = [i * inv for i in col[0]]
-  b = [i / j * (j * inv) for i in col[1] for j in col[0]]
+  a = np.where(np.array([i*inv for i in col[0]]) is np.nan, 0., np.array([i*inv for i in col[0]]))
+  b = []
+  for i in range(len(col[1][0])) :
+    b.append(np.where(col[1][0][i] is np.nan, 0., col[1][0][i]) * inv)
+
+  b = np.array(b)
   tmp = [a, b]
 
   with fits.open(degraded_irf, mode='update') as hdul:
@@ -287,6 +291,8 @@ def degrade_IRF(irf, degraded_irf, factor=3) :
       hdul[extension[i]].data.field(field[i])[:] = tmp[i]
     # save changes ---!
     hdul.flush
+
+  print('done')
 
   return
 
