@@ -13,24 +13,26 @@ from scipy.interpolate import interp1d, interp2d
 
 
 # EXTRACT SPECTRUM ---!
-def extract_spectrum(template, model, Nt, Ne, tbin_stop, energy, spectra, ebl=None, tau=None, if_ebl=True, pathout=None) :
+def extract_spectrum(template, model, Nt, Ne, tbin_stop, energy, spectra, ebl=None, tau=None, if_ebl=False, pathout=None) :
   print('work in progress')
 
   for i in range(tbin_stop):
-    filename=pathout+'spec_tbin'+str(i)+'.out'
+    if if_ebl is True :
+      outfile = pathout + 'spec_ebl_tbin' + str(i) + '.out'
+    else :
+      outfile=pathout+'spec_tbin'+str(i)+'.out'
 
-    if os.path.isfile(filename):
-      os.system('rm '+filename)
-    if not os.path.isfile(filename):
-      os.system('touch '+filename)
-      out_file = open(filename,'a')
-      #out_file.write("E[MeV],Flux[fotoni/MeV/cm^2/s]"+"\n")
+    if os.path.isfile(outfile):
+      os.system('rm '+outfile)
+    if not os.path.isfile(outfile):
+      os.system('touch '+outfile)
+      out_file = open(outfile,'a')
+      #out_file.write("#E[MeV],Flux[fotoni/MeV/cm^2/s]"+"\n")
       out_file.close()
 
   # ebl ---!
-  if if_ebl==True :           
+  if if_ebl==True :
     for i in range(Nt):
-      outfile=pathout+'spec_ebl_tbin'+str(i)+'.out'  
       out_file = open(outfile,'a')
       for j in range(Ne):
        #write spectral data in E [MeV] and I [ph/cm2/s/MeV]
@@ -38,17 +40,16 @@ def extract_spectrum(template, model, Nt, Ne, tbin_stop, energy, spectra, ebl=No
        out_file.write(str(energy[j][0]*1000.0)+' '+str((spectra[i][j]/1000.0)*np.exp(-tau[j]))+"\n") if tau is not None else None
       out_file.close()
 
-      os.system('cp '+model+' '+pathout+'run0406_ID000126_tbin_ebl_tbin'+str(i)+'.xml')
-      s = open(pathout+'run0406_ID000126_tbin_ebl_tbin'+str(i)+'.xml').read()
-      s = s.replace('data/spec_ebl','spec_ebl_tbin'+str(i))  
-      f = open(pathout+'run0406_ID000126_tbin_ebl_tbin'+str(i)+'.xml','w')
+      os.system('cp '+model+' '+pathout+'run0406_ID000126_ebl_tbin'+str(i)+'.xml')
+      s = open(pathout+'run0406_ID000126_ebl_tbin'+str(i)+'.xml').read()
+      s = s.replace('spec','spec_ebl_tbin'+str(i))
+      f = open(pathout+'run0406_ID000126_ebl_tbin'+str(i)+'.xml','w')
       f.write(s)
       f.close()
 
   # no ebl ---!
   else :
     for i in range(Nt):
-      outfile=pathout+'spec_tbin'+str(i)+'.out'
       out_file = open(outfile,'a')
       for j in range(Ne):
         #write spectral data in E [MeV] and I [ph/cm2/s/MeV]
@@ -57,7 +58,7 @@ def extract_spectrum(template, model, Nt, Ne, tbin_stop, energy, spectra, ebl=No
 
       os.system('cp '+model+' '+pathout+'run0406_ID000126_tbin'+str(i))
       s = open(pathout+'run0406_ID000126_tbin'+str(i)+'.xml').read()
-      s = s.replace(pathout+'spec','spec_tbin'+str(i))
+      s = s.replace('spec','spec_tbin'+str(i))
       f = open(pathout+'run0406_ID000126_tbin'+str(i)+'.xml','w')
       f.write(s)
       f.close()  
