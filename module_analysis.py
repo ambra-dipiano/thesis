@@ -34,7 +34,7 @@ def extract_spectrum(template, model, Nt, Ne, tbin_stop, energy, spectra, ebl=No
       out_file = open(outfile,'a')
       for j in range(Ne):
        #write spectral data in E [MeV] and I [ph/cm2/s/MeV]
-       out_file.write(str(energy[j][0]*1000.0)+' '+str(ebl[j][i]/1000.0)+"\n") if ebl!=None else None
+       out_file.write(str(energy[j][0]*1000.0)+' '+str(ebl[i][j]/1000.0)+"\n") if ebl!=None else None
        out_file.write(str(energy[j][0]*1000.0)+' '+str((spectra[i][j]/1000.0)*np.exp(-tau[j]))+"\n") if tau!=None else None
       out_file.close()
 
