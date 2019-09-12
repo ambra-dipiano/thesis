@@ -16,21 +16,22 @@ def loadConfig() :
   #Load configuration file
   cfgFile = os.path.dirname(__file__)+'/config.json'
   with open(cfgFile) as json_cfg_file :
-      cfg = json.load(json_cfg_file)
+    cfg = json.load(json_cfg_file)
   return cfg
   
 class fsMng:
   def __init__(self, cfg) :
-    self.__initPath(cfg.dir)
+    self.__initPath(cfg.get('dir'))
     
   def __initPath(self,cfg) :
-    self.__cfg = cfg.dir
-    self.__workdir = cfg.dir.workdir
-    self.__runpath = cfg.dir.runpath
-    self.selectpath = cfg.dir.selectpath
-    self.datapath = cfg.dir.datapath
-    self.csvpath = cfg.dir.csvpath
-    self.detpath = cfg.dir.detpath
+    self.__cfg = cfg
+    self.__workdir = self.__cfg.get('workdir')
+    self.__runpath = self.__cfg.get('runpath')
+    self.datapath = self.__cfg.get('datapath')
+    self.simpath = self.__cfg.get('simpath')
+    self.selectpath = self.__cfg.get('selectpath')
+    self.detpath = self.__cfg.get('detpath')
+    self.csvpath = self.__cfg.get('csvpath')
     if self.__workdir.endswith(".") == False :
       self.__workdir+'/'
     if self.__runpath.endswith(".") == False :
@@ -44,24 +45,28 @@ class fsMng:
       self.__workdir+'/'
 
   def getRunDir(self) :
-    return self.__runpath.replace('${workdir}', self.getWorkinDir())
+    path = self.getWorkingDir()
+    return self.__runpath.replace('${workdir}', path)
   def setRunDir(self, runDir) :
     self.__runpath = runDir
     if self.__runpath.endswith(".") == False :
       self.__runpath+'/'
 
-  def getSelectDir(self) :
-    return self.__cfg.dir.selectpath.replace('${runpath}', self.getRunDir())
-
   def getDataDir(self) :
-    return self.__cfg.dir.datapath.replace('${runpath}', self.getRunDir())
+    return self.datapath.replace('${runpath}', self.getRunDir())
 
-  def getCsvDir(self) :
-    return self.__cfg.dir.csvpath.replace('${runpath}', self.getRunDir())
+  def getSimDir(self) :
+    return self.simpath.replace('${runpath}', self.getRunDir())
+
+  def getSelectDir(self) :
+    return self.selectpath.replace('${runpath}', self.getRunDir())
 
   def getDetDir(self) :
-    return self.__cfg.dir.detpath.replace('${runpath}', self.getRunDir())
-  
+    return self.detpath.replace('${runpath}', self.getRunDir())
+
+  def getCsvDir(self) :
+    return self.csvpath.replace('${runpath}', self.getRunDir())
+
 #  def resolvePath(self.path) :
 
 class xmlMng :
