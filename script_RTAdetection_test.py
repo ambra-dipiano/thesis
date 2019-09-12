@@ -2,7 +2,7 @@
 # TESTING cssrcdetect FOR CTA-RTA PERFORMANCE EVALUATIONS #
 # ======================================================= #
 
-# IMPORTS ---!
+# IMpORTS ---!
 import gammalib
 import ctools
 import cscripts
@@ -10,17 +10,17 @@ import cscripts
 # from module_plot import showSkymap
 from module_analysis import *
 from module_xml import *
+from class_xml import *
 # import numpy as np
 import csv
 import os
 import sys
 from sys import argv
-
 # from lxml import etree as ET
 # import os.path
 
 # ==============
-# !!! SET UP !!!
+# !!! SET Up !!!
 # ==============
 
 # initialize global count ---!
@@ -28,18 +28,11 @@ chunk = int(sys.argv[1])  # global count
 trials = int(sys.argv[2])  # number of trials
 count = int(sys.argv[3])  # starting count
 
-# work with absolute paths ---!
-workdir = '/mnt/nvme0n1p1/piano_analysis/working-dir/run0406/'
-runpath = workdir + 'run0406_ID000126/'
-simpath = runpath + 'sim/'
-selectpath = runpath + 'selected_sim/'
-datapath = runpath + 'data/'
-csvpath = runpath + 'csv/'
-detpath = runpath + 'detection_all/'
-
 # inputs ---!
-template = workdir + 'run0406_ID000126_ebl.fits'
-model = workdir + 'run0406_ID000126.xml'
+cfg = loadConfig()
+p = fsMng(cfg)
+template = p.getWorkingDir() + 'run0406_ID000126_ebl.fits'
+model = p.getWorkingDir() + 'run0406_ID000126.xml'
 
 # ctools/cscripts parameters ---!
 caldb = 'prod3b'
@@ -79,10 +72,10 @@ else:
   fileroot = 'run0406ebl_'
 
 # =====================
-# !!! LOAD TEMPLATE !!!
+# !!! LOAD TEMpLATE !!!
 # =====================
 
-t, tbin_stop = load_template(template, tmax, extract_spec=False, if_ebl=if_ebl, model=model, pathout=datapath)
+t, tbin_stop = load_template(template, tmax, extract_spec=True, model=model, pathout=p.getDataDir())
 print('!!! check ---- tbin_stop=', tbin_stop) if checks is True else None
 
 for k in range(trials):
@@ -100,18 +93,18 @@ for k in range(trials):
   # simulate ---!
   for i in range(tbin_stop):
     if if_ebl is False:
-      model = datapath + 'run0406_ID000126_tbin%d.xml' % i  # !!
-      event = simpath + f + "_tbin%02d.fits" % i
+      model = p.getDataDir() + 'run0406_ID000126_tbin%d.xml' % i  # !!
+      event = p.getSimDir() + f + "_tbin%02d.fits" % i
     else:
-      model = datapath + 'run0406_ID000126_ebl_tbin%d.xml' % i  # !!
-      event = simpath + f + "_ebl_tbin%02d.fits" % i
+      model = p.getDataDir() + 'run0406_ID000126_ebl_tbin%d.xml' % i  # !!
+      event = p.getSimDir() + f + "_ebl_tbin%02d.fits" % i
     event_bins.append(event)
     if not os.path.isfile(event):
       simulate_event(model=model, event=event, t=[t[i], t[1 + i]], e=[elow, ehigh], caldb=caldb, irf=irf,
                      pointing=[pointRA, pointDEC], seed=count)
 
       # observation list ---!
-  eventList = simpath + 'obs_%s.xml' % f
+  eventList = p.getSimDir() + 'obs_%s.xml' % f
   if not os.path.isfile(eventList):
     observation_list(event=event_bins, eventList=eventList, obsname=f)
 
@@ -122,8 +115,8 @@ for k in range(trials):
   selectedEvents = []
 
   for i in range(tint):
-    selectedEvents.append(eventList.replace(simpath, selectpath).replace('obs_', 'texp%ds_' % texp[i]))
-    prefix = selectpath + 'texp%ds_' % texp[i]
+    selectedEvents.append(eventList.replace(p.getSimDir(), p.getSelectDir()).replace('obs_', 'texp%ds_' % texp[i]))
+    prefix = p.getSelectDir() + 'texp%ds_' % texp[i]
     if not os.path.isfile(selectedEvents[i]):
       select_event(eventList=eventList, event_selected=selectedEvents[i], prefix=prefix, t=[tmin, tmax[i]],
                    e=[emin, emax])
@@ -131,13 +124,13 @@ for k in range(trials):
   print('!!! check --- selection: ', selectedEvents) if checks is True else None
 
   # ========================
-  # !!! SELECTION SKYMAP !!!
+  # !!! SELECTION SKYMAp !!!
   # ========================
 
   skymapName = []
 
   for i in range(tint):
-    skymapName.append(selectedEvents[i].replace(selectpath, detpath).replace('.xml', '_skymap.fits'))
+    skymapName.append(selectedEvents[i].replace(p.setRunDir(), p.getDetDir()).replace('.xml', '_skymap.fits'))
     if not os.path.isfile(skymapName[i]):
       skymap_event(event_selected=selectedEvents[i], sky=skymapName[i], e=[emin, emax], caldb=caldb, irf=irf, wbin=wbin,
                    nbin=nbin)
@@ -274,7 +267,7 @@ for k in range(trials):
         decFit) if checks is True else None
 
   # ==================================
-  # !!! LIKELIHOOD SPECTRAL PARAMS !!!
+  # !!! LIKELIHOOD SpECTRAL pARAMS !!!
   # ==================================
 
   pref = []
@@ -297,24 +290,24 @@ for k in range(trials):
       prefErr.append([np.nan])
       indexErr.append([np.nan])
 
-  Pref = []
+  pref = []
   Index = []
-  Pivot = []
-  Pref_err = []
+  pivot = []
+  pref_err = []
   Index_err = []
   for i in range(len(pref)):
-    Pref.append(pref[i][0])
+    pref.append(pref[i][0])
     Index.append(index[i][0])
-    Pivot.append(pivot[i][0])
-    Pref_err.append(prefErr[i][0])
+    pivot.append(pivot[i][0])
+    pref_err.append(prefErr[i][0])
     Index_err.append(indexErr[i][0])
 
-  print('!!! check ----- prefactor:', Pref) if checks is True else None
+  print('!!! check ----- prefactor:', pref) if checks is True else None
   print('!!! check ----- index:', Index) if checks is True else None
-  print('!!! check ----- pivot:', Pivot) if checks is True else None
+  print('!!! check ----- pivot:', pivot) if checks is True else None
 
   # ====================
-  # !!! COMPUTE FLUX !!!
+  # !!! COMpUTE FLUX !!!
   # ====================
 
   #  (flux, f_lerr, f_uerr) = ((intensity, lerr, uerr) * (energy ** 2)) / (6.4215 * 1e5)
@@ -326,17 +319,17 @@ for k in range(trials):
   for i in range(tint):
     if Ndet[i] > 0:
       gamma = Index[i] + 1
-      cost = Pref[i] / gamma
+      cost = pref[i] / gamma
       cost_erg = cost * 6.42 * 1e5
-      integ = (emax * 1e6 / Pivot[i]) ** gamma - (emin * 1e6 / Pivot[i]) ** gamma
+      integ = (emax * 1e6 / pivot[i]) ** gamma - (emin * 1e6 / pivot[i]) ** gamma
       integ_erg = (emax * 1e6)
 
       flux.append(cost * integ)  # convert E (MeV)
       print('!!! check ----- next is gammalib.plaw_photon_flux') if checks is True else None
-      flux_ph.append(Pref[i] * gammalib.plaw_photon_flux(emin, emax, Pivot[i], Index[i]))  # takes E (TeV)
+      flux_ph.append(pref[i] * gammalib.plaw_photon_flux(emin, emax, pivot[i], Index[i]))  # takes E (TeV)
       flux_erg.append(cost_erg * integ_erg)  # convert E (erg)
       print('!!! check ----- next is gammalib.plaw_energy_flux') if checks is True else None
-      flux_en.append(Pref[i] * gammalib.plaw_energy_flux(emin, emax, Pivot[i], Index[i]))  # takes E (TeV)
+      flux_en.append(pref[i] * gammalib.plaw_energy_flux(emin, emax, pivot[i], Index[i]))  # takes E (TeV)
     else:
       flux.append(np.nan)
       flux_ph.append(np.nan)
@@ -363,7 +356,7 @@ for k in range(trials):
   ID = 'ID%06d' % count
 
   for i in range(tint):
-    csvName.append(csvpath + fileroot + '%ds_chunk%02d.csv' % (texp[i], chunk))
+    csvName.append(p.getCsvDir() + fileroot + '%ds_chunk%02d.csv' % (texp[i], chunk))
 
     row = []
     row.append([ID, texp[i], sigma, Ndet[i], Nsrc[i], raSrc001[i], decSrc001[i], raFit[i], decFit[i], tsv[i], flux[i],
@@ -392,9 +385,9 @@ for k in range(trials):
   print('!!! check --- ', count, ') trial done...') if checks is True else None
 
   if count > 4:
-    os.system('rm ' + simpath + '*sim%06d*' % count)
-    os.system('rm ' + selectpath + '*sim%06d*' % count)
-    os.system('rm ' + detpath + '*sim%06d*' % count)
+    os.system('rm ' + p.getSimDir() + '*sim%06d*' % count)
+    os.system('rm ' + p.getSelectDir() + '*sim%06d*' % count)
+    os.system('rm ' + p.getDetDir() + '*sim%06d*' % count)
 
 print('!!! check end\n\ndone......chunk ', chunk, 'sim id from ', trials * (chunk - 1) + 1, ' to ',
       count) if checks is True else None
