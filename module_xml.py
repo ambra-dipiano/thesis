@@ -103,8 +103,8 @@ def getConfInt_gauss(errors) :
   i = 0
   raList = []
   decList = []
-  prefList = []
-  indexList = []
+#  prefList = []
+#  indexList = []
   for src in root.findall('source'):
     i += 1
 
@@ -112,10 +112,11 @@ def getConfInt_gauss(errors) :
     if src.attrib['name'] != 'Background' and src.attrib['name'] != 'CTABackgroundModel' :
       ra = src.find('spatialModel/parameter[@name="RA"]').attrib['value']
       dec = src.find('spatialModel/parameter[@name="DEC"]').attrib['value']
-      prefactor = src.find('spectrum/parameter[@name="Prefactor"]').attrib['value']
-      index = src.find('spectrum/parameter[@name="Index"]').attrib['value']
+#      prefactor = src.find('spectrum/parameter[@name="Prefactor"]').attrib['value']
+#      index = src.find('spectrum/parameter[@name="Index"]').attrib['value']
       raList.append(ra)
       decList.append(dec)
+
 
   err = [raList, decList]
   file.close()

@@ -9,7 +9,7 @@ from astropy.io import fits
 import numpy as np
 import os.path
 import pandas as pd
-from scipy.interpolate import interp1d
+from scipy.interpolate import interp1d, interp2d
 
 # EXTRACT SPECTRUM ---!
 def extract_spectrum(template, model, Nt, Ne, tbin_stop, energy, spectra, if_ebl=False, ebl=None, pathout=None) :
@@ -250,14 +250,31 @@ def integrated_flux(event_selected, results, srcname='Src001', caldb='prod2', ir
   return
 
 # DEGRADE IRF ---!
-def degrade_IRF(irf, degraded_irf, factor=2) :
+def degrade_IRF(irf, degraded_irf, factor=3) :
+  extension = ['EFFECTIVE AREA', 'BACKGROUND']
+  field = [4, 6]
+  #  field = ['EFFAREA', 'BKG']
+  inv = 1 / factor
   with fits.open(irf) as hdul:
-    aeff = hdul['EFFECTIVE AREA'].data['EFFAREA'][:]
+    col = []
+    for i in range(len(extension)):
+      np.array(col.append(hdul[extension[i]].data.field(field[i])[:].astype(float)))
+
+  a = np.where(np.array([i*inv for i in col[0]]) is np.nan, 0., np.array([i*inv for i in col[0]]))
+  b = []
+  for i in range(len(col[1][0])) :
+    b.append(np.where(col[1][0][i] is np.nan, 0., col[1][0][i]) * inv)
+
+  b = np.array(b)
+  tmp = [a, b]
 
   with fits.open(degraded_irf, mode='update') as hdul:
-    hdul['EFFECTIVE AREA'].data['EFFAREA'][:] = aeff / factor
+    for i in range(len(extension)):
+      hdul[extension[i]].data.field(field[i])[:] = tmp[i]
     # save changes ---!
     hdul.flush
+
+  print('done')
 
   return
 
