@@ -35,7 +35,7 @@ def extract_spectrum(template, model, Nt, Ne, tbin_stop, energy, spectra, ebl=No
       for j in range(Ne):
        #write spectral data in E [MeV] and I [ph/cm2/s/MeV]
        out_file.write(str(energy[j][0]*1000.0)+' '+str(ebl[j][i]/1000.0)+"\n") if ebl!=None else None
-       out_file.write(str(energy[j][0]*1000.0)+' '+str((spectra[i][j]/1000.0)*np.exp(-tau[j]))+"\n") if ebl==None else None
+       out_file.write(str(energy[j][0]*1000.0)+' '+str((spectra[i][j]/1000.0)*np.exp(-tau[j]))+"\n") if tau!=None else None
       out_file.close()
 
       os.system('cp '+model+' '+pathout+'template_ebl_tbin'+str(i)+'.xml')  
@@ -111,9 +111,12 @@ def load_template(template, tmax, extract_spec=False, model=None, pathout=None) 
   # Emax in last bin ---!
   en[Ne] = energy[Ne - 1][0] + (energy[Ne - 1][0] - en[Ne - 1])
 
-  if extract_spec == True :
-    extract_spectrum(template, model, Nt, Ne, tbin_stop, energy=energy, spectra=spectra, if_ebl=if_ebl, pathout=pathout)
-
+  if extract_spec is True and if_ebl is True :
+    extract_spectrum(template, model, Nt, Ne, tbin_stop, energy=energy, spectra=spectra,
+                     ebl=ebl, if_ebl=if_ebl, pathout=pathout)
+  if extract_spec is True and if_ebl is False :
+    extract_spectrum(template, model, Nt, Ne, tbin_stop, energy=energy, spectra=spectra,
+                     if_ebl=if_ebl, pathout=pathout)
   return t, tbin_stop
 
 # ADD EBL TO TEMPLATE ---!
