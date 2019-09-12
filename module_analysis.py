@@ -38,10 +38,10 @@ def extract_spectrum(template, model, Nt, Ne, tbin_stop, energy, spectra, ebl=No
        out_file.write(str(energy[j][0]*1000.0)+' '+str((spectra[i][j]/1000.0)*np.exp(-tau[j]))+"\n") if tau is not None else None
       out_file.close()
 
-      os.system('cp '+model+' '+pathout+'template_ebl_tbin'+str(i)+'.xml')  
-      s = open(pathout+'template_ebl_tbin'+str(i)+'.xml').read() 
+      os.system('cp '+model+' '+pathout+'run0406_ID000126_tbin_ebl_tbin'+str(i)+'.xml')
+      s = open(pathout+'run0406_ID000126_tbin_ebl_tbin'+str(i)+'.xml').read()
       s = s.replace('data/spec_ebl','spec_ebl_tbin'+str(i))  
-      f = open(pathout+'template_ebl_tbin'+str(i)+'.xml','w') 
+      f = open(pathout+'run0406_ID000126_tbin_ebl_tbin'+str(i)+'.xml','w')
       f.write(s)
       f.close()
 
