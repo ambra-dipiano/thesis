@@ -19,11 +19,13 @@ def loadConfig() :
     cfg = json.load(json_cfg_file)
   return cfg
   
-class fsMng:
+class fsMng() :
+  cfg = loadConfig()
+
   def __init__(self, cfg) :
     self.__initPath(cfg.get('dir'))
     
-  def __initPath(self,cfg) :
+  def __initPath(self, cfg) :
     self.__cfg = cfg
     self.__workdir = self.__cfg.get('workdir')
     self.__runpath = self.__cfg.get('runpath')
@@ -33,24 +35,24 @@ class fsMng:
     self.detpath = self.__cfg.get('detpath')
     self.csvpath = self.__cfg.get('csvpath')
     if self.__workdir.endswith(".") == False :
-      self.__workdir+'/'
+      self.__workdir = self.__workdir+'/'
     if self.__runpath.endswith(".") == False :
-      self.__runpath+'/'
-  
+      self.__runpath = self.__runpath+'/'
+
+
   def getWorkingDir(self) :
     return self.__workdir
   def setWorkingDir(self, workingDir) :
     self.__workdir = workingDir
     if self.__workdir.endswith(".") == False :
-      self.__workdir+'/'
+      self.__workdir = self.__workdir+'/'
 
   def getRunDir(self) :
-    path = self.getWorkingDir()
-    return self.__runpath.replace('${workdir}', path)
+    return self.__runpath.replace('${workdir}', self.getWorkingDir())
   def setRunDir(self, runDir) :
     self.__runpath = runDir
     if self.__runpath.endswith(".") == False :
-      self.__runpath+'/'
+      self.__runpath = self.__runpath+'/'
 
   def getDataDir(self) :
     return self.datapath.replace('${runpath}', self.getRunDir())
@@ -67,14 +69,14 @@ class fsMng:
   def getCsvDir(self) :
     return self.csvpath.replace('${runpath}', self.getRunDir())
 
-#  def resolvePath(self.path) :
+  def resolvePath(self) :
+    return
 
-class xmlMng :
-  def __init__(self, xml) :
-    fs = fsMng()
-    self.file = open(fs.resolvePath(xml))
-    self.srcLib = ET.parse(self.file)
-    self.root = self.srcLib.getroot()
+class xmlMng() :
+
+  def __init__(self) :
+    cfg = loadConfig()
+    fs = fsMng(cfg=cfg)
     self.tsvList = []
     self.pos = [[], []]
     self.err = [[], []]
@@ -90,7 +92,14 @@ class xmlMng :
     self.bkgAtt = [[], [], []]
     self.tscalc = True
 
+  def __openXml(self, xml) :
+    self.file = open(xml)
+    self.srcLib = ET.parse(self.file)
+    self.root = self.srcLib.getroot()
+    return  self.srcLib, self.root
+
   def __getSrcObj(self) :
+    self.__openXml()
     src = self.root.findall('source')
     return src
 
@@ -215,8 +224,9 @@ class xmlMng :
       pass
 
   def modXml(self, skymap) :
-    self.__runDetection(skymap)
+    self.__runDetection(skymap=skymap)
     self.__setModel()
+    self.__openXml(xml=self.__detectionXml)
 
     i = 0
     for src in self.root.findall('source') :
