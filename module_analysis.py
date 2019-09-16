@@ -163,7 +163,10 @@ def simulate_event(model, event, t=[0, 2000], e=[0.03, 150.0], caldb='prod2', ir
   sim["emax"] = e[1]
   sim["seed"] = seed
   sim["logfile"] = event.replace('.fits', '.log')
-  sim.execute() 
+  if os.path.isfile(event) is False:
+    sim.execute()
+  else :
+    pass
 
   return
 
@@ -195,8 +198,11 @@ def select_event(eventList, event_selected, prefix, t=[0, 2000], e=[0.1, 100.0],
   selection['emax'] = e[1]
   selection['logfile'] = event_selected.replace('.xml', '.log')
   selection['debug'] = bool('no')
-  selection.execute()
- 
+  if os.path.isfile(event_selected) is False:
+    selection.execute()
+  else :
+    pass
+
   return
 
 # SKYMAP ---!
@@ -217,7 +223,10 @@ def skymap_event(event_selected, sky, e=[0.1, 100.0], caldb='prod2', irf='South_
   skymap['bkgsubtract'] = 'IRF'
   skymap['logfile'] = sky.replace('.fits', '.log')
   skymap['debug'] = bool('no')
-  skymap.execute() 
+  if os.path.isfile(sky) is False:
+    skymap.execute()
+  else :
+    pass
 
   return
 
@@ -232,7 +241,10 @@ def max_likelihood(event_selected, detection_model, results, caldb='prod2', irf=
   like['fix_spat_for_ts'] = bool('no')
   like['logfile'] = results.replace('.xml', '.log')
   like['debug'] = bool('no')  # default
-  like.execute()
+  if os.path.isfile(results) is False:
+    like.execute()
+  else :
+    pass
 
   return
 
@@ -252,7 +264,10 @@ def confidence_lv(event_selected, results, asym_errors, srcname='Src001', caldb=
       err['confidence'] = confidence_level[i]
       err['logfile'] = asym_errors.replace('.xml', '.log')
       err['debug'] = bool('no')  # default
-      err.execute()
+      if os.path.isfile(asym_errors) is False:
+        err.execute()
+      else:
+        pass
 
   return errors_conf
 
@@ -357,6 +372,9 @@ def sensitivity(model, event, output, caldb='prod2', irf='South_0.5h', t=100, e=
   sens['npix'] = npix
   sens['binsz'] = binsz
   sens['logfile'] = output.replace('', '.log')
-  sens.execute()
+  if os.path.isfile(output) is False:
+    sens.execute()
+  else :
+    pass
 
   return
