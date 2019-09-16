@@ -9,9 +9,8 @@ import cscripts
 # from astropy.io import fits
 # from module_plot import showSkymap
 from module_analysis import *
-from module_xml import *
 from class_xml import *
-# import numpy as np
+import numpy as np
 import csv
 import os
 import sys
@@ -27,12 +26,6 @@ from sys import argv
 chunk = int(sys.argv[1])  # global count
 trials = int(sys.argv[2])  # number of trials
 count = int(sys.argv[3])  # starting count
-
-# inputs ---!
-cfg = loadConfig()
-p = fsMng(cfg)
-template = p.getWorkingDir() + 'run0406_ID000126_ebl.fits'
-model = p.getWorkingDir() + 'run0406_ID000126.xml'
 
 # ctools/cscripts parameters ---!
 caldb = 'prod3b'
@@ -66,10 +59,17 @@ pointDEC = trueDec + offmax[1]  # (deg)
 # others ---!
 checks = False
 if_ebl = True
-if if_ebl is False:
-  fileroot = 'run0406_'
-else:
-  fileroot = 'run0406ebl_'
+fileroot = 'run0406_'
+
+# inputs ---!
+cfg = loadConfig()
+p = fsMng(cfg)
+model = p.getWorkingDir() + 'run0406_ID000126.xml'
+if if_ebl is True :
+  template = p.getWorkingDir() + 'run0406_ID000126_ebl.fits'
+else :
+  template = p.getWorkingDir() + 'run0406_ID000126.fits'
+
 
 # =====================
 # !!! LOAD TEMpLATE !!!
@@ -81,7 +81,10 @@ print('!!! check ---- tbin_stop=', tbin_stop) if checks is True else None
 for k in range(trials):
   count += 1
   # attach ID to fileroot ---!
-  f = fileroot + 'sim%06d' % (count)
+  if if_ebl is True :
+    f = fileroot + 'ebl%06d' % (count)
+  else :
+    f = fileroot + 'sim%06d' % (count)
   print('!!! check ---- file=', f) if checks is True else None
 
   # ====================
@@ -130,7 +133,7 @@ for k in range(trials):
   skymapName = []
 
   for i in range(tint):
-    skymapName.append(selectedEvents[i].replace(p.setRunDir(), p.getDetDir()).replace('.xml', '_skymap.fits'))
+    skymapName.append(selectedEvents[i].replace(p.getSelectDir(), p.getDetDir()).replace('.xml', '_skymap.fits'))
     if not os.path.isfile(skymapName[i]):
       skymap_event(event_selected=selectedEvents[i], sky=skymapName[i], e=[emin, emax], caldb=caldb, irf=irf, wbin=wbin,
                    nbin=nbin)
@@ -146,7 +149,7 @@ for k in range(trials):
   pos = []
 
   for i in range(tint):
-    det, reg, coord = srcDetection_spcModeling(skymapName[i], sigma=sigma, maxSrc=1)
+    det, reg, coord = xmlMng().modXml(skymap=skymapName[i])
     detXml.append(det)
     detReg.append(reg)
     pos.append(coord)
@@ -194,7 +197,7 @@ for k in range(trials):
 
   for i in range(tint):
     if Ndet[i] > 0:
-      tsList.append(getTSV(resultsName[i]))
+      tsList.append(xmlMng.loadTSV(resultsName[i]))
     else:
       tsList.append([np.nan])
 
@@ -247,8 +250,8 @@ for k in range(trials):
   prefErr = []
   for i in range(tint):
     if Ndet[i] > 0:
-      raList.append(getRaDec(resultsName[i])[0])
-      decList.append(getRaDec(resultsName[i])[1])
+      raList.append(xmlMng.loadRaDec(resultsName[i])[0])
+      decList.append(xmlMng.loadRaDec(resultsName[i])[1])
     else:
       raList.append([np.nan])
       decList.append([np.nan])
@@ -277,11 +280,11 @@ for k in range(trials):
   pivot = []
   for i in range(tint):
     if Ndet[i] > 0:
-      pref.append(getSpectral(resultsName[i])[0][0])
-      index.append(getSpectral(resultsName[i])[0][1])
-      pivot.append(getSpectral(resultsName[i])[0][2])
-      prefErr.append(getSpectral(resultsName[i])[1][0])
-      indexErr.append(getSpectral(resultsName[i])[1][1])
+      pref.append(xmlMng.loadSpectral(resultsName[i])[0][0])
+      index.append(xmlMng.loadSpectral(resultsName[i])[0][1])
+      pivot.append(xmlMng.loadSpectral(resultsName[i])[0][2])
+      prefErr.append(xmlMng.loadSpectral(resultsName[i])[1][0])
+      indexErr.append(xmlMng.loadSpectral(resultsName[i])[1][1])
 
     else:
       pref.append([np.nan])
