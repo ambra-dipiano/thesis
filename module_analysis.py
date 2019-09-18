@@ -13,7 +13,7 @@ from scipy.interpolate import interp1d, interp2d
 
 
 # EXTRACT SPECTRUM ---!
-def extract_spectrum(template, model, Nt, Ne, tbin_stop, energy, spectra, ebl=None, tau=None, if_ebl=False, pathout=None) :
+def extract_spectrum(model, Nt, Ne, tbin_stop, energy, spectra, ebl=None, tau=None, if_ebl=False, pathout=None) :
   print('work in progress')
 
   for i in range(tbin_stop):
@@ -37,9 +37,12 @@ def extract_spectrum(template, model, Nt, Ne, tbin_stop, energy, spectra, ebl=No
       out_file = open(outfile, 'a')
       for j in range(Ne):
         # write spectral data in E [MeV] and I [ph/cm2/s/MeV]
-        if ebl is not None :
-          out_file.write(str(energy[j][0] * 1000.0) + ' ' + str(ebl[i][j] / 1000.0) + "\n")
-        if tau is not None :
+        if ebl is not None and tau is None:
+          out_file.write(str(energy[j][0] * 1000) + ' ' + str(ebl[i][j] / 1000) + "\n")
+#          if i == 0 :
+            # print('Abs Flux at', energy[j], '=', ebl[i][j])
+            # print('Flux at', energy[j], '=', spectra[i][j])
+        if tau is not None and ebl is None :
           out_file.write(str(energy[j][0] * 1000.0) + ' ' + str((spectra[i][j] / 1000.0) * np.exp(-tau[j])) + "\n")
 
       out_file.close()
@@ -118,10 +121,11 @@ def load_template(template, tmax, extract_spec=False, model=None, pathout=None) 
   en[Ne] = energy[Ne - 1][0] + (energy[Ne - 1][0] - en[Ne - 1])
 
   if extract_spec is True and if_ebl is True :
-    extract_spectrum(template, model, Nt, Ne, tbin_stop, energy=energy, spectra=spectra,
+    extract_spectrum(model, Nt, Ne, tbin_stop, energy=energy, spectra=spectra,
                      ebl=ebl, if_ebl=if_ebl, pathout=pathout)
   if extract_spec is True and if_ebl is False :
-    extract_spectrum(template, model, Nt, Ne, tbin_stop, energy=energy, spectra=spectra,
+    # here you should call the add_ebl and/or fits_ebl ---!!!!!!!!!!
+    extract_spectrum(model, Nt, Ne, tbin_stop, energy=energy, spectra=spectra,
                      if_ebl=if_ebl, pathout=pathout)
   return t, tbin_stop
 
@@ -139,13 +143,47 @@ def add_ebl(table, z, time, energy, spectra, plot=False) :
   ebl_gilmore = np.empty_like(spectra)
   # compute ---!
   for i in range(len(time)):
-    for j in range(len(energy)):
-      ebl_gilmore[j] = spectra[i][j] * np.exp(-tau_gilmore[j])
+    for j in range(len(energy)): # QUI ERRORE
+      ebl_gilmore[i][j] = spectra[i][j] * np.exp(-tau_gilmore[j])
+#      if i == 0 :
+#        print('Abs flux at', energy[j], '=', ebl_gilmore[i][j])
 
   if plot is True :
     return ebl_gilmore, E, energy, tau, tau_gilmore
   else :
     return ebl_gilmore
+
+# CREATE EBL FITS MODEL [WIP] ---!
+def fits_ebl(template, template_ebl, table, zfetch=True, z=None, plot=False) :
+  with fits.open(template) as hdul:
+    # energybins [GeV] ---!
+    energy = np.array(hdul[1].data)
+    # timebins [s] ---!
+    time = np.array(hdul[2].data)
+    # spectra ---!
+    spectra = np.array(hdul[3].data)
+    # redshift [must approx to chose the column] ---!
+    if zfetch is True :
+      z = hdul[0].header['REDSHIFT']
+    # retrive the ebl ---!
+    if plot is True :
+      ebl, x, x2, y, y2 = add_ebl(table, z, time, energy, spectra, plot=plot)
+    else :
+      ebl = add_ebl(table, z, time, energy, spectra, plot=plot)
+    # update fits ---!
+    hdu = fits.BinTableHDU(name='EBL Gilmore', data=ebl)
+    header = hdu.header
+    header.set('UNITS', 'ph/cm2/s/GeV', ' ')
+    hdu = fits.BinTableHDU(name='EBL Gilmore', data=ebl, header=header)
+    hdul.append(hdu)
+    # save to new ---!
+    os.system('rm ' + template_ebl)
+    hdul.writeto(template_ebl, overwrite=False)
+
+  if plot is True :
+    return x, y, x2, y2
+  else :
+    return
 
 # SIMULATE EVENT LIST ---!
 def simulate_event(model, event, t=[0, 2000], e=[0.03, 150.0], caldb='prod2', irf='South_0.5h', roi=5, pointing=[83.63, 22.01], seed=1) :
@@ -229,6 +267,48 @@ def skymap_event(event_selected, sky, e=[0.1, 100.0], caldb='prod2', irf='South_
     pass
 
   return
+
+# DETECTION ---!
+def runDetection(skymap, sigma=5, maxSrc=10, bkgType='irf', exclrad=0.5, corr_rad=0.1) :
+  detectionXml = '%s' % skymap.replace('_skymap.fits', '_det%ssgm.xml' % sigma)
+  detectionReg = '%s' % skymap.replace('_skymap.fits', '_det%ssgm.reg' % sigma)
+
+  detection = cscripts.cssrcdetect()
+  detection['inmap'] = skymap
+  detection['outmodel'] = detectionXml
+  detection['outds9file'] = detectionReg
+  detection['srcmodel'] = 'POINT'
+  detection['bkgmodel'] = bkgType.upper()
+  detection['threshold'] = int(sigma)
+  detection['maxsrcs'] = maxSrc
+  detection['exclrad'] = exclrad
+  detection['corr_rad'] = corr_rad
+  detection['corr_kern'] = 'GAUSSIAN'
+  detection['logfile'] = detectionXml.replace('.xml', '.log')
+  detection['debug'] = bool('no')
+  detection.execute()
+
+  return detectionXml, detectionReg
+#   def __runDetection(self, skymap) :
+#     self.__detectionXml = '%s' % skymap.replace('_skymap.fits', '_det%ssgm.xml' % self.sigma)
+#     self.__detectionReg = '%s' % skymap.replace('_skymap.fits', '_det%ssgm.reg' % self.sigma)
+#
+#     detection = cscripts.cssrcdetect()
+#     detection['inmap'] = skymap
+#     detection['outmodel'] = self.__detectionXml
+#     detection['outds9file'] = self.__detectionReg
+#     detection['srcmodel'] = 'POINT'
+#     detection['bkgmodel'] = self.bkgType.upper()
+#     detection['threshold'] = int(self.sigma)
+#     detection['maxsrcs'] = self.maxSrc
+#     detection['exclrad'] = self.exclrad
+#     detection['corr_rad'] = self.corr_rad
+#     detection['corr_kern'] = 'GAUSSIAN'
+#     detection['logfile'] = self.__detectionXml.replace('.xml', '.log')
+#     detection['debug'] = bool('no')
+#     detection.execute()
+#
+#     return
 
 # CTLIKE ---!
 def max_likelihood(event_selected, detection_model, results, caldb='prod2', irf='South_0.5h') :
@@ -319,38 +399,6 @@ def degrade_IRF(irf, degraded_irf, factor=3) :
   print('done')
 
   return
-
-# CREATE EBL FITS MODEL [WIP] ---!
-def fits_ebl(template, template_ebl, table, zfetch=True, z=None, plot=False) :
-  with fits.open(template) as hdul:
-    # energybins [GeV] ---!
-    energy = np.array(hdul[1].data)
-    # timebins [s] ---!
-    time = np.array(hdul[2].data)
-    # spectra ---!
-    spectra = np.array(hdul[3].data)
-    # redshift [must approx to chose the column] ---!
-    if zfetch is True :
-      z = hdul[0].header['REDSHIFT']
-    # retrive the ebl ---!
-    if plot is True :
-      ebl, x, x2, y, y2 = add_ebl(table, z, time, energy, spectra, plot=plot)
-    else :
-      ebl = add_ebl(table, z, time, energy, spectra, plot=plot)
-    # update fits ---!
-    hdu = fits.BinTableHDU(name='EBL Gilmore', data=ebl)
-    header = hdu.header
-    header.set('UNITS', 'ph/cm2/s/GeV', ' ')
-    hdu = fits.BinTableHDU(name='EBL Gilmore', data=ebl, header=header)
-    hdul.append(hdu)
-    # save to new ---!
-    os.system('rm ' + template_ebl)
-    hdul.writeto(template_ebl, overwrite=False)
-
-  if plot is True :
-    return template_ebl, x, y, x2, y2
-  else :
-    return template_ebl
 
 # CTA SENSITIVITY ---!
 def sensitivity(model, event, output, caldb='prod2', irf='South_0.5h', t=100, e=[0.03, 150.0], roi=5, srcName='Crab',
