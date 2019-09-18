@@ -28,11 +28,7 @@ trials = int(sys.argv[2]) # number of trials
 count = int(sys.argv[3]) # starting count  
 
 # work with absolute paths ---!
-<<<<<<< HEAD
 workdir = '/mnt/nvme0n1p1/piano_analysis/working-dir/run0406_test/run0406/'
-=======
-workdir = '/home/ambra/Desktop/cluster-morgana/run0406_test/run0406/'
->>>>>>> ac38a6c34bdc9a801ace2707e96ad48e917e99a4
 runpath = workdir + 'run0406_ID000126/'
 simpath = runpath + 'sim/'
 selectpath = runpath + 'selected_sim/'
@@ -85,11 +81,7 @@ else :
 # !!! LOAD TEMPLATE !!!
 # =====================
 
-<<<<<<< HEAD
-t, tbin_stop = load_template(template, tmax, extract_spec=False, if_ebl=if_ebl, model=model, pathout=datapath)
-=======
 t, tbin_stop = load_template(template, tmax, extract_spec=True, model=model, pathout=datapath)
->>>>>>> ac38a6c34bdc9a801ace2707e96ad48e917e99a4
 print('!!! check ---- tbin_stop=', tbin_stop) if checks is True else None
 
 for k in range(trials) :
@@ -157,11 +149,7 @@ for k in range(trials) :
   pos = []
   
   for i in range(tint) :
-<<<<<<< HEAD
-    det, reg, coord = srcDetection_spcModeling(skymapName[i], sigma=sigma, maxSrc=1)
-=======
     det, reg, coord = srcDetection_spcModeling(skymapName[i], sigma=sigma, maxSrc=10)
->>>>>>> ac38a6c34bdc9a801ace2707e96ad48e917e99a4
     detXml.append(det)
     detReg.append(reg)
     pos.append(coord)
@@ -240,16 +228,6 @@ for k in range(trials) :
   # !!! ASYMMETRICAL ERRORS !!!
   # ===========================
 
-<<<<<<< HEAD
-  errorsName = []  
-
-  for i in range(tint) :
-    errorsName.append(resultsName[i].replace('_results.xml', '_errors.xml'))
-    if Ndet[i] > 0:
-      if not os.path.isfile(errorsName[i]) :
-        errors_conf = confidence_lv(event_selected=selectedEvents[i], results=resultsName[i], asym_errors=errorsName[i], caldb=caldb, irf=irf)
-  print('!!! check --- asym errors: ', errors_conf) if checks is True else None
-=======
   # errorsName = []
   # for i in range(tint) :
   #   errorsName.append(resultsName[i].replace('_results.xml', '_errors.xml'))
@@ -257,7 +235,6 @@ for k in range(trials) :
   #     if not os.path.isfile(errorsName[i]) :
   #       errors_conf = confidence_lv(event_selected=selectedEvents[i], results=resultsName[i], asym_errors=errorsName[i], caldb=caldb, irf=irf)
   # print('!!! check --- asym errors: ', errors_conf) if checks is True else None
->>>>>>> ac38a6c34bdc9a801ace2707e96ad48e917e99a4
 
   # ===========================
   # !!! LIKELIHOOD RA & DEC !!!
@@ -403,7 +380,7 @@ for k in range(trials) :
 
   print('!!! check --- ', count, ') trial done...') if checks is True else None
  
-<<<<<<< HEAD
+
   if count > 4 :
     os.system('rm ' + simpath + '*sim%06d*' % count)
     os.system('rm ' + selectpath + '*sim%06d*' % count)
@@ -411,15 +388,6 @@ for k in range(trials) :
 
 print('!!! check end\n\ndone......chunk ', chunk, 'sim id from ', trials*(chunk-1)+1, ' to ', count) if checks is True else None
 print('!!! check end\n\ndone...... removed all files in sim, selected_sim and detection_all except seeds from 1 to 4') if checks is True else None
-=======
-  # if count > 4 :
-  #   os.system('rm ' + simpath + '*sim%06d*' % count)
-  #   os.system('rm ' + selectpath + '*sim%06d*' % count)
-  #   os.system('rm ' + detpath + '*sim%06d*' % count)
-
-# print('!!! check end\n\ndone......chunk ', chunk, 'sim id from ', trials*(chunk-1)+1, ' to ', count) if checks is True else None
-# print('!!! check end\n\ndone...... removed all files in sim, selected_sim and detection_all except seeds from 1 to 4') if checks is True else None
->>>>>>> ac38a6c34bdc9a801ace2707e96ad48e917e99a4
 
 
 
