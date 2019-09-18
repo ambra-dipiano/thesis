@@ -83,7 +83,7 @@ if if_fits is True :
 # !!! LOAD TEMpLATE !!!
 # =====================
 
-t, tbin_stop = load_template(template, tmax, extract_spec=True, model=model, pathout=p.getDataDir())
+t, tbin_stop = load_template(template, tmax, extract_spec=False, model=model, pathout=p.getDataDir())
 print('!!! check ---- tbin_stop=', tbin_stop) if checks is True else None
 
 for k in range(trials):
@@ -155,17 +155,18 @@ for k in range(trials):
   detXml = []
   detReg = []
   pos = []
+  detObj = []
+  detectionXml = []
 
   for i in range(tint):
     # needs the analysis class as the prms init goes in there, not in the xml ---!
-    detectionXml, detectionReg = runDetection(skymap=skymapName[i])
-    detObj = xmlMng(detectionXml)
-    detObj.sigma = sigma
-    detObj.maxSrc = 1
-    newXml = detObj.modXml()
-    detXml.append(detectionXml)
-    detReg.append(detectionReg)
-    pos.append(detObj.loadTSV())
+    detectionXml.append(runDetection(skymap=skymapName[i])[0])
+    detObj.append(xmlMng(detectionXml[i]))
+    detObj[i].sigma = sigma
+    detObj[i].maxSrc = 1
+    detObj[i].modXml()
+    detXml.append(detectionXml[i])
+    pos.append(detObj[i].loadRaDec())
 
     print('\n\n==========\n\n!!! check --- detection.............', texp[i], 's done\n\n!!! coords:', pos,
           '\n\n ==========\n\n') if checks is True else None
@@ -193,13 +194,14 @@ for k in range(trials):
   # ==================
 
   resultsName = []
+  likeObj = []
 
   for i in range(tint):
     resultsName.append(detXml[i].replace('_det%dsgm.xml' % sigma, '_det%dsgm_results.xml' % sigma))
     if Ndet[i] > 0:
-      if not os.path.isfile(resultsName[i]):
-        max_likelihood(event_selected=selectedEvents[i], detection_model=detXml[i], results=resultsName[i], caldb=caldb,
-                       irf=irf)
+#      if not os.path.isfile(resultsName[i]):
+      max_likelihood(event_selected=selectedEvents[i], detection_model=detXml[i], results=resultsName[i], caldb=caldb, irf=irf)
+      likeObj.append(xmlMng(resultsName[i]))
   print('!!! check --- max likelihoods: ', resultsName) if checks is True else None
 
   # ======================
@@ -210,7 +212,7 @@ for k in range(trials):
 
   for i in range(tint):
     if Ndet[i] > 0:
-      tsList.append(xmlMng.loadTSV(resultsName[i]))
+      tsList.append(likeObj[i].loadTSV())
     else:
       tsList.append([np.nan])
 
@@ -243,16 +245,16 @@ for k in range(trials):
   # ===========================
   # !!! ASYMMETRICAL ERRORS !!!
   # ===========================
-
-  errorsName = []
-
-  for i in range(tint):
-    errorsName.append(resultsName[i].replace('_results.xml', '_errors.xml'))
-    if Ndet[i] > 0:
-      if not os.path.isfile(errorsName[i]):
-        errors_conf = confidence_lv(event_selected=selectedEvents[i], results=resultsName[i], asym_errors=errorsName[i],
-                                    caldb=caldb, irf=irf)
-  print('!!! check --- asym errors: ', errors_conf) if checks is True else None
+  #
+  # errorsName = []
+  #
+  # for i in range(tint):
+  #   errorsName.append(resultsName[i].replace('_results.xml', '_errors.xml'))
+  #   if Ndet[i] > 0:
+  #     if not os.path.isfile(errorsName[i]):
+  #       errors_conf = confidence_lv(event_selected=selectedEvents[i], results=resultsName[i], asym_errors=errorsName[i],
+  #                                   caldb=caldb, irf=irf)
+  # print('!!! check --- asym errors: ', errors_conf) if checks is True else None
 
   # ===========================
   # !!! LIKELIHOOD RA & DEC !!!
@@ -263,8 +265,8 @@ for k in range(trials):
   prefErr = []
   for i in range(tint):
     if Ndet[i] > 0:
-      raList.append(xmlMng.loadRaDec(resultsName[i])[0])
-      decList.append(xmlMng.loadRaDec(resultsName[i])[1])
+      raList.append(likeObj[i].loadTSV()[0])
+      decList.append(likeObj[i].loadTSV()[1])
     else:
       raList.append([np.nan])
       decList.append([np.nan])
@@ -293,12 +295,9 @@ for k in range(trials):
   pivot = []
   for i in range(tint):
     if Ndet[i] > 0:
-      pref.append(xmlMng.loadSpectral(resultsName[i])[0][0])
-      index.append(xmlMng.loadSpectral(resultsName[i])[0][1])
-      pivot.append(xmlMng.loadSpectral(resultsName[i])[0][2])
-      prefErr.append(xmlMng.loadSpectral(resultsName[i])[1][0])
-      indexErr.append(xmlMng.loadSpectral(resultsName[i])[1][1])
-
+      pref.append(likeObj[i].loadSpectral()[0])
+      index.append(likeObj[i].loadSpectral()[1])
+      pivot.append(likeObj[i].loadSpectral()[2])
     else:
       pref.append([np.nan])
       index.append([np.nan])
@@ -372,6 +371,8 @@ for k in range(trials):
   ID = 'ID%06d' % count
 
   for i in range(tint):
+    detObj[i].closeXml()
+    likeObj[i].closeXml()
     csvName.append(p.getCsvDir() + fileroot + '%ds_chunk%02d.csv' % (texp[i], chunk))
 
     row = []
@@ -407,8 +408,7 @@ for k in range(trials):
 
 print('!!! check end\n\ndone......chunk ', chunk, 'sim id from ', trials * (chunk - 1) + 1, ' to ',
       count) if checks is True else None
-print(
-  '!!! check end\n\ndone...... removed all files in sim, selected_sim and detection_all except seeds from 1 to 4') if checks is True else None
+print('!!! check end\n\ndone...... removed all files in sim, selected_sim and detection_all except seeds from 1 to 4') if checks is True else None
 
 print('\n\n\n\n\n\n\ndone\n\n\n\n\n\n\n\n') if checks is True else None
 
