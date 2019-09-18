@@ -4,28 +4,30 @@
 
 
 # IMPORT ---!
-#import xml.etree.ElementTree as ET
-#import lxml.etree as ET
+# import xml.etree.ElementTree as ET
+# import lxml.etree as ET
 from lxml import etree as ET
 import numpy as np
 import cscripts
 import json
 import os
 
-def loadConfig() :
-  #Load configuration file
-  cfgFile = os.path.dirname(__file__)+'/config.json'
-  with open(cfgFile) as json_cfg_file :
+
+def loadConfig():
+  # Load configuration file
+  cfgFile = os.path.dirname(__file__) + '/config.json'
+  with open(cfgFile) as json_cfg_file:
     cfg = json.load(json_cfg_file)
   return cfg
-  
-class fsMng() :
+
+
+class fsMng():
   cfg = loadConfig()
 
-  def __init__(self, cfg) :
+  def __init__(self, cfg):
     self.__initPath(cfg.get('dir'))
-    
-  def __initPath(self, cfg) :
+
+  def __initPath(self, cfg):
     self.__cfg = cfg
     self.__workdir = self.__cfg.get('workdir')
     self.__runpath = self.__cfg.get('runpath')
@@ -34,49 +36,55 @@ class fsMng() :
     self.selectpath = self.__cfg.get('selectpath')
     self.detpath = self.__cfg.get('detpath')
     self.csvpath = self.__cfg.get('csvpath')
-    if self.__workdir.endswith(".") == False :
-      self.__workdir = self.__workdir+'/'
-    if self.__runpath.endswith(".") == False :
-      self.__runpath = self.__runpath+'/'
+    if self.__workdir.endswith(".") == False:
+      self.__workdir = self.__workdir + '/'
+    if self.__runpath.endswith(".") == False:
+      self.__runpath = self.__runpath + '/'
 
-
-  def getWorkingDir(self) :
+  def getWorkingDir(self):
     return self.__workdir
-  def setWorkingDir(self, workingDir) :
+
+  def setWorkingDir(self, workingDir):
     self.__workdir = workingDir
-    if self.__workdir.endswith(".") == False :
-      self.__workdir = self.__workdir+'/'
+    if self.__workdir.endswith(".") == False:
+      self.__workdir = self.__workdir + '/'
 
-  def getRunDir(self) :
+  def getRunDir(self):
     return self.__runpath.replace('${workdir}', self.getWorkingDir())
-  def setRunDir(self, runDir) :
-    self.__runpath = runDir
-    if self.__runpath.endswith(".") == False :
-      self.__runpath = self.__runpath+'/'
 
-  def getDataDir(self) :
+  def setRunDir(self, runDir):
+    self.__runpath = runDir
+    if self.__runpath.endswith(".") == False:
+      self.__runpath = self.__runpath + '/'
+
+  def getDataDir(self):
     return self.datapath.replace('${runpath}', self.getRunDir())
 
-  def getSimDir(self) :
+  def getSimDir(self):
     return self.simpath.replace('${runpath}', self.getRunDir())
 
-  def getSelectDir(self) :
+  def getSelectDir(self):
     return self.selectpath.replace('${runpath}', self.getRunDir())
 
-  def getDetDir(self) :
+  def getDetDir(self):
     return self.detpath.replace('${runpath}', self.getRunDir())
 
-  def getCsvDir(self) :
+  def getCsvDir(self):
     return self.csvpath.replace('${runpath}', self.getRunDir())
 
-  def resolvePath(self) :
+  def resolvePath(self):
     return
 
-class xmlMng() :
 
-  def __init__(self) :
-    cfg = loadConfig()
-    fs = fsMng(cfg=cfg)
+class xmlMng():
+
+  def __init__(self, xml):
+    print(os.path.isfile(xml), xml)
+    self.__xml = xml
+    self.__cfg = loadConfig()
+    self.file = open(self.__xml)
+    self.srcLib = ET.parse(self.file)
+    self.root = self.srcLib.getroot()
     self.tsvList = []
     self.pos = [[], []]
     self.err = [[], []]
@@ -92,67 +100,61 @@ class xmlMng() :
     self.bkgAtt = [[], [], []]
     self.tscalc = True
 
-  def __openXml(self, xml) :
-    self.file = open(xml)
-    self.srcLib = ET.parse(self.file)
-    self.root = self.srcLib.getroot()
-    return  self.srcLib, self.root
-
-  def __getSrcObj(self) :
-    self.__openXml()
+  def __getSrcObj(self):
     src = self.root.findall('source')
     return src
 
-  def __skipNode(self,node,cfg,src) :
+  def __skipNode(self, src, cfg):
     '''
     :node: node for skip chacks
     :retun true for skip node
     '''
-    if src.attrib[cfg.idAttribute] in cfg.skip:
+    if src.attrib[cfg.get('idAttribute')] in cfg.get('skip'):
       return True
 
-    for filter in cfg.filters :
-      if src.attrib[filter.attribute] == filter.value :
+    for filter in cfg.get('filters'):
+      if src.attrib[filter.get('attribute')] == filter.get('value'):
         return True
 
-    if len(cfg.selectors) == 0 :
+    if len(cfg.get('selectors')) == 0:
       return False
-      
-    for select in cfg.selectors :
-      if src.attrib[select.attribute] == select.value :
+
+    for select in cfg.get('selectors'):
+      if src.attrib[select.get('attribute')] == select.get('value'):
         return False
 
-    return True # shouldn't not return anything here? Or a logical sum of the previous?
+    return True  # shouldn't not return anything here? Or a logical sum of the previous?
 
   # RETRIVES TSV v01 ---!
-  def loadTSV(self) :
-    for src in self.root.findall('source') :
-      if self.__skipNode(src, self.__cfg.xml.tsv) :
+  def loadTSV(self):
+    for src in self.root.findall('source'):
+      if self.__skipNode(src, self.__cfg.get('xml').get('tsv')):
         continue
 
+      tsv = src.attrib['ts'] if src.attrib['tscalc'] == '1' else None
       # source candidates ---!
-      self.tsvList.append(src.attrib['ts'])
+      self.tsvList.append(tsv)
     return self.tsvList
 
-  def loadRaDec(self) :
+  def loadRaDec(self):
     posRaList, posDecList = ([] for i in range(2))
-    for src in self.root.findall('source') :
-      if self.__skipNode(src, self.__cfg.xml.RaDec) :
+    for src in self.root.findall('source'):
+      if self.__skipNode(src, self.__cfg.get('xml').get('RaDec')):
         continue
-        
+
       # source candidates ---!
       ra = src.find('spatialModel/parameter[@name="RA"]').attrib['value']
       dec = src.find('spatialModel/parameter[@name="DEC"]').attrib['value']
-      posRaList.append(ra.attrib['value'])
-      posDecList.append(dec.attrib['value'])
+      posRaList.append(ra)
+      posDecList.append(dec)
 
     self.pos = [posRaList, posDecList]
     return self.pos
 
-  def loadConfInt(self) :
+  def loadConfInt(self):
     raList, decList = ([] for i in range(2))
     for src in self.root.findall('source'):
-      if self.__skipNode(src, self.__cfg.xml.ConfInt) :
+      if self.__skipNode(src, self.__cfg.get('xml').get('ConfInt')):
         continue
 
       ra = src.find('spatialModel/parameter[@name="RA"]').attrib['value']
@@ -163,10 +165,10 @@ class xmlMng() :
     self.err = [raList, decList]
     return self.err
 
-  def loadSpectral(self) :
+  def loadSpectral(self):
     indexList, prefList, pivotList = ([] for i in range(3))
     for src in self.root.findall('source'):
-      if self.__skipNode(src, self.__cfg.xml.ConfInt) :
+      if self.__skipNode(src, self.__cfg.get('xml').get('src')):
         continue
 
       index = float(src.find('spectrum/parameter[@name="Index"]').attrib['value']) * float(
@@ -182,55 +184,33 @@ class xmlMng() :
     self.spectral = [indexList, prefList, pivotList]
     return self.spectral
 
-  def __runDetection(self, skymap) :
-    self.__detectionXml = '%s' % skymap.replace('_skymap.fits', '_det%ssgm.xml' % self.sigma)
-    self.__detectionReg = '%s' % skymap.replace('_skymap.fits', '_det%ssgm.reg' % self.sigma)
-
-    detection = cscripts.cssrcdetect()
-    detection['inmap'] = skymap
-    detection['outmodel'] = self.__detectionXml
-    detection['outds9file'] = self.__detectionReg
-    detection['srcmodel'] = 'POINT'
-    detection['bkgmodel'] = self.bkgType.upper()
-    detection['threshold'] = int(self.sigma)
-    detection['maxsrcs'] = self.maxSrc
-    detection['exclrad'] = self.exclrad
-    detection['corr_rad'] = self.corr_rad
-    detection['corr_kern'] = 'GAUSSIAN'
-    detection['logfile'] = self.__detectionXml.replace('.xml', '.log')
-    detection['debug'] = bool('no')
-    detection.execute()
-
+  def __saveXml(self):
+    self.srcLib.write(self.__xml, encoding="UTF-8", xml_declaration=True,
+                      standalone=False, pretty_print=True)
     return
 
-  def __saveXml(self) :
-    self.srcLib.write(self.__detectionXml, encoding="UTF-8", xml_declaration=True,
-                 standalone=False, pretty_print=True)
-    return
-
-  def __setModel(self) :
-    if self.default_model is True :
-      Att_Prefactor = {'name':'Prefactor', 'scale':'1e-16', 'value':'5.7', 'min':'1e-07', 'max':'1000.0', 'free':'1'}
-      Att_Index = {'name':'Index', 'scale':'-1', 'value':'2.4', 'min':'0', 'max':'5.0', 'free':'1'}
-      Att_PivotEn = {'name':'PivotEnergy', 'scale':'1e6', 'value':'1', 'min':'1e-07', 'max':'1000.0', 'free':'0'}
-      Bkg_Prefactor = {'name':'Prefactor', 'scale':'1', 'value':'1', 'min':'1e-03', 'max':'1e+3', 'free':'1'}
-      Bkg_Index = {'name':'Index', 'scale':'1', 'value':'0.0', 'min':'-5', 'max':'+5.0', 'free':'1'}
-      Bkg_PivotEn = {'name':'PivotEnergy', 'scale':'1e6', 'value':'1', 'min':'0.01', 'max':'1000.0', 'free':'0'}
+  def __setModel(self):
+    if self.default_model is True:
+      Att_Prefactor = {'name': 'Prefactor', 'scale': '1e-16', 'value': '5.7', 'min': '1e-07', 'max': '1000.0',
+                       'free': '1'}
+      Att_Index = {'name': 'Index', 'scale': '-1', 'value': '2.4', 'min': '0', 'max': '5.0', 'free': '1'}
+      Att_PivotEn = {'name': 'PivotEnergy', 'scale': '1e6', 'value': '1', 'min': '1e-07', 'max': '1000.0', 'free': '0'}
+      Bkg_Prefactor = {'name': 'Prefactor', 'scale': '1', 'value': '1', 'min': '1e-03', 'max': '1e+3', 'free': '1'}
+      Bkg_Index = {'name': 'Index', 'scale': '1', 'value': '0.0', 'min': '-5', 'max': '+5.0', 'free': '1'}
+      Bkg_PivotEn = {'name': 'PivotEnergy', 'scale': '1e6', 'value': '1', 'min': '0.01', 'max': '1000.0', 'free': '0'}
 
       self.srcAtt = [Att_Prefactor, Att_Index, Att_PivotEn]
       self.bkgAtt = [Bkg_Prefactor, Bkg_Index, Bkg_PivotEn]
       return self.srcAtt, self.bkgAtt
-    else :
+    else:
       pass
 
-  def modXml(self, skymap) :
-    self.__runDetection(skymap=skymap)
+  def modXml(self):
     self.__setModel()
-    self.__openXml(xml=self.__detectionXml)
-
+    # source ---!
     i = 0
-    for src in self.root.findall('source') :
-      if self.__skipNode(src, self.__cfg.xml.src) :
+    for src in self.root.findall('source'):
+      if self.__skipNode(src=src, cfg=self.__cfg.get('xml').get('src')):
         continue
 
       i += 1
@@ -246,18 +226,18 @@ class xmlMng() :
       # new spectral params ---!
       for j in range(3):
         prm = ET.SubElement(spc, 'parameter', attrib=self.srcAtt[j])
-        if prm.attrib['name'] == 'Prefactor' and i > 1 :
+        if prm.attrib['name'] == 'Prefactor' and i > 1:
           prm.set('value', str(float(prm.attrib['value']) / 2 ** (i - 1)))
           prm.tail = '\n\t\t\t'.replace('\t', ' ' * 2) if j < 2 else '\n\t\t'.replace('\t', ' ' * 2)
           spc.insert(j, prm)
-
-    for src in self.root.findall('source[@name]') :
-      if src.attrib[self.__cfg.idAttribute] in self.__cfg.skip :
+    # background ---!
+    for src in self.root.findall('source[@name]'):
+      if self.__skipNode(src=src, cfg=self.__cfg.get('xml').get('src')):
         # set bkg attributes ---!
         src.set('instrument', '%s' % self.instr.upper()) if self.instr.capitalize() != 'None' else None
-        if self.bkgType.capitalize() == 'Aeff' or self.bkgType.capitalize() == 'Irf' :
+        if self.bkgType.capitalize() == 'Aeff' or self.bkgType.capitalize() == 'Irf':
           src.set('type', 'CTA%sBackground' % self.bkgType.capitalize())
-        if self.bkgType.capitalize() == 'Racc' :
+        if self.bkgType.capitalize() == 'Racc':
           src.set('type', 'RadialAcceptance')
         # remove spectral component ---!
         rm = src.find('spectrum')
@@ -272,31 +252,28 @@ class xmlMng() :
           prm.tail = '\n\t\t\t'.replace('\t', ' ' * 2) if j < 2 else '\n\t\t'.replace('\t', ' ' * 2)
 
     self.__saveXml()
-    return self.__detectionXml, self.__detectionReg
+    return
 
-  def FreeFixPrms(self) :
-    for src in self.root.findall('source') :
-      if self.__skipNode(src, self.__cfg.xml.src) :
+  def FreeFixPrms(self):
+    for src in self.root.findall('source'):
+      if self.__skipNode(src, self.__cfg.xml.src):
         continue
 
-      for free in self.__cfg.xml.src.free :
+      for free in self.__cfg.xml.src.free:
         src.find('spatialModel/parameter[@name="%s"]' % free.value).set('free', '1')
-      for fix in self.__cfg.xml.src.fix :
+      for fix in self.__cfg.xml.src.fix:
         src.find('spatialModel/parameter[@name="%s"]' % fix.value).set('free', '0')
 
-    for src in self.root.findall('source') :
-      if self.__skipNode(src, self.__cfg.xml.src) :
-        for bkg in self.__cfg.xml.src.bkg :
+    for src in self.root.findall('source'):
+      if self.__skipNode(src, self.__cfg.xml.src):
+        for bkg in self.__cfg.xml.src.bkg:
           src.find('spatialModel/parameter[@name="%s"]' % bkg.value).set('free', '1')
-        for prm in src not in self.__cfg.xml.src.bkg :
+        for prm in src not in self.__cfg.xml.src.bkg:
           prm.set('free', '0')
 
     self.__saveXml()
     return
 
-  def closeXml(self) :
+  def closeXml(self):
     self.file.close()
     return
-
-
-
