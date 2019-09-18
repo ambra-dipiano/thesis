@@ -661,13 +661,13 @@ def showButterfly_v02(diagram, spectrum, axisLim='auto', suffix='none', title='n
   return
 
 # V01 ---!
-def degradedIRF_3d(x, y, z, xlabel='x', ylabel='y', zlabel='z', title=None, c=['b'],
+def degradedIRF_3d(x, y, z, xlabel='x', ylabel='y', zlabel='z', title=None, c=['b'], zscale='linear',
                    fontsize=14, zlim=(0,1), alpha=[1], label=None, savefig=None, show=True) :
 
-  fig = plt.figure(figsize=(6, 6))
+  fig = plt.figure(figsize=(12, 6))
   plt.rc('text', usetex=True)
   sns.set_style("whitegrid", {'axes.grid': False})
-  ax = fig.add_subplot(111, projection='3d', zscale='linear')
+  ax = fig.add_subplot(111, projection='3d', zscale=zscale)
 
   curve = []
   for i in range(len(z)) :
@@ -677,12 +677,13 @@ def degradedIRF_3d(x, y, z, xlabel='x', ylabel='y', zlabel='z', title=None, c=['
   ax.set_zlim(zlim)
   ax.set_xlabel(xlabel, fontsize=fontsize)
   ax.set_ylabel(ylabel, fontsize=fontsize)
-  ax.set_zlabel(zlabel, fontsize=fontsize)
+  ax.set_zlabel(zlabel, fontsize=fontsize, labelpad=12)
   ax.set_title(title, fontsize=fontsize) if title != None else None
   ax.legend(curve, label, loc=0) if label != None else None
 
   fig.savefig(savefig) if savefig != None else None
   plt.show() if show != False else None
+  plt.close()
 
   return
 
