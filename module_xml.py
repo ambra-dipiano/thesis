@@ -164,7 +164,7 @@ def getSpectral(likeXml) :
   return val, err
 
 # RUN DETECTION AND MODEL SPECTRAL COMPONENTS v09 ---!
-def srcDetection_spcModeling(skymap, sigma=5, instr='CTA', bkgType='Irf', src_attrib='none', bkg_attrib='none', tsv=True, maxSrc=20, exclrad = 0.5, if_ebl=True) :
+def srcDetection_spcModeling(skymap, sigma=5, instr='CTA', bkgType='Irf', src_attrib='none', bkg_attrib='none', tsv=True, maxSrc=20, exclrad = 0.5, if_cutoff=False) :
   ''''
   Runs cssrcdetect tool to detected src candidates in a counts map. The listing file is modeled in its spectral components.
   :param:
@@ -219,7 +219,7 @@ def srcDetection_spcModeling(skymap, sigma=5, instr='CTA', bkgType='Irf', src_at
     Att_Index = {'name':'Index', 'scale':'-1', 'value':'2.4', 'min':'0', 'max':'5.0', 'free':'1'}
     Att_PivotEn = {'name':'PivotEnergy', 'scale':'1e6', 'value':'1', 'min':'1e-07', 'max':'1000.0', 'free':'0'}
     srcAtt = [Att_Prefactor, Att_Index, Att_PivotEn]
-    if if_ebl is True :
+    if if_cutoff is True :
       Att_CutOff = {'name': 'CutoffEnergy', 'scale': '1e6', 'value': '1.0', 'min': '0.01', 'max': '1000.0', 'free': '1'}
       srcAtt.append(Att_CutOff)
 
