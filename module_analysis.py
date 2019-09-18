@@ -39,12 +39,8 @@ def extract_spectrum(model, Nt, Ne, tbin_stop, energy, spectra, ebl=None, tau=No
         # write spectral data in E [MeV] and I [ph/cm2/s/MeV]
         if ebl is not None and tau is None:
           out_file.write(str(energy[j][0] * 1000) + ' ' + str(ebl[i][j] / 1000) + "\n")
-#          if i == 0 :
-            # print('Abs Flux at', energy[j], '=', ebl[i][j])
-            # print('Flux at', energy[j], '=', spectra[i][j])
         if tau is not None and ebl is None :
           out_file.write(str(energy[j][0] * 1000.0) + ' ' + str((spectra[i][j] / 1000.0) * np.exp(-tau[j])) + "\n")
-
       out_file.close()
 
       os.system('cp ' + model + ' ' + pathout + 'run0406_ID000126_ebl_tbin' + str(i) + '.xml')
@@ -145,8 +141,6 @@ def add_ebl(table, z, time, energy, spectra, plot=False) :
   for i in range(len(time)):
     for j in range(len(energy)): # QUI ERRORE
       ebl_gilmore[i][j] = spectra[i][j] * np.exp(-tau_gilmore[j])
-#      if i == 0 :
-#        print('Abs flux at', energy[j], '=', ebl_gilmore[i][j])
 
   if plot is True :
     return ebl_gilmore, E, energy, tau, tau_gilmore
@@ -395,8 +389,6 @@ def degrade_IRF(irf, degraded_irf, factor=3) :
       hdul[extension[i]].data.field(field[i])[:] = tmp[i]
     # save changes ---!
     hdul.flush
-
-  print('done')
 
   return
 
