@@ -59,6 +59,7 @@ pointDEC = trueDec + offmax[1]  # (deg)
 # others ---!
 checks = False
 if_ebl = True
+if_fits = True
 fileroot = 'run0406_'
 
 # inputs ---!
@@ -70,6 +71,13 @@ if if_ebl is True :
 else :
   template = p.getWorkingDir() + 'run0406_ID000126.fits'
 
+# template ---!
+if if_fits is True :
+  nominal = p.getWorkingDir() + 'run0406_ID000126.fits'
+  absorbed = p.getWorkingDir() + 'run0406_ID000126_ebl.fits'
+  fiducial = '/home/ambra/Desktop/cluster-morgana/gilmore_tau_fiducial.csv'
+
+  fits_ebl(nominal, absorbed, fiducial, zfetch=False, z='0.10', plot=False)
 
 # =====================
 # !!! LOAD TEMpLATE !!!
@@ -149,10 +157,15 @@ for k in range(trials):
   pos = []
 
   for i in range(tint):
-    det, reg, coord = xmlMng().modXml(skymap=skymapName[i])
-    detXml.append(det)
-    detReg.append(reg)
-    pos.append(coord)
+    # needs the analysis class as the prms init goes in there, not in the xml ---!
+    detectionXml, detectionReg = runDetection(skymap=skymapName[i])
+    detObj = xmlMng(detectionXml)
+    detObj.sigma = sigma
+    detObj.maxSrc = 1
+    newXml = detObj.modXml()
+    detXml.append(detectionXml)
+    detReg.append(detectionReg)
+    pos.append(detObj.loadTSV())
 
     print('\n\n==========\n\n!!! check --- detection.............', texp[i], 's done\n\n!!! coords:', pos,
           '\n\n ==========\n\n') if checks is True else None
