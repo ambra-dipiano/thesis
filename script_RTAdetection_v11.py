@@ -28,7 +28,7 @@ trials = int(sys.argv[2]) # number of trials
 count = int(sys.argv[3]) # starting count  
 
 # work with absolute paths ---!
-workdir = '/mnt/nvme0n1p1/piano_analysis/working-dir/run0406/'
+workdir = '/mnt/nvme0n1p1/piano_analysis/working-dir/run0406_test/run0406/'
 runpath = workdir + 'run0406_ID000126/'
 simpath = runpath + 'sim/'
 selectpath = runpath + 'selected_sim/'
