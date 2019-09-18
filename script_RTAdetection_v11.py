@@ -81,7 +81,7 @@ else :
 # !!! LOAD TEMPLATE !!!
 # =====================
 
-t, tbin_stop = load_template(template, tmax, extract_spec=True, model=model, pathout=datapath)
+t, tbin_stop = load_template(template, tmax, extract_spec=False, model=model, pathout=datapath)
 print('!!! check ---- tbin_stop=', tbin_stop) if checks is True else None
 
 for k in range(trials) :
@@ -149,7 +149,7 @@ for k in range(trials) :
   pos = []
   
   for i in range(tint) :
-    det, reg, coord = srcDetection_spcModeling(skymapName[i], sigma=sigma, maxSrc=10)
+    det, reg, coord = srcDetection_spcModeling(skymapName[i], sigma=sigma, maxSrc=10, if_cutoff=True)
     detXml.append(det)
     detReg.append(reg)
     pos.append(coord)
