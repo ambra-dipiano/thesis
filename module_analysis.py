@@ -57,7 +57,7 @@ def extract_spectrum(template, model, Nt, Ne, tbin_stop, energy, spectra, if_ebl
 
       os.system('cp '+model+' '+pathout+'run0406_ID000126_tbin'+str(i))
       s = open(pathout+'run0406_ID000126_tbin'+str(i)+'.xml').read()
-      s = s.replace(pathout+'spec','spec_tbin'+str(i))
+      s = s.replace('spec','spec_tbin'+str(i))
       f = open(pathout+'run0406_ID000126_tbin'+str(i)+'.xml','w')
       f.write(s)
       f.close()  
