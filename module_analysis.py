@@ -195,10 +195,7 @@ def simulate_event(model, event, t=[0, 2000], e=[0.03, 150.0], caldb='prod2', ir
   sim["emax"] = e[1]
   sim["seed"] = seed
   sim["logfile"] = event.replace('.fits', '.log')
-  if os.path.isfile(event) is False:
-    sim.execute()
-  else :
-    pass
+  sim.execute()
 
   return
 
@@ -211,7 +208,6 @@ def observation_list(event, eventList, obsname) :
   for i in range(len(event)):
     obs = obslist.append('observation name="%s" id="%02d" instrument="CTA"' % (obsname,i))
     obs.append('parameter name="EventList" file="%s"' % event[i])
-
   xml.save(eventList)
 
   return
@@ -230,10 +226,7 @@ def select_event(eventList, event_selected, prefix, t=[0, 2000], e=[0.1, 100.0],
   selection['emax'] = e[1]
   selection['logfile'] = event_selected.replace('.xml', '.log')
   selection['debug'] = bool('no')
-  if os.path.isfile(event_selected) is False:
-    selection.execute()
-  else :
-    pass
+  selection.execute()
 
   return
 
@@ -255,10 +248,7 @@ def skymap_event(event_selected, sky, e=[0.1, 100.0], caldb='prod2', irf='South_
   skymap['bkgsubtract'] = 'IRF'
   skymap['logfile'] = sky.replace('.fits', '.log')
   skymap['debug'] = bool('no')
-  if os.path.isfile(sky) is False:
-    skymap.execute()
-  else :
-    pass
+  skymap.execute()
 
   return
 
@@ -315,10 +305,7 @@ def max_likelihood(event_selected, detection_model, results, caldb='prod2', irf=
   like['fix_spat_for_ts'] = bool('no')
   like['logfile'] = results.replace('.xml', '.log')
   like['debug'] = bool('no')  # default
-  if os.path.isfile(results) is False:
-    like.execute()
-  else :
-    pass
+  like.execute()
 
   return
 
@@ -338,10 +325,7 @@ def confidence_lv(event_selected, results, asym_errors, srcname='Src001', caldb=
       err['confidence'] = confidence_level[i]
       err['logfile'] = asym_errors.replace('.xml', '.log')
       err['debug'] = bool('no')  # default
-      if os.path.isfile(asym_errors) is False:
-        err.execute()
-      else:
-        pass
+      err.execute()
 
   return errors_conf
 
@@ -412,9 +396,6 @@ def sensitivity(model, event, output, caldb='prod2', irf='South_0.5h', t=100, e=
   sens['npix'] = npix
   sens['binsz'] = binsz
   sens['logfile'] = output.replace('', '.log')
-  if os.path.isfile(output) is False:
-    sens.execute()
-  else :
-    pass
+  sens.execute()
 
   return
