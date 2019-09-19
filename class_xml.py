@@ -200,8 +200,7 @@ class xmlMng():
 
   def __setModel(self):
     if self.default_model is True:
-      Att_Prefactor = {'name': 'Prefactor', 'scale': '1e-16', 'value': '5.7', 'min': '1e-07', 'max': '1000.0',
-                       'free': '1'}
+      Att_Prefactor = {'name': 'Prefactor', 'scale': '1e-16', 'value': '5.7', 'min': '1e-07', 'max': '1000.0', 'free': '1'}
       Att_Index = {'name': 'Index', 'scale': '-1', 'value': '2.4', 'min': '0', 'max': '5.0', 'free': '1'}
       Att_PivotEn = {'name': 'PivotEnergy', 'scale': '1e6', 'value': '1', 'min': '1e-07', 'max': '1000.0', 'free': '0'}
       Bkg_Prefactor = {'name': 'Prefactor', 'scale': '1', 'value': '1', 'min': '1e-03', 'max': '1e+3', 'free': '1'}
@@ -211,8 +210,7 @@ class xmlMng():
       self.srcAtt = [Att_Prefactor, Att_Index, Att_PivotEn]
       self.bkgAtt = [Bkg_Prefactor, Bkg_Index, Bkg_PivotEn]
       if self.if_cut is True:
-        Att_CutOff = {'name': 'CutoffEnergy', 'scale': '1e6', 'value': '1.0', 'min': '0.01', 'max': '1000.0',
-                        'free': '1'}
+        Att_CutOff = {'name': 'CutoffEnergy', 'scale': '1e6', 'value': '1.0', 'min': '0.01', 'max': '1000.0', 'free': '1'}
         self.srcAtt.append(Att_CutOff)
 
       return self.srcAtt, self.bkgAtt
@@ -245,8 +243,8 @@ class xmlMng():
         prm = ET.SubElement(spc, 'parameter', attrib=self.srcAtt[j])
         if prm.attrib['name'] == 'Prefactor' and i > 1:
           prm.set('value', str(float(prm.attrib['value']) / 2 ** (i - 1)))
-          prm.tail = '\n\t\t\t'.replace('\t', ' ' * 2) if j < len(self.srcAtt) else '\n\t\t'.replace('\t', ' ' * 2)
-          spc.insert(j, prm)
+        prm.tail = '\n\t\t\t'.replace('\t', ' ' * 2) if j < len(self.srcAtt) else '\n\t\t'.replace('\t', ' ' * 2)
+        spc.insert(j, prm)
     # background ---!
     for src in self.root.findall('source[@name]'):
       if self.__skipNode(src=src, cfg=self.__cfg.get('xml').get('src')):
