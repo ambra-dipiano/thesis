@@ -57,10 +57,10 @@ pointRA = trueRa + offmax[0]  # (deg)
 pointDEC = trueDec + offmax[1]  # (deg)
 
 # others ---!
-checks = False
+checks = True
 if_ebl = True
 if_fits = False
-if_cut = True
+if_cut = False
 fileroot = 'run0406_'
 
 # inputs ---!
@@ -188,12 +188,16 @@ for k in range(trials):
   resultsName = []
   likeObj = []
   for i in range(tint):
-    resultsName.append(detXml[i].replace('_det%dsgm.xml' % sigma, '_det%dsgm_results.xml' % sigma))
+    resultsName.append(detXml[i].replace('_det%dsgm.xml' % sigma, '_like%dsgm.xml' % sigma))
     if Ndet[i] > 0:
       max_likelihood(event_selected=selectedEvents[i], detection_model=detXml[i], results=resultsName[i], caldb=caldb, irf=irf)
       likeObj.append(xmlMng(resultsName[i]))
-      likeObj[i].if_cut = True
-  print('!!! check --- max likelihoods: ', resultsName) if checks is True else None
+      likeObj[i].sigma = sigma
+      likeObj[i].maxSrc = 1
+      likeObj[i].if_cut = if_cut
+    else:
+      likeObj.append(np.nan)
+    print('!!! check --- max likelihoods: ', resultsName) if checks is True else None
 
   # ======================
   # !!! LIKELIHOOD TSV !!!
@@ -252,8 +256,8 @@ for k in range(trials):
   prefErr = []
   for i in range(tint):
     if Ndet[i] > 0:
-      raList.append(likeObj[i].loadTSV()[0])
-      decList.append(likeObj[i].loadTSV()[1])
+      raList.append(likeObj[i].loadRaDec()[0])
+      decList.append(likeObj[i].loadRaDec()[1])
     else:
       raList.append([np.nan])
       decList.append([np.nan])
@@ -345,7 +349,7 @@ for k in range(trials):
   for i in range(len(detObj)):
     detObj[i].closeXml()
   for i in range(len(likeObj)):
-    likeObj[i].closeXml()
+    likeObj[i].closeXml() if type(likeObj[i]) is not float else None
 
   # ================== #
   # !!! WRITE CSV FILE #
@@ -388,7 +392,7 @@ print('!!! check end\n\ndone......chunk ', chunk, 'sim id from ', trials * (chun
       count) if checks is True else None
 print('!!! check end\n\ndone...... removed all files in sim, selected_sim and detection_all except seeds from 1 to 4') if checks is True else None
 
-print('\n\n\n\n\n\n\ndone\n\n\n\n\n\n\n\n') if checks is True else None
+print('\n\n\n\n\n\n\ndone\n\n\n\n\n\n\n\n')
 
 
 
