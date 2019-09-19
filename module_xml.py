@@ -274,7 +274,7 @@ def srcDetection_spcModeling(skymap, sigma=5, instr='CTA', bkgType='Irf', src_at
         prm = ET.SubElement(spc, 'parameter', attrib=srcAtt[j])
         prm.set('value', str(float(prm.attrib['value']) / 2 ** (i - 1))) if prm.attrib['name'] == 'Prefactor' \
                                                                             and i > 1 else None
-        prm.tail = '\n\t\t\t'.replace('\t', ' ' * 2) if j < (len(srcAtt)-1) else '\n\t\t'.replace('\t', ' ' * 2)
+        prm.tail = '\n\t\t\t'.replace('\t', ' ' * 2) if j < len(srcAtt) else '\n\t\t'.replace('\t', ' ' * 2)
         spc.insert(j, prm)
 
       # store detected src positions (RA & DEC) ---!
@@ -300,7 +300,7 @@ def srcDetection_spcModeling(skymap, sigma=5, instr='CTA', bkgType='Irf', src_at
       # new bkg params ---!
       for j in range(len(bkgAtt)):
         prm = ET.SubElement(spc, 'parameter', attrib=bkgAtt[j])
-        prm.tail = '\n\t\t\t'.replace('\t', ' ' * 2) if j < 2 else '\n\t\t'.replace('\t', ' ' * 2)
+        prm.tail = '\n\t\t\t'.replace('\t', ' ' * 2) if j < len(bkgAtt) else '\n\t\t'.replace('\t', ' ' * 2)
 
   # store ra & dec in position list ---!
   posList = [raList, decList]
