@@ -79,7 +79,6 @@ class fsMng():
 class xmlMng():
 
   def __init__(self, xml):
-    print(os.path.isfile(xml), xml)
     self.__xml = xml
     self.__cfg = loadConfig()
     self.file = open(self.__xml)
@@ -99,6 +98,7 @@ class xmlMng():
     self.srcAtt = [[], [], []]
     self.bkgAtt = [[], [], []]
     self.tscalc = True
+    self.if_cut = False
 
   def __getSrcObj(self):
     src = self.root.findall('source')
@@ -106,7 +106,6 @@ class xmlMng():
 
   def __skipNode(self, src, cfg):
     '''
-    :node: node for skip chacks
     :retun true for skip node
     '''
     if src.attrib[cfg.get('idAttribute')] in cfg.get('skip'):
@@ -165,8 +164,13 @@ class xmlMng():
     self.err = [raList, decList]
     return self.err
 
+  @property
   def loadSpectral(self):
+    global cutoffList
     indexList, prefList, pivotList = ([] for i in range(3))
+    if self.if_cut is True :
+      cutoffList = []
+
     for src in self.root.findall('source'):
       if self.__skipNode(src, self.__cfg.get('xml').get('src')):
         continue
@@ -180,14 +184,19 @@ class xmlMng():
       indexList.append(index)
       prefList.append(pref)
       pivotList.append(pivot)
+      self.spectral = [indexList, prefList, pivotList]
+      if self.if_cut is True :
+        cutoff = float(src.find('spectrum/parameter[@name="CutoffEnergy"]').attrib['value']) * float(
+            src.find('spectrum/parameter[@name="CutoffEnergy"]').attrib['scale'])
+        cutoffList.append(cutoff)
+        self.spectral.append(cutoffList)
 
-    self.spectral = [indexList, prefList, pivotList]
     return self.spectral
 
   def __saveXml(self):
     self.srcLib.write(self.__xml, encoding="UTF-8", xml_declaration=True,
                       standalone=False, pretty_print=True)
-    return
+    return self.__xml
 
   def __setModel(self):
     if self.default_model is True:
@@ -201,6 +210,11 @@ class xmlMng():
 
       self.srcAtt = [Att_Prefactor, Att_Index, Att_PivotEn]
       self.bkgAtt = [Bkg_Prefactor, Bkg_Index, Bkg_PivotEn]
+      if self.if_cut is True:
+        Att_CutOff = {'name': 'CutoffEnergy', 'scale': '1e6', 'value': '1.0', 'min': '0.01', 'max': '1000.0',
+                        'free': '1'}
+        self.srcAtt.append(Att_CutOff)
+
       return self.srcAtt, self.bkgAtt
     else:
       pass
@@ -219,16 +233,19 @@ class xmlMng():
       rm = src.find('spectrum')
       src.remove(rm)
       # new spectrum ---!
-      spc = ET.SubElement(src, 'spectrum', attrib={'type': 'PowerLaw'})
+      if self.if_cut is True:
+        spc = ET.SubElement(src, 'spectrum', attrib={'type': 'ExponentialCutoffPowerLaw'})
+      else:
+        spc = ET.SubElement(src, 'spectrum', attrib={'type': 'PowerLaw'})
       spc.text = '\n\t\t\t'.replace('\t', ' ' * 2)
       spc.tail = '\n\t\t'.replace('\t', ' ' * 2)
       src.insert(0, spc)
       # new spectral params ---!
-      for j in range(3):
+      for j in range(len(self.srcAtt)):
         prm = ET.SubElement(spc, 'parameter', attrib=self.srcAtt[j])
         if prm.attrib['name'] == 'Prefactor' and i > 1:
           prm.set('value', str(float(prm.attrib['value']) / 2 ** (i - 1)))
-          prm.tail = '\n\t\t\t'.replace('\t', ' ' * 2) if j < 2 else '\n\t\t'.replace('\t', ' ' * 2)
+          prm.tail = '\n\t\t\t'.replace('\t', ' ' * 2) if j < len(self.srcAtt) else '\n\t\t'.replace('\t', ' ' * 2)
           spc.insert(j, prm)
     # background ---!
     for src in self.root.findall('source[@name]'):
@@ -247,12 +264,12 @@ class xmlMng():
         spc.text = '\n\t\t\t'.replace('\t', ' ' * 2)
         spc.tail = '\n\t'.replace('\t', ' ' * 2)
         # new bkg params ---!
-        for j in range(3):
+        for j in range(len(self.bkgAtt)):
           prm = ET.SubElement(spc, 'parameter', attrib=self.bkgAtt[j])
-          prm.tail = '\n\t\t\t'.replace('\t', ' ' * 2) if j < 2 else '\n\t\t'.replace('\t', ' ' * 2)
+          prm.tail = '\n\t\t\t'.replace('\t', ' ' * 2) if j < len(self.bkgAtt) else '\n\t\t'.replace('\t', ' ' * 2)
 
-    self.__saveXml()
-    return
+    self.__xml = self.__saveXml()
+    return self.__xml
 
   def FreeFixPrms(self):
     for src in self.root.findall('source'):
