@@ -8,7 +8,7 @@ import ctools
 import cscripts
 # from astropy.io import fits
 # from module_plot import showSkymap
-from module_analysis import *
+from class_analysis import *
 from class_xml import *
 import numpy as np
 import csv
@@ -64,13 +64,15 @@ if_cut = False
 fileroot = 'run0406_'
 
 # inputs ---!
-cfg = loadConfig()
-p = fsMng(cfg)
+cfg = xmlConfig()
+p = cfgMng(cfg)
 model = p.getWorkingDir() + 'run0406_ID000126.xml'
 if if_ebl is True :
   template = p.getWorkingDir() + 'run0406_ID000126_ebl.fits'
 else :
   template = p.getWorkingDir() + 'run0406_ID000126.fits'
+
+print(template)
 
 # template ---!
 if if_fits is True :
