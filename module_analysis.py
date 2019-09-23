@@ -139,7 +139,7 @@ def add_ebl(table, z, time, energy, spectra, plot=False) :
   ebl_gilmore = np.empty_like(spectra)
   # compute ---!
   for i in range(len(time)):
-    for j in range(len(energy)): # QUI ERRORE
+    for j in range(len(energy)):
       ebl_gilmore[i][j] = spectra[i][j] * np.exp(-tau_gilmore[j])
 
   if plot is True :

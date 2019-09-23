@@ -9,7 +9,7 @@ from astropy.io import fits
 from matplotlib.colors import SymLogNorm
 from matplotlib import rc
 import numpy as np
-#import pyregion
+import pyregion
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.patches import Rectangle
 
