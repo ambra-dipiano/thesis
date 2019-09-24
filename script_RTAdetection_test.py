@@ -6,8 +6,6 @@
 import gammalib
 import ctools
 import cscripts
-# from astropy.io import fits
-# from module_plot import showSkymap
 from class_analysis import *
 from class_xml import *
 import numpy as np
@@ -15,8 +13,6 @@ import csv
 import os
 import sys
 from sys import argv
-# from lxml import etree as ET
-# import os.path
 
 # ==============
 # !!! SET Up !!!
@@ -59,33 +55,42 @@ pointDEC = trueDec + offmax[1]  # (deg)
 # others ---!
 checks = True
 if_ebl = True
-if_fits = False
+if_fits = True
 if_cut = False
 fileroot = 'run0406_'
 
 # inputs ---!
 cfg = xmlConfig()
 p = cfgMng(cfg)
-model = p.getWorkingDir() + 'run0406_ID000126.xml'
-if if_ebl is True :
+# template ---!
+tObj = analysis()
+tObj.pointing = [pointRA, pointDEC]
+tObj.roi = roi
+tObj.tmax = tmax
+tObj.model = p.getWorkingDir() + 'run0406_ID000126.xml'
+
+if if_fits is True and chunk-1 == 0:
+  tObj.template = p.getWorkingDir() + 'run0406_ID000126.fits' # nominal ---!
+  new_template = p.getWorkingDir() + 'run0406_ID000126_ebl.fits' # absorbed ---!
+  tObj.table = '/home/ambra/Desktop/cluster-morgana/gilmore_tau_fiducial.csv' # fiducial table ---!
+  tObj.zfetch = True
+  tObj.fits_ebl(new_template)
+if if_ebl is True:
   template = p.getWorkingDir() + 'run0406_ID000126_ebl.fits'
+  tObj.if_ebl = if_ebl
 else :
   template = p.getWorkingDir() + 'run0406_ID000126.fits'
+  tObj.if_ebl = if_ebl
+tObj.template = template  # assign template ---!
 
-print(template)
-
-# template ---!
-if if_fits is True :
-  nominal = p.getWorkingDir() + 'run0406_ID000126.fits'
-  absorbed = p.getWorkingDir() + 'run0406_ID000126_ebl.fits'
-  fiducial = '/home/ambra/Desktop/cluster-morgana/gilmore_tau_fiducial.csv'
-  fits_ebl(nominal, absorbed, fiducial, zfetch=False, z='0.10', plot=False)
 
 # =====================
 # !!! LOAD TEMpLATE !!!
 # =====================
 
-t, tbin_stop = load_template(template, tmax, extract_spec=False, model=model, pathout=p.getDataDir())
+tObj.if_ebl = if_ebl
+tObj.extract_spec = True
+tbin_stop = tObj.load_template()
 print('!!! check ---- tbin_stop=', tbin_stop) if checks is True else None
 
 for k in range(trials):
@@ -97,32 +102,29 @@ for k in range(trials):
     f = fileroot + 'sim%06d' % (count)
   print('!!! check ---- file=', f) if checks is True else None
 
-  # ====================
-  # !!! SIMULATE GRB !!!
-  # ====================
+  # --------------------------------- SIMULATION --------------------------------- !!!
 
+  print(tObj.tmax)
   event_bins = []
   # simulate ---!
   for i in range(tbin_stop):
     if if_ebl is False:
-      model = p.getDataDir() + 'run0406_ID000126_tbin%d.xml' % i  # !!
-      event = p.getSimDir() + f + "_tbin%02d.fits" % i
+      tObj.model = p.getDataDir() + 'run0406_ID000126_tbin%02d.xml' % i
+      tObj.event = p.getSimDir() + f + "_tbin%02d.fits" % i
     else:
-      model = p.getDataDir() + 'run0406_ID000126_ebl_tbin%d.xml' % i  # !!
-      event = p.getSimDir() + f + "_ebl_tbin%02d.fits" % i
-    event_bins.append(event)
-    if not os.path.isfile(event):
-      simulate_event(model=model, event=event, t=[t[i], t[1 + i]], e=[elow, ehigh], caldb=caldb, irf=irf,
-                     pointing=[pointRA, pointDEC], seed=count)
-
+      tObj.model = p.getDataDir() + 'run0406_ID000126_ebl_tbin%02d.xml' % i
+      tObj.event = p.getSimDir() + f + "_ebl_tbin%02d.fits" % i
+    event_bins.append(tObj.event)
+    if not os.path.isfile(tObj.event): # skip if existing ---!
+      tObj.eventSim()
   # observation list ---!
   eventList = p.getSimDir() + 'obs_%s.xml' % f
   if not os.path.isfile(eventList):
-    observation_list(event=event_bins, eventList=eventList, obsname=f)
+    tObj.event = event_bins
+    tObj.event_list = eventList
+    tObj.obsList(obsname=f)
 
-  # ============================
-  # !!! EVENT LIST SELECTION !!!
-  # ============================
+  # --------------------------------- SELECTION --------------------------------- !!!
 
   selectedEvents = []
   for i in range(tint):
@@ -133,9 +135,7 @@ for k in range(trials):
                    e=[emin, emax])
   print('!!! check --- selection: ', selectedEvents) if checks is True else None
 
-  # ========================
-  # !!! SELECTION SKYMAp !!!
-  # ========================
+  # --------------------------------- SKYMAP --------------------------------- !!!
 
   skymapName = []
   for i in range(tint):
@@ -145,9 +145,7 @@ for k in range(trials):
                    nbin=nbin)
   print('!!! check --- skymaps: ', skymapName) if checks is True else None
 
-  # ==============================
-  # !!! DETECTION AND MODELING !!!
-  # ==============================
+  # --------------------------------- DETECTION & MODELING --------------------------------- !!!
 
   detXml = []
   detReg = []
@@ -166,9 +164,7 @@ for k in range(trials):
     print('\n\n==========\n\n!!! check --- detection.............', texp[i], 's done\n\n!!! coords:', pos,
           '\n\n ==========\n\n') if checks is True else None
 
-  # =========================
-  # !!! DETECTED RA & DEC !!!
-  # =========================
+  # --------------------------------- DETECTION RA & DEC --------------------------------- !!!
 
   raDet = []
   decDet = []
@@ -183,9 +179,7 @@ for k in range(trials):
   decSrc001 = decDet
   print('!!! check ------- 1° src DETECTED RA:', raSrc001, ' and DEC:', decSrc001) if checks is True else None
 
-  # ==================
-  # !!! LIKELIHOOD !!!
-  # ==================
+  # --------------------------------- MAX LIKELIHOOD --------------------------------- !!!
 
   resultsName = []
   likeObj = []
@@ -201,9 +195,7 @@ for k in range(trials):
       likeObj.append(np.nan)
     print('!!! check --- max likelihoods: ', resultsName) if checks is True else None
 
-  # ======================
-  # !!! LIKELIHOOD TSV !!!
-  # ======================
+  # --------------------------------- BEST FIT TSV --------------------------------- !!!
 
   tsList = []
   for i in range(tint):
@@ -219,9 +211,7 @@ for k in range(trials):
     tsv.append(tsList[i][0])
   print('!!! check --- SRC001 TSV for each texp:', tsv) if checks is True else None
 
-  # =================
-  # !!! N SOURCES !!!
-  # =================
+  # --------------------------------- Nsrc FOR TSV THRESHOLD --------------------------------- !!!
 
   # count src with TS >= 9
   Nsrc = []
@@ -235,10 +225,8 @@ for k in range(trials):
     print('!!! check ---- SRC NUMBER with TS > 9 for trial ', k + 1, ' ===== ', Nsrc[i], ' for texp ==== ',
           texp[i]) if checks is True else None
 
-  # ===========================
-  # !!! ASYMMETRICAL ERRORS !!!
-  # ===========================
-  #
+  # --------------------------------- ASYM ERRORS --------------------------------- !!!
+
   # errorsName = []
   #
   # for i in range(tint):
@@ -249,9 +237,7 @@ for k in range(trials):
   #                                   caldb=caldb, irf=irf)
   # print('!!! check --- asym errors: ', errors_conf) if checks is True else None
 
-  # ===========================
-  # !!! LIKELIHOOD RA & DEC !!!
-  # ===========================
+  # --------------------------------- BEST FIT RA & DEC --------------------------------- !!!
 
   raList = []
   decList = []
@@ -276,9 +262,7 @@ for k in range(trials):
   print('!!! check --- DEC FIT for each texp: ', decList, '\n\nand DEC SRC001 for each texp:',
         decFit) if checks is True else None
 
-  # ==================================
-  # !!! LIKELIHOOD SPECTRAL PARAMS !!!
-  # ==================================
+  # --------------------------------- BEST FIT SPECTRAL --------------------------------- !!!
 
   pref = []
   index = []
@@ -314,9 +298,7 @@ for k in range(trials):
   if if_cut is True:
     print('!!! check ----- cutoff:', Cutoff) if checks is True else None
 
-  # ====================
-  # !!! COMpUTE FLUX !!!
-  # ====================
+  # --------------------------------- INTEGRATED FLUX --------------------------------- !!!
 
   #  (flux, f_lerr, f_uerr) = ((intensity, lerr, uerr) * (energy ** 2)) / (6.4215 * 1e5)
 
@@ -344,18 +326,14 @@ for k in range(trials):
       flux_erg.append(np.nan)
       flux_en.append(np.nan)
 
-  # ==================
-  # !!! CLOSE XMLs !!!
-  # ==================
+  # --------------------------------- CLOSE XMLs --------------------------------- !!!
 
   for i in range(len(detObj)):
     detObj[i].closeXml()
   for i in range(len(likeObj)):
     likeObj[i].closeXml() if type(likeObj[i]) is not float else None
 
-  # ================== #
-  # !!! WRITE CSV FILE #
-  # ================== #
+  # --------------------------------- RESULTS TABLE (csv) --------------------------------- !!!
 
   csvName = []
   header = '#trial,t exp,sigma,Ndet,Nsrc,RA Src001,DEC Src001,RA Fit,DEC Fit,TSV,flux1 ph,flux2 ph,flux1 erg,flux2 erg\n'
@@ -381,9 +359,7 @@ for k in range(trials):
         f.close()
   print('!!! check --- data file: ', csvName) if checks is True else None
 
-  # ==================== #
-  # !!! DELETE SIM FILES #
-  # ==================== #
+  # --------------------------------- CLEAR SPACE --------------------------------- !!!
 
   print('!!! check --- ', count, ') trial done...') if checks is True else None
   if count > 4:
