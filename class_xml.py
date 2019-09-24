@@ -4,11 +4,7 @@
 
 
 # IMPORT ---!
-# import xml.etree.ElementTree as ET
-# import lxml.etree as ET
 from lxml import etree as ET
-import numpy as np
-import cscripts
 import json
 import os
 

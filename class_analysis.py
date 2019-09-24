@@ -10,9 +10,9 @@ import numpy as np
 import os.path
 import pandas as pd
 from scipy.interpolate import interp1d
-import json
-import xmltodict
 import untangle
+import csv
+import re
 
 def xmlConfig() :
   #Load configuration file
@@ -20,6 +20,8 @@ def xmlConfig() :
   with open(cfgFile) as fd:
     cfg = untangle.parse(fd.read())
   return cfg.config
+
+# --------------------------------- CLASS CONFIGURATION --------------------------------- !!!
 
 class cfgMng() :
   def __init__(self, cfg) :
@@ -45,39 +47,69 @@ class cfgMng() :
   def setRunDir(self, runDir) :
     self.__runpath = runDir
 
-  def getSelectDir(self) :
-    return self.__cfg.dir.selectpath.replace('${runpath}', self.getRunDir())
-
   def getDataDir(self) :
-    return self.__cfg.dir.datapath.replace('${runpath}', self.getRunDir())
+    return self.__datapath.replace('${runpath}', self.getRunDir())
+  def setDataDir(self, dataDir) :
+    self.__runpath = dataDir
 
-  def getCsvDir(self) :
-    return self.__cfg.dir.csvpath.replace('${runpath}', self.getRunDir())
+  def getSimDir(self) :
+    return self.__simpath.replace('${runpath}', self.getRunDir())
+  def setSimDir(self, simDir) :
+    self.__runpath = simDir
+
+  def getSelectDir(self) :
+    return self.__selectpath.replace('${runpath}', self.getRunDir())
+  def setSelectDir(self, selectDir) :
+    self.__runpath = selectDir
 
   def getDetDir(self) :
-    return self.__cfg.dir.detpath.replace('${runpath}', self.getRunDir())
+    return self.__detpath.replace('${runpath}', self.getRunDir())
+  def setDetDir(self, detDir) :
+    self.__runpath = detDir
+
+  def getCsvDir(self) :
+    return self.__csvpath.replace('${runpath}', self.getRunDir())
+  def setCsvDir(self, csvDir) :
+    self.__runpath = csvDir
+
+# --------------------------------- CLASS ANALYSIS --------------------------------- !!!
 
 class analysis() :
   def __init__(self):
     global p
+    # conf ---!
     self.__cfg = xmlConfig()
     p = cfgMng(self.__cfg)
+    self.__pathout = p.getDataDir()
+    self.seed = 1
+    # files ---!
     self.model = None
     self.template = None
     self.table = None
-    self.tmax = 1800
+    self.event = None
+    self.event_list = None
+    self.caldb = 'prod2'
+    self.irf = 'South_0.5h'
+    # condition control ---!
     self.if_ebl = False
     self.extract_spec = False
-    self.__pathout = p.getDataDir()
     self.plot = False
-    self.z = 0.1
     self.zfetch = False
+    # data ---!
+    self.z = 0.1
+    self.t = [0, 2000]
+    self.tmax = [1800]
+    self.e = [0.03, 150.0]
+    self.roi = 5
+    self.pointing = [83.63, 22.01]
+    self.z_ind = 1
+
 
   def __openFITS(self):
     global hdul
     hdul = fits.open(self.template)
-    return
-  def __closeFITS(self):
+    return hdul
+  def __closeFITS(self, hdul):
     hdul.close()
 
   def __getFitsData(self):
@@ -89,9 +121,12 @@ class analysis() :
     if len(hdul) == 5 :
       ebl = np.array(hdul[4].data)
       self.if_ebl = True
+      self.__closeFITS(hdul)
+      return energy, time, spectra, ebl
     else :
       self.if_ebl = False
-    return
+      self.__closeFITS(hdul)
+      return energy, time, spectra
 
   def __openCSV(self):
     df = pd.read_csv(self.table)
@@ -101,11 +136,12 @@ class analysis() :
   def __getCsvData(self):
     df = self.__openCSV()
     cols = list(df.columns)
-    tau = np.array(df[self.z])
+    tau_gilmore = np.array(df[cols[self.z_ind]])
     E = np.array(df[cols[0]]) / 1e3  # MeV --> GeV ---!
-    return  tau, E
+    return tau_gilmore, E
 
   def __add_ebl(self):
+    energy, time, spectra = self.__getFitsData()
     tau_gilmore, E = self.__getCsvData()
     # interpolate ---!
     interp = interp1d(E, tau_gilmore)
@@ -124,13 +160,22 @@ class analysis() :
 
   def __zfetch(self):
     hdul = self.__openFITS()
+    # fetch z and chose the table column with min distance from it ---!
     z = hdul[0].header['REDSHIFT']
-    self.z = min([0.5, 0.9, 0.1, 0.09, 1.2], key=lambda x:abs(x-0.097)) # fetch min distance values from given one ---!
+    with open(self.table, 'r') as f:
+      reader = csv.reader(f)
+      hdr = next(reader)
+    zlist = []
+    for el in hdr:
+      zlist.append(re.sub('[^0-9,.]', '', el))
+    zlist.remove('')
+    zlist = [float(i) for i in zlist]
+    self.z = min(zlist, key=lambda x:abs(x-z))
+    self.z_ind = zlist.index(self.z) +1
     return
 
   def fits_ebl(self, template_ebl):
-
-    self.__getFitsData()
+    hdul = self.__openFITS() # open template ---!
     if self.zfetch is True:
       self.__zfetch()
     if self.plot is True:
@@ -144,9 +189,10 @@ class analysis() :
     hdu = fits.BinTableHDU(name='EBL Gilmore', data=ebl, header=header)
     hdul.append(hdu)
     # save to new ---!
-    os.system('rm ' + template_ebl)
-    hdul.writeto(template_ebl, overwrite=False)
-
+    if os.path.isfile(template_ebl):
+      os.system('rm ' + template_ebl)
+    hdul.writeto(template_ebl, overwrite=False) # write new template ---!
+    self.__closeFITS(hdul) # close template ---!
     if self.plot is True:
       return x, y, x2, y2
     else:
@@ -155,60 +201,60 @@ class analysis() :
   def __extractSpc(self):
     for i in range(tbin_stop):
       if self.if_ebl is False:
-        filename = self.__pathout + 'spec_tbin' + str(i) + '.out'
+        filename = self.__pathout + 'spec_tbin%02.out' % i
       else:
-        filename = self.__pathout + 'spec_ebl_tbin' + str(i) + '.out'
+        filename = self.__pathout + 'spec_ebl_tbin%02d.out' % i
 
       if os.path.isfile(filename):
         os.system('rm ' + filename)
       if not os.path.isfile(filename):
         os.system('touch ' + filename)
         out_file = open(filename, 'a')
-        # E[MeV], Flux[fotoni/MeV/cm^2/s]
+        # E[MeV], Flux[fotoni/MeV/cm^2/s] ---!
         out_file.close()
-
     # ebl ---!
     if self.if_ebl is True:
       for i in range(Nt):
-        outfile = self.__pathout + 'spec_ebl_tbin' + str(i) + '.out'
+        outfile = self.__pathout + 'spec_ebl_tbin%02d.out' % i
         out_file = open(outfile, 'a')
         for j in range(Ne):
-          # write spectral data in E [MeV] and I [ph/cm2/s/MeV]
-          if ebl is not None and tau is None:
+          # write spectral data in E [MeV] and I [ph/cm2/s/MeV] ---!
+          if ebl is not None:
             out_file.write(str(energy[j][0] * 1000) + ' ' + str(ebl[i][j] / 1000) + "\n")
           if tau is not None and ebl is None:
             out_file.write(str(energy[j][0] * 1000.0) + ' ' + str((spectra[i][j] / 1000.0) * np.exp(-tau[j])) + "\n")
         out_file.close()
-
-        os.system('cp ' + self.model + ' ' + self.__pathout + 'run0406_ID000126_ebl_tbin' + str(i) + '.xml')
-        s = open(self.__pathout + 'run0406_ID000126_ebl_tbin' + str(i) + '.xml').read()
-        s = s.replace('data/spec', 'spec_ebl_tbin' + str(i))
-        f = open(self.__pathout + 'run0406_ID000126_ebl_tbin' + str(i) + '.xml', 'w')
+        # bin models ---!
+        os.system('cp ' + str(self.model) + ' ' + str(self.__pathout) + 'run0406_ID000126_ebl_tbin%02d.xml' % i)
+        s = open(self.__pathout + 'run0406_ID000126_ebl_tbin%02d.xml' % i).read()
+        s = s.replace('data/spec', 'spec_ebl_tbin%02d' % i)
+        f = open(self.__pathout + 'run0406_ID000126_ebl_tbin%02d.xml' % i, 'w')
         f.write(s)
         f.close()
-
     # no ebl ---!
     else:
       for i in range(Nt):
-        outfile = self.__pathout + 'spec_tbin' + str(i) + '.out'
+        outfile = self.__pathout + 'spec_tbin%02d.out' % i
         out_file = open(outfile, 'a')
         for j in range(Ne):
-          # write spectral data in E [MeV] and I [ph/cm2/s/MeV]
+          # write spectral data in E [MeV] and I [ph/cm2/s/MeV] ---!
           out_file.write(str(energy[j][0] * 1000.0) + ' ' + str(spectra[i][j] / 1000.0) + "\n")
         out_file.close()
-
-        os.system('cp ' + self.model + ' ' + self.__pathout + 'run0406_ID000126_tbin' + str(i))
-        s = open(self.__pathout + 'run0406_ID000126_tbin' + str(i) + '.xml').read()
-        s = s.replace('spec', 'spec_tbin' + str(i))
-        f = open(self.__pathout + 'run0406_ID000126_tbin' + str(i) + '.xml', 'w')
+        # bin models ---!
+        os.system('cp ' + str(self.model) + ' ' + str(self.__pathout) + 'run0406_ID000126_tbin%02d.xml' % i)
+        s = open(self.__pathout + 'run0406_ID000126_tbin%02d.xml' % i).read()
+        s = s.replace('spec', 'spec_tbin%02d' % i)
+        f = open(self.__pathout + 'run0406_ID000126_tbin%02d.xml' % i, 'w')
         f.write(s)
         f.close()
-
     return
 
   def load_template(self) :
-    self.__getFitsData()
-    self.__closeFITS()
+    global energy, time, spectra, ebl
+    if self.if_ebl is True :
+      energy, time, spectra, ebl = self.__getFitsData()
+    if self.if_ebl is False:
+      energy, time, spectra = self.__getFitsData()
 
     global Nt, Ne, tbin_stop
     Nt = len(time)
@@ -239,10 +285,40 @@ class analysis() :
     # Emax in last bin ---!
     en[Ne] = energy[Ne - 1][0] + (energy[Ne - 1][0] - en[Ne - 1])
 
-    if self.extract_spec is True and self.if_ebl is True :
-      self.__extractSpc()
-    if self.extract_spec is True and self.if_ebl is False :
+    if self.extract_spec is True:
       # here you should call the add_ebl and/or fits_ebl ---!!!!!!!!!!
       self.__extractSpc()
+
+    return tbin_stop
+
+  def eventSim(self) :
+    sim = ctools.ctobssim()
+    sim["inmodel"] = self.model
+    sim["outevents"] = self.event
+    sim["caldb"] = self.caldb
+    sim["irf"] = self.irf
+    sim["ra"] = self.pointing[0]
+    sim["dec"] = self.pointing[1]
+    sim["rad"] = self.roi
+    sim["tmin"] = self.t[0]
+    sim["tmax"] = self.t[1]
+    sim["emin"] = self.e[0]
+    sim["emax"] = self.e[1]
+    sim["seed"] = self.seed
+    sim["logfile"] = self.event.replace('.fits', '.log')
+    sim["debug"] = True
+    sim.execute()
+
+    return
+
+  def obsList(self, eventList, obsname):
+    # combine in observatiion list
+    xml = gammalib.GXml()
+    obslist = xml.append('observation_list title="observation library"')
+
+    for i in range(len(self.event)):
+      obs = obslist.append('observation name="%s" id="%02d" instrument="CTA"' % (obsname, i))
+      obs.append('parameter name="EventList" file="%s"' % self.event[i])
+    xml.save(self.event_list)
 
     return
