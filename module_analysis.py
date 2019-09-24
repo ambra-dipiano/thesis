@@ -9,7 +9,7 @@ from astropy.io import fits
 import numpy as np
 import os.path
 import pandas as pd
-from scipy.interpolate import interp1d, interp2d
+from scipy.interpolate import interp1d
 
 
 # EXTRACT SPECTRUM ---!
