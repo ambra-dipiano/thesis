@@ -7,7 +7,6 @@ import gammalib
 import ctools
 import cscripts
 from module_analysis import *
-from module_xml import *
 import csv
 import os
 import sys
@@ -36,7 +35,7 @@ caldb = 'prod3b'
 irf = 'South_z40_average_100s'
 
 sigma = 5  # detection acceptance (Gaussian)
-texp = [1, 5, 10, 100]  # exposure times (s)
+texp = [2e4]  # exposure times (s)
 texp.sort()
 tint = len(texp)
 tmin = 30  # slewing time (s)
@@ -46,12 +45,7 @@ for i in range(tint):
 
 elow = 0.03  # simulation minimum energy (TeV)
 ehigh = 1.0  # simulation maximum energy (TeV)
-emin = 0.03  # selection minimum energy (TeV)
-emax = 0.5  # selection maximum energy (TeV)
 roi = 5  # region of interest for simulation and selection (deg)
-wbin = 0.02  # skymap bin width (deg)
-nbin = int(roi / wbin)  # skymap x,y axes (pixel)
-confidence = (0.68, 0.95, 0.9973)  # confidence interval for asymmetrical errors (%)
 
 # pointing with off-axis equal to max prob GW ---!
 offmax = (-1.475, -1.371)  # (deg)
