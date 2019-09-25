@@ -5,20 +5,23 @@
 
 # IMPORT ---!
 from lxml import etree as ET
+from operator import attrgetter
 import json
 import os
+from class_analysis import (xmlConfig, cfgMng_xml)
 
 
-def loadConfig():
+def jsonConfig():
   # Load configuration file
   cfgFile = os.path.dirname(__file__) + '/config.json'
   with open(cfgFile) as json_cfg_file:
     cfg = json.load(json_cfg_file)
   return cfg
 
+# --------------------------------- CLASS json CONFIGURATION --------------------------------- !!!
 
-class fsMng():
-  cfg = loadConfig()
+class cfgMng_json():
+  cfg = jsonConfig()
 
   def __init__(self, cfg):
     self.__initPath(cfg.get('dir'))
@@ -71,28 +74,26 @@ class fsMng():
   def resolvePath(self):
     return
 
+# --------------------------------- CLASS xml HANDLING --------------------------------- !!!
 
 class xmlMng():
 
   def __init__(self, xml):
     self.__xml = xml
-    self.__cfg = loadConfig()
+    self.__cfg = jsonConfig()
     self.file = open(self.__xml)
     self.srcLib = ET.parse(self.file)
     self.root = self.srcLib.getroot()
     self.tsvList = []
-    self.pos = [[], []]
-    self.err = [[], []]
-    self.spectral = [[], [], []]
+    self.pos = []
+    self.err = []
+    self.spectral = []
     self.sigma = 5
-    self.bkgType = 'Irf'
-    self.instr = 'CTA'
-    self.maxSrc = 10
-    self.corr_rad = 0.1
-    self.exclrad = 0.5
     self.default_model = True
-    self.srcAtt = [[], [], []]
-    self.bkgAtt = [[], [], []]
+    self.instr = 'CTA'
+    self.bkgType = 'Irf'
+    self.srcAtt = []
+    self.bkgAtt = []
     self.tscalc = True
     self.if_cut = False
 
@@ -118,49 +119,43 @@ class xmlMng():
       if src.attrib[select.get('attribute')] == select.get('value'):
         return False
 
-    return True  # shouldn't not return anything here? Or a logical sum of the previous?
+    return True
 
-  # RETRIVES TSV v01 ---!
   def loadTSV(self):
     for src in self.root.findall('source'):
-      if self.__skipNode(src, self.__cfg.get('xml').get('tsv')):
-        continue
-
-      tsv = src.attrib['ts'] if src.attrib['tscalc'] == '1' else None
-      # source candidates ---!
-      self.tsvList.append(tsv)
+      if src.attrib['name'] != 'Background' and src.attrib['name'] != 'CTABackgroundModel':
+      # if self.__skipNode(src, self.__cfg.get('xml').get('tsv')):
+      #   continue
+        tsv = src.attrib['ts']
+        self.tsvList.append(tsv)
     return self.tsvList
 
   def loadRaDec(self):
     posRaList, posDecList = ([] for i in range(2))
     for src in self.root.findall('source'):
-      if self.__skipNode(src, self.__cfg.get('xml').get('RaDec')):
-        continue
-
-      # source candidates ---!
-      ra = src.find('spatialModel/parameter[@name="RA"]').attrib['value']
-      dec = src.find('spatialModel/parameter[@name="DEC"]').attrib['value']
-      posRaList.append(ra)
-      posDecList.append(dec)
-
+      if src.attrib['name'] != 'Background' and src.attrib['name'] != 'CTABackgroundModel':
+      # if self.__skipNode(src, self.__cfg.get('xml').get('RaDec')):
+      #   continue
+        ra = src.find('spatialModel/parameter[@name="RA"]').attrib['value']
+        dec = src.find('spatialModel/parameter[@name="DEC"]').attrib['value']
+        posRaList.append(ra)
+        posDecList.append(dec)
     self.pos = [posRaList, posDecList]
     return self.pos
 
   def loadConfInt(self):
     raList, decList = ([] for i in range(2))
     for src in self.root.findall('source'):
-      if self.__skipNode(src, self.__cfg.get('xml').get('ConfInt')):
-        continue
-
-      ra = src.find('spatialModel/parameter[@name="RA"]').attrib['value']
-      dec = src.find('spatialModel/parameter[@name="DEC"]').attrib['value']
-      raList.append(ra)
-      decList.append(dec)
-
+      if src.attrib['name'] != 'Background' and src.attrib['name'] != 'CTABackgroundModel':
+      # if self.__skipNode(src, self.__cfg.get('xml').get('ConfInt')):
+      #   continue
+        ra = src.find('spatialModel/parameter[@name="RA"]').attrib['value']
+        dec = src.find('spatialModel/parameter[@name="DEC"]').attrib['value']
+        raList.append(ra)
+        decList.append(dec)
     self.err = [raList, decList]
     return self.err
 
-  @property
   def loadSpectral(self):
     global cutoffList
     indexList, prefList, pivotList = ([] for i in range(3))
@@ -168,25 +163,27 @@ class xmlMng():
       cutoffList = []
 
     for src in self.root.findall('source'):
-      if self.__skipNode(src, self.__cfg.get('xml').get('src')):
-        continue
+      if src.attrib['name'] != 'Background' and src.attrib['name'] != 'CTABackgroundModel':
+      # if self.__skipNode(src, self.__cfg.get('xml').get('src')):
+      #   continue
+        index = float(src.find('spectrum/parameter[@name="Index"]').attrib['value']) * float(
+            src.find('spectrum/parameter[@name="Index"]').attrib['scale'])
+        pref = float(src.find('spectrum/parameter[@name="Prefactor"]').attrib['value']) * float(
+            src.find('spectrum/parameter[@name="Prefactor"]').attrib['scale'])
+        pivot = float(src.find('spectrum/parameter[@name="PivotEnergy"]').attrib['value']) * float(
+            src.find('spectrum/parameter[@name="PivotEnergy"]').attrib['scale'])
+        indexList.append(index)
+        prefList.append(pref)
+        pivotList.append(pivot)
+        if self.if_cut is True :
+          cutoff = float(src.find('spectrum/parameter[@name="CutoffEnergy"]').attrib['value']) * float(
+              src.find('spectrum/parameter[@name="CutoffEnergy"]').attrib['scale'])
+          cutoffList.append(cutoff)
 
-      index = float(src.find('spectrum/parameter[@name="Index"]').attrib['value']) * float(
-          src.find('spectrum/parameter[@name="Index"]').attrib['scale'])
-      pref = float(src.find('spectrum/parameter[@name="Prefactor"]').attrib['value']) * float(
-          src.find('spectrum/parameter[@name="Prefactor"]').attrib['scale'])
-      pivot = float(src.find('spectrum/parameter[@name="PivotEnergy"]').attrib['value']) * float(
-          src.find('spectrum/parameter[@name="PivotEnergy"]').attrib['scale'])
-      indexList.append(index)
-      prefList.append(pref)
-      pivotList.append(pivot)
+    if self.if_cut is False:
       self.spectral = [indexList, prefList, pivotList]
-      if self.if_cut is True :
-        cutoff = float(src.find('spectrum/parameter[@name="CutoffEnergy"]').attrib['value']) * float(
-            src.find('spectrum/parameter[@name="CutoffEnergy"]').attrib['scale'])
-        cutoffList.append(cutoff)
-        self.spectral.append(cutoffList)
-
+    else:
+      self.spectral = [indexList, prefList, pivotList, cutoffList]
     return self.spectral
 
   def __saveXml(self):
@@ -218,32 +215,33 @@ class xmlMng():
     # source ---!
     i = 0
     for src in self.root.findall('source'):
-      if self.__skipNode(src=src, cfg=self.__cfg.get('xml').get('src')):
-        continue
-
       i += 1
-      src.set('tscalc', '1') if self.tscalc is True else None
-      # remove spectral component ---!
-      rm = src.find('spectrum')
-      src.remove(rm)
-      # new spectrum ---!
-      if self.if_cut is True:
-        spc = ET.SubElement(src, 'spectrum', attrib={'type': 'ExponentialCutoffPowerLaw'})
-      else:
-        spc = ET.SubElement(src, 'spectrum', attrib={'type': 'PowerLaw'})
-      spc.text = '\n\t\t\t'.replace('\t', ' ' * 2)
-      spc.tail = '\n\t\t'.replace('\t', ' ' * 2)
-      src.insert(0, spc)
-      # new spectral params ---!
-      for j in range(len(self.srcAtt)):
-        prm = ET.SubElement(spc, 'parameter', attrib=self.srcAtt[j])
-        if prm.attrib['name'] == 'Prefactor' and i > 1:
-          prm.set('value', str(float(prm.attrib['value']) / 2 ** (i - 1)))
-        prm.tail = '\n\t\t\t'.replace('\t', ' ' * 2) if j < len(self.srcAtt) else '\n\t\t'.replace('\t', ' ' * 2)
-        spc.insert(j, prm)
+      if src.attrib['name'] != 'Background' and src.attrib['name'] != 'CTABackgroundModel':
+      # if self.__skipNode(src=src, cfg=self.__cfg.get('xml').get('src')):
+      #   continue
+        src.set('tscalc', '1') if self.tscalc is True else None
+        # remove spectral component ---!
+        rm = src.find('spectrum')
+        src.remove(rm)
+        # new spectrum ---!
+        if self.if_cut is True:
+          spc = ET.SubElement(src, 'spectrum', attrib={'type': 'ExponentialCutoffPowerLaw'})
+        else:
+          spc = ET.SubElement(src, 'spectrum', attrib={'type': 'PowerLaw'})
+        spc.text = '\n\t\t\t'.replace('\t', ' ' * 2)
+        spc.tail = '\n\t\t'.replace('\t', ' ' * 2)
+        src.insert(0, spc)
+        # new spectral params ---!
+        for j in range(len(self.srcAtt)):
+          prm = ET.SubElement(spc, 'parameter', attrib=self.srcAtt[j])
+          if prm.attrib['name'] == 'Prefactor' and i > 1:
+            prm.set('value', str(float(prm.attrib['value']) / 2 ** (i - 1)))
+          prm.tail = '\n\t\t\t'.replace('\t', ' ' * 2) if j < len(self.srcAtt) else '\n\t\t'.replace('\t', ' ' * 2)
+          spc.insert(j, prm)
     # background ---!
-    for src in self.root.findall('source[@name]'):
-      if self.__skipNode(src=src, cfg=self.__cfg.get('xml').get('src')):
+      else:
+      # for src in self.root.findall('source[@name]'):
+      #   if self.__skipNode(src=src, cfg=self.__cfg.get('xml').get('src')):
         # set bkg attributes ---!
         src.set('instrument', '%s' % self.instr.upper()) if self.instr.capitalize() != 'None' else None
         if self.bkgType.capitalize() == 'Aeff' or self.bkgType.capitalize() == 'Irf':
@@ -263,20 +261,19 @@ class xmlMng():
           prm.tail = '\n\t\t\t'.replace('\t', ' ' * 2) if j < len(self.bkgAtt) else '\n\t\t'.replace('\t', ' ' * 2)
 
     self.__xml = self.__saveXml()
-    return self.__xml
+    return
 
   def FreeFixPrms(self):
     for src in self.root.findall('source'):
-      if self.__skipNode(src, self.__cfg.xml.src):
-        continue
-
-      for free in self.__cfg.xml.src.free:
-        src.find('spatialModel/parameter[@name="%s"]' % free.value).set('free', '1')
-      for fix in self.__cfg.xml.src.fix:
-        src.find('spatialModel/parameter[@name="%s"]' % fix.value).set('free', '0')
-
-    for src in self.root.findall('source'):
-      if self.__skipNode(src, self.__cfg.xml.src):
+      if src.attrib['name'] != 'Background' and src.attrib['name'] != 'CTABackgroundModel':
+      # if self.__skipNode(src, self.__cfg.xml.src):
+      #   continue
+        for free in self.__cfg.xml.src.free:
+          src.find('spatialModel/parameter[@name="%s"]' % free.value).set('free', '1')
+        for fix in self.__cfg.xml.src.fix:
+          src.find('spatialModel/parameter[@name="%s"]' % fix.value).set('free', '0')
+      else:
+      # if self.__skipNode(src, self.__cfg.xml.src):
         for bkg in self.__cfg.xml.src.bkg:
           src.find('spatialModel/parameter[@name="%s"]' % bkg.value).set('free', '1')
         for prm in src not in self.__cfg.xml.src.bkg:
@@ -285,6 +282,13 @@ class xmlMng():
     self.__saveXml()
     return
 
+  def sortSrcTS(self):
+    src = self.root.findall("*[@ts]")
+    self.root[:-1] = sorted(src, key=lambda el: (el.tag, el.attrib['ts']), reverse=True)
+    self.__saveXml()
+    return
+
   def closeXml(self):
     self.file.close()
     return
+
