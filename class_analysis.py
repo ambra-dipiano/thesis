@@ -21,9 +21,9 @@ def xmlConfig() :
     cfg = untangle.parse(fd.read())
   return cfg.config
 
-# --------------------------------- CLASS CONFIGURATION --------------------------------- !!!
+# --------------------------------- CLASS xml CONFIGURATION --------------------------------- !!!
 
-class cfgMng() :
+class cfgMng_xml() :
   def __init__(self, cfg) :
     self.__initPath(cfg)
 
@@ -79,24 +79,18 @@ class analysis() :
     global p
     # conf ---!
     self.__cfg = xmlConfig()
-    p = cfgMng(self.__cfg)
+    p = cfgMng_xml(self.__cfg)
     self.__pathout = p.getDataDir()
     self.seed = 1
     # files ---!
-    self.model = None
-    self.template = None
-    self.table = None
-    self.event = None
-    self.event_list =  None
-    self.event_selected = None
-    self.skymap = None
-    self.detectionXml = None
-    self.likeXml = None
-    self.sensCsv = None
+    self.model, self.template, self.table = (str() for i in range(3))
+    self.event, self.event_list, self.event_selected, self.skymap = (str() for i in range(4))
+    self.detectionXml, self.detectionReg, self.likeXml = (str() for i in range(3))
+    self.sensCsv = str()
     self.caldb = 'prod2'
     self.irf = 'South_0.5h'
     # condition control ---!
-    self.if_ebl = False
+    self.if_ebl = True
     self.extract_spec = False
     self.plot = False
     self.zfetch = False
@@ -126,7 +120,6 @@ class analysis() :
     self.factor = 3
     self.sensType = 'Differential'
 
-
   def __openFITS(self):
     global hdul
     hdul = fits.open(self.template)
@@ -150,7 +143,7 @@ class analysis() :
     else :
       self.if_ebl = False
       self.__closeFITS(hdul)
-      return globals()
+      return energy, time, spectra
 
   def __openCSV(self):
     df = pd.read_csv(self.table)
@@ -246,8 +239,8 @@ class analysis() :
           # write spectral data in E [MeV] and I [ph/cm2/s/MeV] ---!
           if ebl is not None:
             out_file.write(str(energy[j][0] * 1000) + ' ' + str(ebl[i][j] / 1000) + "\n")
-          if tau is not None and ebl is None:
-            out_file.write(str(energy[j][0] * 1000.0) + ' ' + str((spectra[i][j] / 1000.0) * np.exp(-tau[j])) + "\n")
+          # if tau is not None and ebl is None:
+          #   out_file.write(str(energy[j][0] * 1000.0) + ' ' + str((spectra[i][j] / 1000.0) * np.exp(-tau[j])) + "\n")
         out_file.close()
         # bin models ---!
         os.system('cp ' + str(self.model) + ' ' + str(self.__pathout) + 'run0406_ID000126_ebl_tbin%02d.xml' % i)
@@ -336,10 +329,10 @@ class analysis() :
     return
 
   def obsList(self, obsname):
-    if '.fits' in str(self.event):
-      self.event_list = 'obs_' + self.event.replace('.fits', '.xml')
-    else:
-      self.event_list = 'obs_' + self.event
+    # if '.fits' in str(self.event):
+    #   self.event_list = 'obs_' + self.event.replace('.fits', '.xml')
+    # else:
+    #   self.event_list = 'obs_' + self.event
     xml = gammalib.GXml()
     obslist = xml.append('observation_list title="observation library"')
 
@@ -391,12 +384,12 @@ class analysis() :
 
   def runDetection(self) :
     self.detectionXml = '%s' % self.skymap.replace('_skymap.fits', '_det%ssgm.xml' % self.sigma)
-    detectionReg = '%s' % self.skymap.replace('_skymap.fits', '_det%ssgm.reg' % self.sigma)
+    self.detectionReg = '%s' % self.skymap.replace('_skymap.fits', '_det%ssgm.reg' % self.sigma)
 
     detection = cscripts.cssrcdetect()
     detection['inmap'] = self.skymap
     detection['outmodel'] = self.detectionXml
-    detection['outds9file'] = detectionReg
+    detection['outds9file'] = self.detectionReg
     detection['srcmodel'] = self.src_type.upper()
     detection['bkgmodel'] = self.bkgType.upper()
     detection['threshold'] = int(self.sigma)
@@ -408,7 +401,7 @@ class analysis() :
     detection['debug'] = True
     detection.execute()
 
-    return self.detectionXml, detectionReg
+    return
 
   def maxLikelihood(self):
     like = ctools.ctlike()
@@ -462,6 +455,24 @@ class analysis() :
     uplim.execute()
 
     return
+
+  def photonFlux_pl(self, gamma, k0, e0):
+    e1 = self.e[0]*1e6
+    e2 = self.e[1]*1e6
+    delta = gamma + 1
+    factor = k0 / (e0**gamma * delta)
+    flux = factor * (e2**delta - e1**delta)
+    return flux
+
+  def energyFlux_pl(self, gamma, k0, e0):
+    k0 *= 1.60218e-6
+    e0 *= 1.60218e-6
+    e1 = self.e[0]*1e6 * 1.60218e-6
+    e2 = self.e[1]*1e6 * 1.60218e-6
+    delta = gamma+1
+    factor = k0 / (e0**gamma * delta)
+    flux = factor * (e2**delta - e1**delta)
+    return flux
 
   def degradeIRF(self, degraded_irf):
     extension = ['EFFECTIVE AREA', 'BACKGROUND']
