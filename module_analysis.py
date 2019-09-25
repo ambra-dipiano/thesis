@@ -273,26 +273,6 @@ def runDetection(skymap, sigma=5, maxSrc=10, bkgType='irf', exclrad=0.5, corr_ra
   detection.execute()
 
   return detectionXml, detectionReg
-#   def __runDetection(self, skymap) :
-#     self.__detectionXml = '%s' % skymap.replace('_skymap.fits', '_det%ssgm.xml' % self.sigma)
-#     self.__detectionReg = '%s' % skymap.replace('_skymap.fits', '_det%ssgm.reg' % self.sigma)
-#
-#     detection = cscripts.cssrcdetect()
-#     detection['inmap'] = skymap
-#     detection['outmodel'] = self.__detectionXml
-#     detection['outds9file'] = self.__detectionReg
-#     detection['srcmodel'] = 'POINT'
-#     detection['bkgmodel'] = self.bkgType.upper()
-#     detection['threshold'] = int(self.sigma)
-#     detection['maxsrcs'] = self.maxSrc
-#     detection['exclrad'] = self.exclrad
-#     detection['corr_rad'] = self.corr_rad
-#     detection['corr_kern'] = 'GAUSSIAN'
-#     detection['logfile'] = self.__detectionXml.replace('.xml', '.log')
-#     detection['debug'] = bool('no')
-#     detection.execute()
-#
-#     return
 
 # CTLIKE ---!
 def max_likelihood(event_selected, detection_model, results, caldb='prod2', irf='South_0.5h') :
