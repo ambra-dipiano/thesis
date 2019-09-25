@@ -48,11 +48,9 @@ def getRaDec(likeXml) :
   srcLib = ET.parse(file)
   root = srcLib.getroot()
 
-  i = 0
   raList = []
   decList = []
   for src in root.findall('source'):
-    i += 1
 
     # source candidates ---!
     if src.attrib['name'] != 'Background' and src.attrib['name'] != 'CTABackgroundModel' :
@@ -80,11 +78,9 @@ def getRaDec_errors(likeXml) :
   srcLib = ET.parse(file)
   root = srcLib.getroot()
 
-  i = 0
   raList = []
   decList = []
   for src in root.findall('source'):
-    i += 1
 
     # source candidates ---!
     if src.attrib['name'] != 'Background' and src.attrib['name'] != 'CTABackgroundModel' :
@@ -109,13 +105,11 @@ def getConfInt_gauss(errors) :
   srcLib = ET.parse(file)
   root = srcLib.getroot()
 
-  i = 0
   raList = []
   decList = []
 #  prefList = []
 #  indexList = []
   for src in root.findall('source'):
-    i += 1
 
     # source candidates ---!
     if src.attrib['name'] != 'Background' and src.attrib['name'] != 'CTABackgroundModel' :
@@ -145,14 +139,12 @@ def getSpectral(likeXml) :
   srcLib = ET.parse(file)
   root = srcLib.getroot()
 
-  i = 0
   indexList = []
   prefactorList = []
   pivotList = []
   indexList_error = []
   prefactorList_error = []
   for src in root.findall('source'):
-    i += 1
 
     # source candidates ---!
     if src.attrib['name'] != 'Background' and src.attrib['name'] != 'CTABackgroundModel' :
