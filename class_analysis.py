@@ -75,11 +75,10 @@ class cfgMng_xml() :
 # --------------------------------- CLASS ANALYSIS --------------------------------- !!!
 
 class analysis() :
-  def __init__(self):
+  def __init__(self, cfg_file):
     global p
     # conf ---!
-    self.cfg_file = '/config.xml'
-    self.__cfg = xmlConfig(self.cfg_file)
+    self.__cfg = xmlConfig(cfg_file)
     p = cfgMng_xml(self.__cfg)
     self.__pathout = p.getDataDir()
     self.seed = 1
@@ -218,7 +217,7 @@ class analysis() :
       return
 
   def __extractSpc(self):
-    print('!!! check --- extracting spectrum')
+    print('!!! check --- extract spect in', self.__pathout)
     for i in range(tbin_stop):
       if self.if_ebl is False:
         filename = self.__pathout + 'spec_tbin%02.out' % i
