@@ -21,6 +21,7 @@ count = int(sys.argv[3])  # starting count
 
 # ctools/cscripts parameters ---!
 caldb = 'prod3b'
+caldb_degraded = caldb.replace('prod', 'degr')
 irf = 'South_z40_average_100s'
 
 sigma = 5  # detection acceptance (Gaussian)
@@ -52,8 +53,14 @@ checks = True
 if_fits = False
 if_cut = False
 if_ebl = True
+irf_degrade = True
+src_sort = True
 skip_exist = True
 fileroot = 'run0406_'
+ebl_table = '/home/ambra/Desktop/cluster-morgana/gilmore_tau_fiducial.csv'
+nominal_template = 'run0406_ID000126.fits'
+ebl_template = 'run0406_ID000126_ebl.fits'
+model_pl = 'run0406_ID000126.xml'
 
 # --------------------------------- INITIALIZE --------------------------------- !!!
 
@@ -65,22 +72,27 @@ tObj.pointing = [pointRA, pointDEC]
 tObj.roi = roi
 tObj.e = [elow, ehigh]
 tObj.tmax = tmax
-tObj.model = p.getWorkingDir() + 'run0406_ID000126.xml'
+tObj.model = p.getWorkingDir() + model_pl
+tObj.caldb = caldb
+tObj.irf = irf
+# degrade IRF if required ---!
+if irf_degrade:
+  tObj.degradeIRF()
 # add EBL to template ---!
-if if_fits is True and chunk-1 == 0:
-  tObj.template = p.getWorkingDir() + 'run0406_ID000126.fits' # nominal ---!
-  new_template = p.getWorkingDir() + 'run0406_ID000126_ebl.fits' # absorbed ---!
-  tObj.table = '/home/ambra/Desktop/cluster-morgana/gilmore_tau_fiducial.csv' # fiducial table ---!
+if if_fits:
+  tObj.template = p.getWorkingDir() + nominal_template # nominal ---!
+  new_template = p.getWorkingDir() + ebl_template # absorbed ---!
+  tObj.table = table # fiducial ---!
   tObj.zfetch = True
   tObj.if_ebl = False
   tObj.fits_ebl(new_template)
   if_ebl = True
 # assign template ---!
 if if_ebl is True:
-  template = p.getWorkingDir() + 'run0406_ID000126_ebl.fits'
+  template = p.getWorkingDir() + ebl_template
   tObj.if_ebl = if_ebl
 else :
-  template = p.getWorkingDir() + 'run0406_ID000126.fits'
+  template = p.getWorkingDir() + nominal_template
   tObj.if_ebl = False
 tObj.template = template
 print('!!! check ---- template=', tObj.template) if checks is True else None
@@ -105,10 +117,11 @@ for k in range(trials):
 
   # --------------------------------- SIMULATION --------------------------------- !!!
 
-  print(tObj.tmax)
   event_bins = []
+  t0, t1 = tObj.load_tarray(tcsv)  # methods which returns time slice edges
   # simulate ---!
   for i in range(tbin_stop):
+    tObj.t = [t0[i], t1[i]]
     if if_ebl is False:
       tObj.model = p.getDataDir() + 'run0406_ID000126_tbin%02d.xml' % i
       tObj.event = p.getSimDir() + f + "_tbin%02d.fits" % i
@@ -199,7 +212,8 @@ for k in range(trials):
       else:
         tObj.maxLikelihood()
       likeObj = xmlMng(tObj.likeXml)
-      likeObj.sortSrcTS()
+      if src_sort is True:
+        likeObj.sortSrcTS()
     else:
       likeObj = np.nan
     print('!!! check --- max likelihoods: ', tObj.likeXml) if checks is True else None
