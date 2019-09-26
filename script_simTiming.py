@@ -21,7 +21,7 @@ count = int(sys.argv[3])  # starting count
 
 # ctools/cscripts parameters ---!
 caldb = 'prod3b'
-irf = 'South_z40_average_100s'
+irf = 'South_z40_average_5h'
 
 texp = [2e1]  # exposure times (s)
 texp.sort()
@@ -50,14 +50,17 @@ if_fits = True
 if_cut = False
 if_ebl = True
 skip_exist = False
+extract_spec = True
 fileroot = 'run0406_'
+cfg_file = '/config_archive.xml'
 
 # --------------------------------- INITIALIZE --------------------------------- !!!
 
-cfg = xmlConfig()
+cfg = xmlConfig(cfg_file)
 p = cfgMng_xml(cfg)
 # setup trials obj ---!
 tObj = analysis()
+tObj.cfg_file = cfg_file
 tObj.pointing = [pointRA, pointDEC]
 tObj.roi = roi
 tObj.e = [elow, ehigh]
@@ -67,7 +70,7 @@ tObj.model = p.getWorkingDir() + 'run0406_ID000126.xml'
 if if_fits is True and chunk-1 == 0:
   tObj.template = p.getWorkingDir() + 'run0406_ID000126.fits' # nominal ---!
   new_template = p.getWorkingDir() + 'run0406_ID000126_ebl.fits' # absorbed ---!
-  tObj.table = '$WORK/gilmore_tau_fiducial.csv' # fiducial table ---!
+  tObj.table = os.path.dirname(__file__) + 'gilmore_tau_fiducial.csv' # fiducial table ---!
   tObj.zfetch = True
   tObj.if_ebl = False
   tObj.fits_ebl(new_template)
@@ -83,7 +86,7 @@ tObj.template = template
 print('!!! check ---- template=', tObj.template) if checks is True else None
 # load template ---!
 tObj.if_ebl = if_ebl
-tObj.extract_spec = True
+tObj.extract_spec = extract_spec
 tbin_stop = tObj.load_template()
 print('!!! check ---- tbin_stop=', tbin_stop) if checks is True else None
 
@@ -108,9 +111,11 @@ for i in range(tbin_stop):
   if if_ebl is False:
     tObj.model = p.getDataDir() + 'run0406_ID000126_tbin%02d.xml' % i
     tObj.event = p.getSimDir() + f + "_tbin%02d.fits" % i
+    print('!!! check ---- simulation without EBL') if checks is True else None
   else:
     tObj.model = p.getDataDir() + 'run0406_ID000126_ebl_tbin%02d.xml' % i
     tObj.event = p.getSimDir() + f + "_ebl_tbin%02d.fits" % i
+    print('!!! check ---- simulation with EBL') if checks is True else None
   event_bins.append(tObj.event)
   if skip_exist is True:
     if not os.path.isfile(tObj.event):

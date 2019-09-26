@@ -14,9 +14,9 @@ import untangle
 import csv
 import re
 
-def xmlConfig() :
+def xmlConfig(cfg_file) :
   #Load configuration file
-  cfgFile = os.path.dirname(__file__)+'/config.xml'
+  cfgFile = os.path.dirname(__file__)+str(cfg_file)
   with open(cfgFile) as fd:
     cfg = untangle.parse(fd.read())
   return cfg.config
@@ -78,7 +78,8 @@ class analysis() :
   def __init__(self):
     global p
     # conf ---!
-    self.__cfg = xmlConfig()
+    self.cfg_file = '/config.xml'
+    self.__cfg = xmlConfig(self.cfg_file)
     p = cfgMng_xml(self.__cfg)
     self.__pathout = p.getDataDir()
     self.seed = 1
@@ -217,6 +218,7 @@ class analysis() :
       return
 
   def __extractSpc(self):
+    print('!!! check --- extracting spectrum')
     for i in range(tbin_stop):
       if self.if_ebl is False:
         filename = self.__pathout + 'spec_tbin%02.out' % i
