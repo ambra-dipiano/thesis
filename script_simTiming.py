@@ -4,47 +4,37 @@
 
 # IMPORTS ---!
 import gammalib
-import ctools
-import cscripts
-from module_analysis import *
+from class_analysis import *
+from class_xml import *
+import numpy as np
 import csv
 import os
 import sys
 from sys import argv
+
+# --------------------------------- SETUP --------------------------------- !!!
 
 # initialize global count ---!
 chunk = int(sys.argv[1])  # global count
 trials = int(sys.argv[2])  # number of trials
 count = int(sys.argv[3])  # starting count
 
-# work with absolute paths ---!
-workdir = '/mnt/nvme0n1p1/piano_analysis/working-dir/run0406/'
-runpath = workdir + 'run0406_ID000126/'
-simpath = runpath + 'sim/'
-selectpath = runpath + 'selected_sim/'
-datapath = runpath + 'data/'
-csvpath = runpath + 'csv/'
-detpath = runpath + 'detection_all/'
-
-# inputs ---!
-template = workdir + 'run0406_ID000126_ebl.fits'
-model = workdir + 'run0406_ID000126.xml'
-
 # ctools/cscripts parameters ---!
 caldb = 'prod3b'
 irf = 'South_z40_average_100s'
 
-sigma = 5  # detection acceptance (Gaussian)
-texp = [2e4]  # exposure times (s)
+texp = [2e1]  # exposure times (s)
 texp.sort()
 tint = len(texp)
-tmin = 30  # slewing time (s)
+tmin = 0  # slewing time (s)
 tmax = []
 for i in range(tint):
   tmax.append(tmin + texp[i])
 
 elow = 0.03  # simulation minimum energy (TeV)
 ehigh = 1.0  # simulation maximum energy (TeV)
+emin = 0.03  # selection minimum energy (TeV)
+emax = 0.5  # selection maximum energy (TeV)
 roi = 5  # region of interest for simulation and selection (deg)
 
 # pointing with off-axis equal to max prob GW ---!
@@ -55,48 +45,85 @@ pointRA = trueRa + offmax[0]  # (deg)
 pointDEC = trueDec + offmax[1]  # (deg)
 
 # others ---!
-checks = False
+checks = True
+if_fits = True
+if_cut = False
 if_ebl = True
-if if_ebl is False:
-  fileroot = 'run0406_'
-else:
-  fileroot = 'run0406ebl_'
+skip_exist = False
+fileroot = 'run0406_'
 
-# =====================
-# !!! LOAD TEMPLATE !!!
-# =====================
+# --------------------------------- INITIALIZE --------------------------------- !!!
 
-t, tbin_stop = load_template(template, tmax, extract_spec=False, model=model, pathout=datapath)
+cfg = xmlConfig()
+p = cfgMng_xml(cfg)
+# setup trials obj ---!
+tObj = analysis()
+tObj.pointing = [pointRA, pointDEC]
+tObj.roi = roi
+tObj.e = [elow, ehigh]
+tObj.tmax = tmax
+tObj.model = p.getWorkingDir() + 'run0406_ID000126.xml'
+# add EBL to template ---!
+if if_fits is True and chunk-1 == 0:
+  tObj.template = p.getWorkingDir() + 'run0406_ID000126.fits' # nominal ---!
+  new_template = p.getWorkingDir() + 'run0406_ID000126_ebl.fits' # absorbed ---!
+  tObj.table = '$WORK/gilmore_tau_fiducial.csv' # fiducial table ---!
+  tObj.zfetch = True
+  tObj.if_ebl = False
+  tObj.fits_ebl(new_template)
+  if_ebl = True
+# assign template ---!
+if if_ebl is True:
+  template = p.getWorkingDir() + 'run0406_ID000126_ebl.fits'
+  tObj.if_ebl = if_ebl
+else :
+  template = p.getWorkingDir() + 'run0406_ID000126.fits'
+  tObj.if_ebl = False
+tObj.template = template
+print('!!! check ---- template=', tObj.template) if checks is True else None
+# load template ---!
+tObj.if_ebl = if_ebl
+tObj.extract_spec = True
+tbin_stop = tObj.load_template()
 print('!!! check ---- tbin_stop=', tbin_stop) if checks is True else None
 
-for k in range(trials):
-  count += 1
-  # attach ID to fileroot ---!
+# --------------------------------- 1° LOOP :: trials  --------------------------------- !!!
+
+count += 1
+tObj.seed = count
+print('!!! check ---- seed=', tObj.seed) if checks is True else None
+# attach ID to fileroot ---!
+if if_ebl is True :
+  f = fileroot + 'ebl%06d' % (count)
+else :
   f = fileroot + 'sim%06d' % (count)
-  print('!!! check ---- file=', f) if checks is True else None
+print('!!! check ---- file=', f) if checks is True else None
 
-  # ====================
-  # !!! SIMULATE GRB !!!
-  # ====================
+# --------------------------------- SIMULATION --------------------------------- !!!
 
-  event_bins = []
-
-  # simulate ---!
-  for i in range(tbin_stop):
-    if if_ebl is False:
-      model = datapath + 'run0406_ID000126_tbin%d.xml' % i  # !!
-      event = simpath + f + "_tbin%02d.fits" % i
-    else:
-      model = datapath + 'run0406_ID000126_ebl_tbin%d.xml' % i  # !!
-      event = simpath + f + "_ebl_tbin%02d.fits" % i
-    event_bins.append(event)
-    if not os.path.isfile(event):
-      simulate_event(model=model, event=event, t=[t[i], t[1 + i]], e=[elow, ehigh], caldb=caldb, irf=irf,
-                     pointing=[pointRA, pointDEC], seed=count)
-
-      # observation list ---!
-  eventList = simpath + 'obs_%s.xml' % f
-  if not os.path.isfile(eventList):
-    observation_list(event=event_bins, eventList=eventList, obsname=f)
-
-
+print(tObj.tmax)
+event_bins = []
+# simulate ---!
+for i in range(tbin_stop):
+  if if_ebl is False:
+    tObj.model = p.getDataDir() + 'run0406_ID000126_tbin%02d.xml' % i
+    tObj.event = p.getSimDir() + f + "_tbin%02d.fits" % i
+  else:
+    tObj.model = p.getDataDir() + 'run0406_ID000126_ebl_tbin%02d.xml' % i
+    tObj.event = p.getSimDir() + f + "_ebl_tbin%02d.fits" % i
+  event_bins.append(tObj.event)
+  if skip_exist is True:
+    if not os.path.isfile(tObj.event):
+      tObj.eventSim()
+  else:
+    tObj.eventSim()
+print('!!! check ---- simulation=', tObj.event) if checks is True else None
+# observation list ---!
+tObj.event = event_bins
+tObj.event_list = p.getSimDir() + 'obs_%s.xml' % f
+if skip_exist is True:
+  if not os.path.isfile(tObj.event_list):
+    tObj.obsList(obsname=f)
+else:
+  tObj.obsList(obsname=f)
+print('!!! check ---- obs list=', tObj.event_list) if checks is True else None
