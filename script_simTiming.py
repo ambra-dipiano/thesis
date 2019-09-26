@@ -23,7 +23,7 @@ count = int(sys.argv[3])  # starting count
 caldb = 'prod3b'
 irf = 'South_z40_average_5h'
 
-texp = [2e4]  # exposure times (s)
+texp = [20000]  # exposure times (s)
 texp.sort()
 tint = len(texp)
 tmin = 0  # slewing time (s)
@@ -32,7 +32,7 @@ for i in range(tint):
   tmax.append(tmin + texp[i])
 
 elow = 0.03  # simulation minimum energy (TeV)
-ehigh = 1.0  # simulation maximum energy (TeV)
+ehigh = 150.0  # simulation maximum energy (TeV)
 emin = 0.03  # selection minimum energy (TeV)
 emax = 0.5  # selection maximum energy (TeV)
 roi = 5  # region of interest for simulation and selection (deg)
@@ -120,6 +120,8 @@ for i in range(tbin_stop):
     if not os.path.isfile(tObj.event):
       tObj.eventSim()
   else:
+    print('!!! check ---tmax', tObj.tmax)
+    exit()
     tObj.eventSim()
 print('!!! check ---- simulation=', tObj.event) if checks is True else None
 # observation list ---!
