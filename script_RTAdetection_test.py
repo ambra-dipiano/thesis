@@ -4,23 +4,15 @@
 
 # IMpORTS ---!
 import gammalib
-import ctools
-import cscripts
-# from astropy.io import fits
-# from module_plot import showSkymap
-from module_analysis import *
+from class_analysis import *
 from class_xml import *
 import numpy as np
 import csv
 import os
 import sys
 from sys import argv
-# from lxml import etree as ET
-# import os.path
 
-# ==============
-# !!! SET Up !!!
-# ==============
+# --------------------------------- SETUP --------------------------------- !!!
 
 # initialize global count ---!
 chunk = int(sys.argv[1])  # global count
@@ -46,7 +38,6 @@ emin = 0.03  # selection minimum energy (TeV)
 emax = 0.5  # selection maximum energy (TeV)
 roi = 5  # region of interest for simulation and selection (deg)
 wbin = 0.02  # skymap bin width (deg)
-nbin = int(roi / wbin)  # skymap x,y axes (pixel)
 confidence = (0.68, 0.95, 0.9973)  # confidence interval for asymmetrical errors (%)
 
 # pointing with off-axis equal to max prob GW ---!
@@ -57,37 +48,54 @@ pointRA = trueRa + offmax[0]  # (deg)
 pointDEC = trueDec + offmax[1]  # (deg)
 
 # others ---!
-checks = False
+checks = True
+if_fits = False
+if_cut = False
 if_ebl = True
-if_fits = True
+skip_exist = True
 fileroot = 'run0406_'
 
-# inputs ---!
-cfg = loadConfig()
-p = fsMng(cfg)
-model = p.getWorkingDir() + 'run0406_ID000126.xml'
-if if_ebl is True :
+# --------------------------------- INITIALIZE --------------------------------- !!!
+
+cfg = xmlConfig()
+p = cfgMng_xml(cfg)
+# setup trials obj ---!
+tObj = analysis()
+tObj.pointing = [pointRA, pointDEC]
+tObj.roi = roi
+tObj.e = [elow, ehigh]
+tObj.tmax = tmax
+tObj.model = p.getWorkingDir() + 'run0406_ID000126.xml'
+# add EBL to template ---!
+if if_fits is True and chunk-1 == 0:
+  tObj.template = p.getWorkingDir() + 'run0406_ID000126.fits' # nominal ---!
+  new_template = p.getWorkingDir() + 'run0406_ID000126_ebl.fits' # absorbed ---!
+  tObj.table = '/home/ambra/Desktop/cluster-morgana/gilmore_tau_fiducial.csv' # fiducial table ---!
+  tObj.zfetch = True
+  tObj.if_ebl = False
+  tObj.fits_ebl(new_template)
+  if_ebl = True
+# assign template ---!
+if if_ebl is True:
   template = p.getWorkingDir() + 'run0406_ID000126_ebl.fits'
+  tObj.if_ebl = if_ebl
 else :
   template = p.getWorkingDir() + 'run0406_ID000126.fits'
-
-# template ---!
-if if_fits is True :
-  nominal = p.getWorkingDir() + 'run0406_ID000126.fits'
-  absorbed = p.getWorkingDir() + 'run0406_ID000126_ebl.fits'
-  fiducial = '/home/ambra/Desktop/cluster-morgana/gilmore_tau_fiducial.csv'
-
-  fits_ebl(nominal, absorbed, fiducial, zfetch=False, z='0.10', plot=False)
-
-# =====================
-# !!! LOAD TEMpLATE !!!
-# =====================
-
-t, tbin_stop = load_template(template, tmax, extract_spec=True, model=model, pathout=p.getDataDir())
+  tObj.if_ebl = False
+tObj.template = template
+print('!!! check ---- template=', tObj.template) if checks is True else None
+# load template ---!
+tObj.if_ebl = if_ebl
+tObj.extract_spec = True
+tbin_stop = tObj.load_template()
 print('!!! check ---- tbin_stop=', tbin_stop) if checks is True else None
+
+# --------------------------------- 1° LOOP :: trials  --------------------------------- !!!
 
 for k in range(trials):
   count += 1
+  tObj.seed = count
+  print('!!! check ---- seed=', tObj.seed) if checks is True else None
   # attach ID to fileroot ---!
   if if_ebl is True :
     f = fileroot + 'ebl%06d' % (count)
@@ -95,322 +103,246 @@ for k in range(trials):
     f = fileroot + 'sim%06d' % (count)
   print('!!! check ---- file=', f) if checks is True else None
 
-  # ====================
-  # !!! SIMULATE GRB !!!
-  # ====================
+  # --------------------------------- SIMULATION --------------------------------- !!!
 
+  print(tObj.tmax)
   event_bins = []
-
   # simulate ---!
   for i in range(tbin_stop):
     if if_ebl is False:
-      model = p.getDataDir() + 'run0406_ID000126_tbin%d.xml' % i  # !!
-      event = p.getSimDir() + f + "_tbin%02d.fits" % i
+      tObj.model = p.getDataDir() + 'run0406_ID000126_tbin%02d.xml' % i
+      tObj.event = p.getSimDir() + f + "_tbin%02d.fits" % i
     else:
-      model = p.getDataDir() + 'run0406_ID000126_ebl_tbin%d.xml' % i  # !!
-      event = p.getSimDir() + f + "_ebl_tbin%02d.fits" % i
-    event_bins.append(event)
-    if not os.path.isfile(event):
-      simulate_event(model=model, event=event, t=[t[i], t[1 + i]], e=[elow, ehigh], caldb=caldb, irf=irf,
-                     pointing=[pointRA, pointDEC], seed=count)
+      tObj.model = p.getDataDir() + 'run0406_ID000126_ebl_tbin%02d.xml' % i
+      tObj.event = p.getSimDir() + f + "_ebl_tbin%02d.fits" % i
+    event_bins.append(tObj.event)
+    if skip_exist is True:
+      if not os.path.isfile(tObj.event):
+        tObj.eventSim()
+    else:
+      tObj.eventSim()
+  print('!!! check ---- simulation=', tObj.event) if checks is True else None
+  # observation list ---!
+  tObj.event = event_bins
+  tObj.event_list = p.getSimDir() + 'obs_%s.xml' % f
+  if skip_exist is True:
+    if not os.path.isfile(tObj.event_list):
+      tObj.obsList(obsname=f)
+  else:
+    tObj.obsList(obsname=f)
+  print('!!! check ---- obs list=', tObj.event_list) if checks is True else None
 
-      # observation list ---!
-  eventList = p.getSimDir() + 'obs_%s.xml' % f
-  if not os.path.isfile(eventList):
-    observation_list(event=event_bins, eventList=eventList, obsname=f)
+  # --------------------------------- 2° LOOP :: texp --------------------------------- !!!
 
-    # ============================
-  # !!! EVENT LIST SELECTION !!!
-  # ============================
+  raDet, decDet, Ndet = ([[] for i in range(4)] for j in range(3))
+  ts, Nsrc, raFit, decFit = ([[] for i in range(4)] for j in range(4))
+  Pref, Index, Pivot = ([[] for i in range(4)] for j in range(3))
+  flux_ph, flux_en = ([[] for i in range(4)] for j in range(2))
+  Cutoff = [[] for i in range(4)] if if_cut is True else None
 
-  selectedEvents = []
+  # --------------------------------- SELECTION --------------------------------- !!!
 
+  tObj.e = [emin, emax]
   for i in range(tint):
-    selectedEvents.append(eventList.replace(p.getSimDir(), p.getSelectDir()).replace('obs_', 'texp%ds_' % texp[i]))
+    tObj.t = [tmin, tmax[i]]
+    tObj.event_selected = tObj.event_list.replace(p.getSimDir(), p.getSelectDir()).replace('obs_', 'texp%ds_' % texp[i])
     prefix = p.getSelectDir() + 'texp%ds_' % texp[i]
-    if not os.path.isfile(selectedEvents[i]):
-      select_event(eventList=eventList, event_selected=selectedEvents[i], prefix=prefix, t=[tmin, tmax[i]],
-                   e=[emin, emax])
+    if skip_exist is True:
+      if not os.path.isfile(tObj.event_selected):
+        tObj.eventSelect(prefix=prefix)
+    else:
+      tObj.eventSelect(prefix=prefix)
+    print('!!! check --- selection: ', tObj.event_selected) if checks is True else None
 
-  print('!!! check --- selection: ', selectedEvents) if checks is True else None
+  # --------------------------------- SKYMAP --------------------------------- !!!
 
-  # ========================
-  # !!! SELECTION SKYMAp !!!
-  # ========================
+    tObj.skymap = tObj.event_selected.replace(p.getSelectDir(), p.getDetDir()).replace('.xml', '_skymap.fits')
+    if skip_exist is True:
+      if not os.path.isfile(tObj.skymap):
+        tObj.eventSkymap(wbin=wbin)
+    else:
+      tObj.eventSkymap(wbin=wbin)
+    print('!!! check --- skymaps: ', tObj.skymap) if checks is True else None
 
-  skymapName = []
+  # --------------------------------- DETECTION & MODELING --------------------------------- !!!
 
-  for i in range(tint):
-    skymapName.append(selectedEvents[i].replace(p.getSelectDir(), p.getDetDir()).replace('.xml', '_skymap.fits'))
-    if not os.path.isfile(skymapName[i]):
-      skymap_event(event_selected=selectedEvents[i], sky=skymapName[i], e=[emin, emax], caldb=caldb, irf=irf, wbin=wbin,
-                   nbin=nbin)
-
-  print('!!! check --- skymaps: ', skymapName) if checks is True else None
-
-  # ==============================
-  # !!! DETECTION AND MODELING !!!
-  # ==============================
-
-  detXml = []
-  detReg = []
-  pos = []
-
-  for i in range(tint):
-    # needs the analysis class as the prms init goes in there, not in the xml ---!
-    detectionXml, detectionReg = runDetection(skymap=skymapName[i])
-    detObj = xmlMng(detectionXml)
+    tObj.maxSrc = 10
+    if skip_exist is True:
+      if not os.path.isfile(str(tObj.detectionXml)):
+        tObj.runDetection()
+    else:
+      tObj.runDetection()
+    detObj = xmlMng(tObj.detectionXml)
     detObj.sigma = sigma
-    detObj.maxSrc = 1
-    newXml = detObj.modXml()
-    detXml.append(detectionXml)
-    detReg.append(detectionReg)
-    pos.append(detObj.loadTSV())
+    detObj.if_cut = if_cut
+    detObj.modXml()
+    print('!!! check --- detection.............', texp[i], 's done') if checks is True else None
 
-    print('\n\n==========\n\n!!! check --- detection.............', texp[i], 's done\n\n!!! coords:', pos,
-          '\n\n ==========\n\n') if checks is True else None
+  # --------------------------------- DETECTION RA & DEC --------------------------------- !!!
 
-  # =========================
-  # !!! DETECTED RA & DEC !!!
-  # =========================
+    pos = []
+    pos.append(detObj.loadRaDec())
+    print('!!! coords:', pos[0]) if checks is True else None
+    raDet[i].append(pos[0][0][0]) if len(pos[0][0]) > 0 else raDet[i].append(np.nan)
+    decDet[i].append(pos[0][1][0]) if len(pos[0][0]) > 0 else decDet[i].append(np.nan)
+    Ndet[i].append(len(pos[0][0]))
+    print('!!! check number of detections in trial', k + 1, ' ====== ', Ndet[i][0]) if checks is True else None
+    print('!!! check ------- 1° src DETECTED RA:', raDet[i][0], ' and DEC:', decDet[i][0]) if checks is True else None
 
-  raDet = []
-  decDet = []
-  Ndet = []
+  # --------------------------------- MAX LIKELIHOOD --------------------------------- !!!
 
-  for i in range(tint):
-    raDet.append(pos[i][0][0]) if len(pos[i][0]) > 0 else raDet.append(np.nan)
-    decDet.append(pos[i][1][0]) if len(pos[i][1]) > 0 else decDet.append(np.nan)
-    Ndet.append(len(pos[i][0]))
-    print('!!! check number of detections in trial', k + 1, ' ====== ', Ndet) if checks is True else None
+    tObj.likeXml = tObj.detectionXml.replace('_det%dsgm.xml' % tObj.sigma, '_like%dsgm.xml' % tObj.sigma)
+    if Ndet[i][0] > 0:
+      if skip_exist is True:
+        if not os.path.isfile(tObj.likeXml):
+          tObj.maxLikelihood()
+      else:
+        tObj.maxLikelihood()
+      likeObj = xmlMng(tObj.likeXml)
+      likeObj.sortSrcTS()
+    else:
+      likeObj = np.nan
+    print('!!! check --- max likelihoods: ', tObj.likeXml) if checks is True else None
 
-  raSrc001 = raDet
-  decSrc001 = decDet
-  print('!!! check ------- 1° src DETECTED RA:', raSrc001, ' and DEC:', decSrc001) if checks is True else None
+  # --------------------------------- BEST FIT TSV --------------------------------- !!!
 
-  # ==================
-  # !!! LIKELIHOOD !!!
-  # ==================
-
-  resultsName = []
-
-  for i in range(tint):
-    resultsName.append(detXml[i].replace('_det%dsgm.xml' % sigma, '_det%dsgm_results.xml' % sigma))
-    if Ndet[i] > 0:
-      if not os.path.isfile(resultsName[i]):
-        max_likelihood(event_selected=selectedEvents[i], detection_model=detXml[i], results=resultsName[i], caldb=caldb,
-                       irf=irf)
-  print('!!! check --- max likelihoods: ', resultsName) if checks is True else None
-
-  # ======================
-  # !!! LIKELIHOOD TSV !!!
-  # ======================
-
-  tsList = []
-
-  for i in range(tint):
-    if Ndet[i] > 0:
-      tsList.append(xmlMng.loadTSV(resultsName[i]))
+    tsList = []
+    if Ndet[i][0] > 0:
+      tsList.append(likeObj.loadTSV())
     else:
       tsList.append([np.nan])
+    print('!!! check --- TSV List for all sources: ', tsList[0]) if checks is True else None
 
-  print('!!! check --- TSV List for each texp: ', tsList) if checks is True else None
+    # only first elem ---!
+    ts[i].append(tsList[0][0])
+    print('!!! check --- SRC001 TSV for candidate:', ts[i][0]) if checks is True else None
 
-  # only first elem ---!
-  tsv = []
-  for i in range(len(tsList)):
-    tsv.append(tsList[i][0])
+  # --------------------------------- Nsrc FOR TSV THRESHOLD --------------------------------- !!!
 
-  print('!!! check --- SRC001 TSV for each texp:', tsv) if checks is True else None
-
-  # =================
-  # !!! N SOURCES !!!
-  # =================
-
-  # count src with TS >= 9
-  Nsrc = []
-  for i in range(tint):
+    # count src with TS >= 9
     n = 0
-    for j in range(len(tsList[i])):
-      if float(tsList[i][j]) >= 9:
+    for j in range(len(tsList[0])):
+      if float(tsList[0][j]) >= 9:
         n += 1
 
-    Nsrc.append(n)
+    Nsrc[i].append(n)
+    print('!!! check ---- SRC NUMBER with TS > 9 for trial ', k + 1, ' ===== ', Nsrc[i][0], ' for texp ==== ',
+          texp[i], 's') if checks is True else None
 
-    print('!!! check ---- SRC NUMBER with TS > 9 for trial ', k + 1, ' ===== ', Nsrc[i], ' for texp ==== ',
-          texp[i]) if checks is True else None
+  # --------------------------------- BEST FIT RA & DEC --------------------------------- !!!
 
-  # ===========================
-  # !!! ASYMMETRICAL ERRORS !!!
-  # ===========================
-
-  errorsName = []
-
-  for i in range(tint):
-    errorsName.append(resultsName[i].replace('_results.xml', '_errors.xml'))
-    if Ndet[i] > 0:
-      if not os.path.isfile(errorsName[i]):
-        errors_conf = confidence_lv(event_selected=selectedEvents[i], results=resultsName[i], asym_errors=errorsName[i],
-                                    caldb=caldb, irf=irf)
-  print('!!! check --- asym errors: ', errors_conf) if checks is True else None
-
-  # ===========================
-  # !!! LIKELIHOOD RA & DEC !!!
-  # ===========================
-
-  raList = []
-  decList = []
-  prefErr = []
-  for i in range(tint):
-    if Ndet[i] > 0:
-      raList.append(xmlMng.loadRaDec(resultsName[i])[0])
-      decList.append(xmlMng.loadRaDec(resultsName[i])[1])
+    raList = []
+    decList = []
+    if Ndet[i][0] > 0:
+      coord = likeObj.loadRaDec()
+      raList.append(coord[0])
+      decList.append(coord[1])
     else:
       raList.append([np.nan])
       decList.append([np.nan])
 
-  raFit = []
-  decFit = []
-  raFit_err = []
-  decFit_err = []
-  for i in range(len(raList)):
-    raFit.append(raList[i][0])
-    decFit.append(decList[i][0])
+    raFit[i].append(raList[0][0])
+    decFit[i].append(decList[0][0])
+    print('!!! check --- RA FIT for all sources: ', raList[0], '\n!!!check --- RA FIT for candidate:',
+          raFit[i][0]) if checks is True else None
+    print('!!! check --- DEC FIT for all sources: ', decList[0], '\n!!!check --- DEC FIT for candidate:',
+          decFit[i][0]) if checks is True else None
 
-  print('!!! check --- RA FIT for each texp: ', raList, '\n\nand RA SRC001 for each texp:',
-        raFit) if checks is True else None
-  print('!!! check --- DEC FIT for each texp: ', decList, '\n\nand DEC SRC001 for each texp:',
-        decFit) if checks is True else None
+  # --------------------------------- BEST FIT SPECTRAL --------------------------------- !!!
 
-  # ==================================
-  # !!! LIKELIHOOD SpECTRAL pARAMS !!!
-  # ==================================
-
-  pref = []
-  prefErr = []
-  index = []
-  indexErr = []
-  pivot = []
-  for i in range(tint):
-    if Ndet[i] > 0:
-      pref.append(xmlMng.loadSpectral(resultsName[i])[0][0])
-      index.append(xmlMng.loadSpectral(resultsName[i])[0][1])
-      pivot.append(xmlMng.loadSpectral(resultsName[i])[0][2])
-      prefErr.append(xmlMng.loadSpectral(resultsName[i])[1][0])
-      indexErr.append(xmlMng.loadSpectral(resultsName[i])[1][1])
-
+    pref = []
+    index = []
+    pivot = []
+    cutoff = [] if if_cut is True else None
+    if Ndet[i][0] > 0:
+      spectral = likeObj.loadSpectral()
+      index.append(spectral[0])
+      pref.append(spectral[1])
+      pivot.append(spectral[2])
+      if if_cut is True :
+        cutoff.append(spectral[3])
     else:
       pref.append([np.nan])
       index.append([np.nan])
       pivot.append([np.nan])
-      prefErr.append([np.nan])
-      indexErr.append([np.nan])
+      if if_cut is True :
+        cutoff.append([np.nan])
 
-  pref = []
-  Index = []
-  pivot = []
-  pref_err = []
-  Index_err = []
-  for i in range(len(pref)):
-    pref.append(pref[i][0])
-    Index.append(index[i][0])
-    pivot.append(pivot[i][0])
-    pref_err.append(prefErr[i][0])
-    Index_err.append(indexErr[i][0])
+    Index[i].append(index[0][0])
+    Pref[i].append(pref[0][0])
+    Pivot[i].append(pivot[0][0])
+    if if_cut is True:
+      Cutoff[i].append(cutoff[0][0])
+    print('!!! check ----- index:', Index[i][0]) if checks is True else None
+    print('!!! check ----- prefactor:', Pref[i][0]) if checks is True else None
+    print('!!! check ----- pivot:', Pivot[i][0]) if checks is True else None
+    if if_cut is True:
+      print('!!! check ----- cutoff:', Cutoff[i]) if checks is True else None
 
-  print('!!! check ----- prefactor:', pref) if checks is True else None
-  print('!!! check ----- index:', Index) if checks is True else None
-  print('!!! check ----- pivot:', pivot) if checks is True else None
+  # --------------------------------- INTEGRATED FLUX --------------------------------- !!!
 
-  # ====================
-  # !!! COMpUTE FLUX !!!
-  # ====================
-
-  #  (flux, f_lerr, f_uerr) = ((intensity, lerr, uerr) * (energy ** 2)) / (6.4215 * 1e5)
-
-  flux = []
-  flux_ph = []
-  flux_erg = []
-  flux_en = []
-  for i in range(tint):
-    if Ndet[i] > 0:
-      gamma = Index[i] + 1
-      cost = pref[i] / gamma
-      cost_erg = cost * 6.42 * 1e5
-      integ = (emax * 1e6 / pivot[i]) ** gamma - (emin * 1e6 / pivot[i]) ** gamma
-      integ_erg = (emax * 1e6)
-
-      flux.append(cost * integ)  # convert E (MeV)
-      print('!!! check ----- next is gammalib.plaw_photon_flux') if checks is True else None
-      flux_ph.append(pref[i] * gammalib.plaw_photon_flux(emin, emax, pivot[i], Index[i]))  # takes E (TeV)
-      flux_erg.append(cost_erg * integ_erg)  # convert E (erg)
-      print('!!! check ----- next is gammalib.plaw_energy_flux') if checks is True else None
-      flux_en.append(pref[i] * gammalib.plaw_energy_flux(emin, emax, pivot[i], Index[i]))  # takes E (TeV)
+    if Ndet[i][0] > 0:
+      flux_ph[i].append(tObj.photonFlux_pl(Index[i][0], Pref[i][0], Pivot[i][0]))  # E (MeV)
+      flux_en[i].append(tObj.energyFlux_pl(Index[i][0], Pref[i][0], Pivot[i][0]))  # E (erg)
     else:
-      flux.append(np.nan)
-      flux_ph.append(np.nan)
-      flux_erg.append(np.nan)
-      flux_en.append(np.nan)
+      flux_ph[i].append(np.nan)
+      flux_en[i].append(np.nan)
 
-  # ==================
-  # !!! CHECK FLUX !!!
-  # ==================
+    print('!!! check ----- my flux [ph/cm2/s]:', flux_ph[i][0]) if checks is True else None
+    print('!!! check ----- my flux [erg/cm2/s]:', flux_en[i][0], '(*)') if checks is True else None
 
-  #  uplimName = []
+    # MISSING THE CUT-OFF OPTION ---!!!
 
-  #  for i in range(tint) :
-  #    if Ndet[i] > 0 :
-  #      integrated_flux(selectedEvents[i], resultsName[i], caldb=caldb, irf=irf, conf=0.95, erange=[0.03, 0.5])
-  #  print('!!! check --- max likelihoods: ', resultsName)
+  # --------------------------------- CLOSE XMLs --------------------------------- !!!
 
-  # ================== #
-  # !!! WRITE CSV FILE #
-  # ================== #
+    detObj.closeXml()
+    likeObj.closeXml()
 
-  csvName = []
-  header = '#trial,t exp,sigma,Ndet,Nsrc,RA Src001,DEC Src001,RA Fit,DEC Fit,TSV,flux1 ph,flux2 ph,flux1 erg,flux2 erg\n'
+  # --------------------------------- RESULTS TABLE (csv) --------------------------------- !!!
+
+  header = '#trial,t exp,sigma,Ndet,Nsrc,RA Src001,DEC Src001,RA Fit,DEC Fit,flux ph,flux erg,TSV\n'
   ID = 'ID%06d' % count
-
   for i in range(tint):
-    csvName.append(p.getCsvDir() + fileroot + '%ds_chunk%02d.csv' % (texp[i], chunk))
+    csvName = p.getCsvDir() + fileroot + '%ds_chunk%02d.csv' % (texp[i], chunk)
 
     row = []
-    row.append([ID, texp[i], sigma, Ndet[i], Nsrc[i], raSrc001[i], decSrc001[i], raFit[i], decFit[i], tsv[i], flux[i],
-                flux_ph[i], flux_erg[i], flux_en[i]])
+    print('!!! check Ndet:', Ndet)
+    print('!!! check Nsrc:', Nsrc)
+    print('!!! check raDet:', raDet)
+    print('!!! check decDet:', decDet)
+    print('!!! check raFit:', raFit)
+    print('!!! check decFit:', decFit)
+    print('!!! check flux_ph:', flux_ph)
+    print('!!! check flux_en:', flux_en)
+    print('!!! check ts:', ts)
 
+    row.append([ID, texp[i], sigma, Ndet[i][0], Nsrc[i][0], raDet[i][0], decDet[i][0], raFit[i][0], decFit[i][0], flux_ph[i][0], flux_en[i][0], ts[i][0]])
     print('!!! check row --- iter', i, '=====', row) if checks is True else None
-
-    if os.path.isfile(csvName[i]) == True:
-      with open(csvName[i], 'a') as f:
+    if os.path.isfile(csvName) is True:
+      with open(csvName, 'a') as f:
         w = csv.writer(f)
         w.writerows(row)
         f.close()
     else:
-      with open(csvName[i], 'w+') as f:
+      with open(csvName, 'w+') as f:
         f.write(header)
         w = csv.writer(f)
         w.writerows(row)
         f.close()
+    print('!!! check --- data file: ', csvName) if checks is True else None
 
-  print('!!! check --- data file: ', csvName) if checks is True else None
-
-  # ==================== #
-  # !!! DELETE SIM FILES #
-  # ==================== #
+  # --------------------------------- CLEAR SPACE --------------------------------- !!!
 
   print('!!! check --- ', count, ') trial done...') if checks is True else None
-
   if count > 4:
     os.system('rm ' + p.getSimDir() + '*sim%06d*' % count)
     os.system('rm ' + p.getSelectDir() + '*sim%06d*' % count)
     os.system('rm ' + p.getDetDir() + '*sim%06d*' % count)
-
 print('!!! check end\n\ndone......chunk ', chunk, 'sim id from ', trials * (chunk - 1) + 1, ' to ',
       count) if checks is True else None
-print(
-  '!!! check end\n\ndone...... removed all files in sim, selected_sim and detection_all except seeds from 1 to 4') if checks is True else None
+print('!!! check end\n\ndone...... removed all files in sim, selected_sim and detection_all except seeds from 1 to 4') if checks is True else None
 
-print('\n\n\n\n\n\n\ndone\n\n\n\n\n\n\n\n') if checks is True else None
+print('\n\n\n\n\n\n\ndone\n\n\n\n\n\n\n\n')
 
 
 
