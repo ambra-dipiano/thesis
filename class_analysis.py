@@ -89,6 +89,8 @@ class analysis() :
     self.sensCsv = str()
     self.caldb = 'prod2'
     self.irf = 'South_0.5h'
+    self.irf_nominal = '$CTOOLS/share/caldb/data/cta/%s/bcf/%s/irf_file.fits' % (self.caldb, self.irf)
+    self.irf_degraded = self.irf_nominal.replace('prod', 'degr')
     # condition control ---!
     self.if_ebl = True
     self.extract_spec = False
@@ -475,12 +477,18 @@ class analysis() :
     flux = factor * (e2**delta - e1**delta)
     return flux
 
-  def degradeIRF(self, degraded_irf):
+  def degradeIRF(self):
+    caldb_degr = self.caldb.replace('prod', 'degr')
+    # check caldb and change permissions ---!
+    if not os.path.isfile(self.irf_degraded):
+      os.system('cp -r $CTOOLS/share/caldb/data/cta/%s/ $CTOOLS/share/caldb/data/cta/%s/' % (self.caldb, caldb_degr))
+    os.system('chmod 777 $CTOOLS/share/caldb/data/cta/%s/' % caldb_degr)
+    # degrade ---!
     extension = ['EFFECTIVE AREA', 'BACKGROUND']
     field = [4, 6]
     #  field = ['EFFAREA', 'BKG']
     inv = 1 / self.factor
-    with fits.open(self.irf) as hdul:
+    with fits.open(self.irf_nominal) as hdul:
       col = []
       for i in range(len(extension)):
         col.append(hdul[extension[i]].data.field(field[i])[:].astype(float))
@@ -494,13 +502,15 @@ class analysis() :
     b = np.array(b)
     tmp = [a, b]
 
-    with fits.open(degraded_irf, mode='update') as hdul:
+    with fits.open(self.irf_degraded, mode='update') as hdul:
       for i in range(len(extension)):
         hdul[extension[i]].data.field(field[i])[:] = tmp[i]
       # save changes ---!
       hdul.flush
-
-    return degraded_irf
+    # update and change permissions back ---!
+    self.caldb.replace('prod', 'degr')
+    os.system('chmod 755 $CTOOLS/share/caldb/data/cta/%s/' % caldb_degr)
+    return
 
   def eventSens(self, bins=20, wbin=0.05):
     sens = cscripts.cssens()
