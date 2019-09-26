@@ -23,7 +23,7 @@ count = int(sys.argv[3])  # starting count
 caldb = 'prod3b'
 irf = 'South_z40_average_5h'
 
-texp = [2e1]  # exposure times (s)
+texp = [2e4]  # exposure times (s)
 texp.sort()
 tint = len(texp)
 tmin = 0  # slewing time (s)
@@ -46,11 +46,11 @@ pointDEC = trueDec + offmax[1]  # (deg)
 
 # others ---!
 checks = True
-if_fits = True
+if_fits = False
 if_cut = False
 if_ebl = True
 skip_exist = False
-extract_spec = True
+extract_spec = False
 fileroot = 'run0406_'
 cfg_file = '/config_archive.xml'
 
@@ -59,8 +59,7 @@ cfg_file = '/config_archive.xml'
 cfg = xmlConfig(cfg_file)
 p = cfgMng_xml(cfg)
 # setup trials obj ---!
-tObj = analysis()
-tObj.cfg_file = cfg_file
+tObj = analysis(cfg_file)
 tObj.pointing = [pointRA, pointDEC]
 tObj.roi = roi
 tObj.e = [elow, ehigh]
