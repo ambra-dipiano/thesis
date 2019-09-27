@@ -55,7 +55,7 @@ if_ebl = True
 extract_spec = False
 irf_degrade = False
 src_sort = True
-skip_exist = True
+skip_exist = False
 
 # files ---!
 fileroot = 'run0406_'
@@ -64,6 +64,7 @@ ebl_table = '/home/ambra/Desktop/cluster-morgana/gilmore_tau_fiducial.csv'
 nominal_template = 'run0406_ID000126.fits'
 ebl_template = 'run0406_ID000126_ebl.fits'
 model_pl = 'run0406_ID000126.xml'
+tcsv = 'time_slices.csv'
 
 # --------------------------------- INITIALIZE --------------------------------- !!!
 
@@ -85,7 +86,7 @@ if irf_degrade:
 if if_fits:
   tObj.template = p.getWorkingDir() + nominal_template # nominal ---!
   new_template = p.getWorkingDir() + ebl_template # absorbed ---!
-  tObj.table = table # fiducial ---!
+  tObj.table = ebl_table # fiducial ---!
   tObj.zfetch = True
   tObj.if_ebl = False
   tObj.fits_ebl(new_template)
@@ -121,10 +122,13 @@ for k in range(trials):
   # --------------------------------- SIMULATION --------------------------------- !!!
 
   event_bins = []
-  t0, t1 = tObj.load_tarray(tcsv)  # methods which returns time slice edges
+  tObj.table = p.getDataDir() + tcsv
+  time = tObj.getTimeSlices()  # methods which returns time slice edges
+  print(time)
   # simulate ---!
   for i in range(tbin_stop):
-    tObj.t = [t0[i], t1[i]]
+    tObj.t = [time[i], time[i+1]]
+    print(time[i], time[i+1])
     if if_ebl is False:
       tObj.model = p.getDataDir() + 'run0406_ID000126_tbin%02d.xml' % i
       tObj.event = p.getSimDir() + f + "_tbin%02d.fits" % i
@@ -147,8 +151,6 @@ for k in range(trials):
   else:
     tObj.obsList(obsname=f)
   print('!!! check ---- obs list=', tObj.event_list) if checks is True else None
-
-  breakpoint()
 
   # --------------------------------- 2° LOOP :: texp --------------------------------- !!!
 
