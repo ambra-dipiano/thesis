@@ -159,13 +159,16 @@ class analysis() :
     E = np.array(df[cols[0]]) / 1e3  # MeV --> GeV ---!
     return tau_gilmore, E
 
-  def getTimeSlices(selfself):
-    df = self.__openCSV
-    time = df[0]
+  def getTimeSlices(self):
+    global time
+    df = self.__openCSV()
+    cols = list(df.columns)
+    time = np.append(0, np.array(df[cols[0]]))
     for t in time:
-      if t > self.tmax:
+      if t > max(self.tmax):
         t = self.tmax
-    print(time)
+        break
+
     return time
 
   def __add_ebl(self):
@@ -250,7 +253,6 @@ class analysis() :
         os.system('touch ' + filename)
 
       # time slices table ---!
-      print(i, time[i])
       with open(table, 'a') as tab:
         tab.write('\n' + str(i) + ', ' + str(time[i][0]))
 
