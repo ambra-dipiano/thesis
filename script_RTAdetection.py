@@ -32,7 +32,6 @@ tmin = 30  # slewing time (s)
 tmax = []
 for i in range(tint):
   tmax.append(tmin + texp[i])
-
 elow = 0.03  # simulation minimum energy (TeV)
 ehigh = 1.0  # simulation maximum energy (TeV)
 emin = 0.03  # selection minimum energy (TeV)
@@ -48,15 +47,19 @@ trueDec = -51.841  # (deg)
 pointRA = trueRa + offmax[0]  # (deg)
 pointDEC = trueDec + offmax[1]  # (deg)
 
-# others ---!
+# conditions control ---!
 checks = True
 if_fits = False
 if_cut = False
 if_ebl = True
-irf_degrade = True
+extract_spec = False
+irf_degrade = False
 src_sort = True
 skip_exist = True
+
+# files ---!
 fileroot = 'run0406_'
+cfg_file = '/config.xml'
 ebl_table = '/home/ambra/Desktop/cluster-morgana/gilmore_tau_fiducial.csv'
 nominal_template = 'run0406_ID000126.fits'
 ebl_template = 'run0406_ID000126_ebl.fits'
@@ -64,10 +67,10 @@ model_pl = 'run0406_ID000126.xml'
 
 # --------------------------------- INITIALIZE --------------------------------- !!!
 
-cfg = xmlConfig()
+cfg = xmlConfig(cfg_file)
 p = cfgMng_xml(cfg)
 # setup trials obj ---!
-tObj = analysis()
+tObj = analysis(cfg_file)
 tObj.pointing = [pointRA, pointDEC]
 tObj.roi = roi
 tObj.e = [elow, ehigh]
@@ -98,7 +101,7 @@ tObj.template = template
 print('!!! check ---- template=', tObj.template) if checks is True else None
 # load template ---!
 tObj.if_ebl = if_ebl
-tObj.extract_spec = True
+tObj.extract_spec = extract_spec
 tbin_stop = tObj.load_template()
 print('!!! check ---- tbin_stop=', tbin_stop) if checks is True else None
 
@@ -144,6 +147,8 @@ for k in range(trials):
   else:
     tObj.obsList(obsname=f)
   print('!!! check ---- obs list=', tObj.event_list) if checks is True else None
+
+  breakpoint()
 
   # --------------------------------- 2° LOOP :: texp --------------------------------- !!!
 

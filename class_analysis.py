@@ -159,6 +159,15 @@ class analysis() :
     E = np.array(df[cols[0]]) / 1e3  # MeV --> GeV ---!
     return tau_gilmore, E
 
+  def getTimeSlices(selfself):
+    df = self.__openCSV
+    time = df[0]
+    for t in time:
+      if t > self.tmax:
+        t = self.tmax
+    print(time)
+    return time
+
   def __add_ebl(self):
     energy, time, spectra = self.__getFitsData
     tau_gilmore, E = self.__getCsvData()
@@ -219,8 +228,17 @@ class analysis() :
       return
 
   def __extractSpc(self):
-    print('!!! check --- extract spect in', self.__pathout)
-    for i in range(tbin_stop):
+    # time slices table ---!
+    table = self.__pathout + 'time_slices.csv'
+    if os.path.isfile(table):
+      os.system('rm ' + table)
+    if not os.path.isfile(table):
+      os.system('touch ' + table)
+      with open(table, 'a') as tab:
+        tab.write('#bin,tmax_bin')
+
+    # spectra and models ---!
+    for i in range(Nt):
       if self.if_ebl is False:
         filename = self.__pathout + 'spec_tbin%02.out' % i
       else:
@@ -230,44 +248,38 @@ class analysis() :
         os.system('rm ' + filename)
       if not os.path.isfile(filename):
         os.system('touch ' + filename)
-        out_file = open(filename, 'a')
-        # E[MeV], Flux[fotoni/MeV/cm^2/s] ---!
-        out_file.close()
-    # ebl ---!
-    if self.if_ebl is True:
-      for i in range(Nt):
-        outfile = self.__pathout + 'spec_ebl_tbin%02d.out' % i
-        out_file = open(outfile, 'a')
-        for j in range(Ne):
-          # write spectral data in E [MeV] and I [ph/cm2/s/MeV] ---!
-          if ebl is not None:
-            out_file.write(str(energy[j][0] * 1000) + ' ' + str(ebl[i][j] / 1000) + "\n")
-          # if tau is not None and ebl is None:
-          #   out_file.write(str(energy[j][0] * 1000.0) + ' ' + str((spectra[i][j] / 1000.0) * np.exp(-tau[j])) + "\n")
-        out_file.close()
-        # bin models ---!
+
+      # time slices table ---!
+      print(i, time[i])
+      with open(table, 'a') as tab:
+        tab.write('\n' + str(i) + ', ' + str(time[i][0]))
+
+      # ebl ---!
+      if self.if_ebl is True:
+        with open(filename, 'a') as f:
+          for j in range(Ne):
+            # write spectral data in E [MeV] and I [ph/cm2/s/MeV] ---!
+            if ebl is not None:
+              f.write(str(energy[j][0] * 1000) + ' ' + str(ebl[i][j] / 1000) + "\n")
+        # write bin models ---!
         os.system('cp ' + str(self.model) + ' ' + str(self.__pathout) + 'run0406_ID000126_ebl_tbin%02d.xml' % i)
         s = open(self.__pathout + 'run0406_ID000126_ebl_tbin%02d.xml' % i).read()
         s = s.replace('data/spec', 'spec_ebl_tbin%02d' % i)
-        f = open(self.__pathout + 'run0406_ID000126_ebl_tbin%02d.xml' % i, 'w')
-        f.write(s)
-        f.close()
-    # no ebl ---!
-    else:
-      for i in range(Nt):
-        outfile = self.__pathout + 'spec_tbin%02d.out' % i
-        out_file = open(outfile, 'a')
-        for j in range(Ne):
-          # write spectral data in E [MeV] and I [ph/cm2/s/MeV] ---!
-          out_file.write(str(energy[j][0] * 1000.0) + ' ' + str(spectra[i][j] / 1000.0) + "\n")
-        out_file.close()
-        # bin models ---!
+        with open(self.__pathout + 'run0406_ID000126_ebl_tbin%02d.xml' % i, 'w') as f:
+          f.write(s)
+      # no ebl ---!
+      else:
+        with open(filename, 'a') as f:
+          for j in range(Ne):
+            # write spectral data in E [MeV] and I [ph/cm2/s/MeV] ---!
+            f.write(str(energy[j][0] * 1000.0) + ' ' + str(spectra[i][j] / 1000.0) + "\n")
+        # write bin models ---!
         os.system('cp ' + str(self.model) + ' ' + str(self.__pathout) + 'run0406_ID000126_tbin%02d.xml' % i)
         s = open(self.__pathout + 'run0406_ID000126_tbin%02d.xml' % i).read()
         s = s.replace('spec', 'spec_tbin%02d' % i)
-        f = open(self.__pathout + 'run0406_ID000126_tbin%02d.xml' % i, 'w')
-        f.write(s)
-        f.close()
+        with open(self.__pathout + 'run0406_ID000126_tbin%02d.xml' % i, 'w') as f:
+          f.write(s)
+
     return
 
   def load_template(self) :
