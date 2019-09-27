@@ -96,6 +96,7 @@ class analysis() :
     self.extract_spec = False
     self.plot = False
     self.zfetch = False
+    self.debug = False
     # data ---!
     self.z = 0.1
     self.t = [0, 2000]
@@ -163,13 +164,14 @@ class analysis() :
     global time
     df = self.__openCSV()
     cols = list(df.columns)
-    time = np.append(0, np.array(df[cols[0]]))
-    for t in time:
-      if t > max(self.tmax):
-        t = self.tmax
+    time = np.append(0, np.array(df[cols[1]]))
+    for i in range(len(time)):
+      if time[i] > max(self.tmax):
+        time[i] = max(self.tmax)
+        sliceObj = slice(0, i+1)
         break
 
-    return time
+    return time[sliceObj]
 
   def __add_ebl(self):
     energy, time, spectra = self.__getFitsData
@@ -340,7 +342,7 @@ class analysis() :
     sim["emax"] = self.e[1]
     sim["seed"] = self.seed
     sim["logfile"] = self.event.replace('.fits', '.log')
-    sim["debug"] = True
+    sim["debug"] = self.debug
     sim.execute()
 
     return
@@ -372,7 +374,7 @@ class analysis() :
     selection['emin'] = self.e[0]
     selection['emax'] = self.e[1]
     selection['logfile'] = self.event_selected.replace('.xml', '.log')
-    selection['debug'] = True
+    selection['debug'] = self.debug
     selection.execute()
 
     return
@@ -394,7 +396,7 @@ class analysis() :
     skymap['proj'] = 'CAR'
     skymap['bkgsubtract'] = self.sky_subtraction.upper()
     skymap['logfile'] = self.skymap.replace('.fits', '.log')
-    skymap['debug'] = True
+    skymap['debug'] = self.debug
     skymap.execute()
 
     return
@@ -415,7 +417,7 @@ class analysis() :
     detection['corr_rad'] = self.corr_rad
     detection['corr_kern'] = self.corr_kern.upper()
     detection['logfile'] = self.detectionXml.replace('.xml', '.log')
-    detection['debug'] = True
+    detection['debug'] = self.debug
     detection.execute()
 
     return
@@ -429,7 +431,7 @@ class analysis() :
     like['irf'] = self.irf
     like['fix_spat_for_ts'] = True
     like['logfile'] = self.likeXml.replace('.xml', '.log')
-    like['debug'] = True
+    like['debug'] = self.debug
     like.execute()
 
     return
@@ -449,7 +451,7 @@ class analysis() :
         err['irf'] = self.irf
         err['confidence'] = self.confidence_level[i]
         err['logfile'] = asym_errors.replace('.xml', '.log')
-        err['debug'] = True
+        err['debug'] = self.debug
         err.execute()
 
     return self.errors_conf
@@ -468,7 +470,7 @@ class analysis() :
     uplim['emin'] = self.e[0]  # default minimum energy for integral flux limit (in TeV)
     uplim['emax'] = self.e[1]  # default maximum energy for integral flux limit (in TeV)
     uplim['logfile'] = self.likeXml.replace('results.xml', 'flux.log')
-    uplim['debug'] = True  # default
+    uplim['debug'] = self.debug
     uplim.execute()
 
     return
