@@ -4,26 +4,29 @@
 
 
 # IMPORT ---!
-#import xml.etree.ElementTree as ET
-#import lxml.etree as ET
 from lxml import etree as ET
-import numpy as np
-import cscripts
+from operator import attrgetter
 import json
 import os
+from class_analysis import (xmlConfig, cfgMng_xml)
 
-def loadConfig() :
-  #Load configuration file
-  cfgFile = os.path.dirname(__file__)+'/config.json'
-  with open(cfgFile) as json_cfg_file :
+
+def jsonConfig():
+  # Load configuration file
+  cfgFile = os.path.dirname(__file__) + '/config.json'
+  with open(cfgFile) as json_cfg_file:
     cfg = json.load(json_cfg_file)
   return cfg
-  
-class fsMng:
-  def __init__(self, cfg) :
+
+# --------------------------------- CLASS json CONFIGURATION --------------------------------- !!!
+
+class cfgMng_json():
+  cfg = jsonConfig()
+
+  def __init__(self, cfg):
     self.__initPath(cfg.get('dir'))
-    
-  def __initPath(self,cfg) :
+
+  def __initPath(self, cfg):
     self.__cfg = cfg
     self.__workdir = self.__cfg.get('workdir')
     self.__runpath = self.__cfg.get('runpath')
@@ -32,222 +35,218 @@ class fsMng:
     self.selectpath = self.__cfg.get('selectpath')
     self.detpath = self.__cfg.get('detpath')
     self.csvpath = self.__cfg.get('csvpath')
-    if self.__workdir.endswith(".") == False :
-      self.__workdir+'/'
-    if self.__runpath.endswith(".") == False :
-      self.__runpath+'/'
-  
-  def getWorkingDir(self) :
+    if self.__workdir.endswith(".") == False:
+      self.__workdir = self.__workdir + '/'
+    if self.__runpath.endswith(".") == False:
+      self.__runpath = self.__runpath + '/'
+
+  def getWorkingDir(self):
     return self.__workdir
-  def setWorkingDir(self, workingDir) :
+
+  def setWorkingDir(self, workingDir):
     self.__workdir = workingDir
-    if self.__workdir.endswith(".") == False :
-      self.__workdir+'/'
+    if self.__workdir.endswith(".") == False:
+      self.__workdir = self.__workdir + '/'
 
-  def getRunDir(self) :
-    path = self.getWorkingDir()
-    return self.__runpath.replace('${workdir}', path)
-  def setRunDir(self, runDir) :
+  def getRunDir(self):
+    return self.__runpath.replace('${workdir}', self.getWorkingDir())
+
+  def setRunDir(self, runDir):
     self.__runpath = runDir
-    if self.__runpath.endswith(".") == False :
-      self.__runpath+'/'
+    if self.__runpath.endswith(".") == False:
+      self.__runpath = self.__runpath + '/'
 
-  def getDataDir(self) :
+  def getDataDir(self):
     return self.datapath.replace('${runpath}', self.getRunDir())
 
-  def getSimDir(self) :
+  def getSimDir(self):
     return self.simpath.replace('${runpath}', self.getRunDir())
 
-  def getSelectDir(self) :
+  def getSelectDir(self):
     return self.selectpath.replace('${runpath}', self.getRunDir())
 
-  def getDetDir(self) :
+  def getDetDir(self):
     return self.detpath.replace('${runpath}', self.getRunDir())
 
-  def getCsvDir(self) :
+  def getCsvDir(self):
     return self.csvpath.replace('${runpath}', self.getRunDir())
 
-#  def resolvePath(self.path) :
+  def resolvePath(self):
+    return
 
-class xmlMng :
-  def __init__(self, xml) :
-    fs = fsMng()
-    self.file = open(fs.resolvePath(xml))
+# --------------------------------- CLASS xml HANDLING --------------------------------- !!!
+
+class xmlMng():
+
+  def __init__(self, xml):
+    self.__xml = xml
+    self.__cfg = jsonConfig()
+    self.file = open(self.__xml)
     self.srcLib = ET.parse(self.file)
     self.root = self.srcLib.getroot()
     self.tsvList = []
-    self.pos = [[], []]
-    self.err = [[], []]
-    self.spectral = [[], [], []]
+    self.pos = []
+    self.err = []
+    self.spectral = []
     self.sigma = 5
-    self.bkgType = 'Irf'
-    self.instr = 'CTA'
-    self.maxSrc = 10
-    self.corr_rad = 0.1
-    self.exclrad = 0.5
     self.default_model = True
-    self.srcAtt = [[], [], []]
-    self.bkgAtt = [[], [], []]
+    self.instr = 'CTA'
+    self.bkgType = 'Irf'
+    self.srcAtt = []
+    self.bkgAtt = []
     self.tscalc = True
+    self.if_cut = False
 
-  def __getSrcObj(self) :
+  def __getSrcObj(self):
     src = self.root.findall('source')
     return src
 
-  def __skipNode(self,node,cfg,src) :
+  def __skipNode(self, src, cfg):
     '''
-    :node: node for skip chacks
     :retun true for skip node
     '''
-    if src.attrib[cfg.idAttribute] in cfg.skip:
+    if src.attrib[cfg.get('idAttribute')] in cfg.get('skip'):
       return True
 
-    for filter in cfg.filters :
-      if src.attrib[filter.attribute] == filter.value :
+    for filter in cfg.get('filters'):
+      if src.attrib[filter.get('attribute')] == filter.get('value'):
         return True
 
-    if len(cfg.selectors) == 0 :
+    if len(cfg.get('selectors')) == 0:
       return False
-      
-    for select in cfg.selectors :
-      if src.attrib[select.attribute] == select.value :
+
+    for select in cfg.get('selectors'):
+      if src.attrib[select.get('attribute')] == select.get('value'):
         return False
 
-    return True # shouldn't not return anything here? Or a logical sum of the previous?
+    return True
 
-  # RETRIVES TSV v01 ---!
-  def loadTSV(self) :
-    for src in self.root.findall('source') :
-      if self.__skipNode(src, self.__cfg.xml.tsv) :
-        continue
-
-      # source candidates ---!
-      self.tsvList.append(src.attrib['ts'])
+  def loadTSV(self):
+    for src in self.root.findall('source'):
+      if src.attrib['name'] != 'Background' and src.attrib['name'] != 'CTABackgroundModel':
+      # if self.__skipNode(src, self.__cfg.get('xml').get('tsv')):
+      #   continue
+        tsv = src.attrib['ts']
+        self.tsvList.append(tsv)
     return self.tsvList
 
-  def loadRaDec(self) :
+  def loadRaDec(self):
     posRaList, posDecList = ([] for i in range(2))
-    for src in self.root.findall('source') :
-      if self.__skipNode(src, self.__cfg.xml.RaDec) :
-        continue
-        
-      # source candidates ---!
-      ra = src.find('spatialModel/parameter[@name="RA"]').attrib['value']
-      dec = src.find('spatialModel/parameter[@name="DEC"]').attrib['value']
-      posRaList.append(ra.attrib['value'])
-      posDecList.append(dec.attrib['value'])
-
+    for src in self.root.findall('source'):
+      if src.attrib['name'] != 'Background' and src.attrib['name'] != 'CTABackgroundModel':
+      # if self.__skipNode(src, self.__cfg.get('xml').get('RaDec')):
+      #   continue
+        ra = src.find('spatialModel/parameter[@name="RA"]').attrib['value']
+        dec = src.find('spatialModel/parameter[@name="DEC"]').attrib['value']
+        posRaList.append(ra)
+        posDecList.append(dec)
     self.pos = [posRaList, posDecList]
     return self.pos
 
-  def loadConfInt(self) :
+  def loadConfInt(self):
     raList, decList = ([] for i in range(2))
     for src in self.root.findall('source'):
-      if self.__skipNode(src, self.__cfg.xml.ConfInt) :
-        continue
-
-      ra = src.find('spatialModel/parameter[@name="RA"]').attrib['value']
-      dec = src.find('spatialModel/parameter[@name="DEC"]').attrib['value']
-      raList.append(ra)
-      decList.append(dec)
-
+      if src.attrib['name'] != 'Background' and src.attrib['name'] != 'CTABackgroundModel':
+      # if self.__skipNode(src, self.__cfg.get('xml').get('ConfInt')):
+      #   continue
+        ra = src.find('spatialModel/parameter[@name="RA"]').attrib['value']
+        dec = src.find('spatialModel/parameter[@name="DEC"]').attrib['value']
+        raList.append(ra)
+        decList.append(dec)
     self.err = [raList, decList]
     return self.err
 
-  def loadSpectral(self) :
+  def loadSpectral(self):
+    global cutoffList
     indexList, prefList, pivotList = ([] for i in range(3))
+    if self.if_cut is True :
+      cutoffList = []
+
     for src in self.root.findall('source'):
-      if self.__skipNode(src, self.__cfg.xml.ConfInt) :
-        continue
+      if src.attrib['name'] != 'Background' and src.attrib['name'] != 'CTABackgroundModel':
+      # if self.__skipNode(src, self.__cfg.get('xml').get('src')):
+      #   continue
+        index = float(src.find('spectrum/parameter[@name="Index"]').attrib['value']) * float(
+            src.find('spectrum/parameter[@name="Index"]').attrib['scale'])
+        pref = float(src.find('spectrum/parameter[@name="Prefactor"]').attrib['value']) * float(
+            src.find('spectrum/parameter[@name="Prefactor"]').attrib['scale'])
+        pivot = float(src.find('spectrum/parameter[@name="PivotEnergy"]').attrib['value']) * float(
+            src.find('spectrum/parameter[@name="PivotEnergy"]').attrib['scale'])
+        indexList.append(index)
+        prefList.append(pref)
+        pivotList.append(pivot)
+        if self.if_cut is True :
+          cutoff = float(src.find('spectrum/parameter[@name="CutoffEnergy"]').attrib['value']) * float(
+              src.find('spectrum/parameter[@name="CutoffEnergy"]').attrib['scale'])
+          cutoffList.append(cutoff)
 
-      index = float(src.find('spectrum/parameter[@name="Index"]').attrib['value']) * float(
-          src.find('spectrum/parameter[@name="Index"]').attrib['scale'])
-      pref = float(src.find('spectrum/parameter[@name="Prefactor"]').attrib['value']) * float(
-          src.find('spectrum/parameter[@name="Prefactor"]').attrib['scale'])
-      pivot = float(src.find('spectrum/parameter[@name="PivotEnergy"]').attrib['value']) * float(
-          src.find('spectrum/parameter[@name="PivotEnergy"]').attrib['scale'])
-      indexList.append(index)
-      prefList.append(pref)
-      pivotList.append(pivot)
-
-    self.spectral = [indexList, prefList, pivotList]
+    if self.if_cut is False:
+      self.spectral = [indexList, prefList, pivotList]
+    else:
+      self.spectral = [indexList, prefList, pivotList, cutoffList]
     return self.spectral
 
-  def __runDetection(self, skymap) :
-    self.__detectionXml = '%s' % skymap.replace('_skymap.fits', '_det%ssgm.xml' % self.sigma)
-    self.__detectionReg = '%s' % skymap.replace('_skymap.fits', '_det%ssgm.reg' % self.sigma)
+  def __saveXml(self):
+    self.srcLib.write(self.__xml, encoding="UTF-8", xml_declaration=True,
+                      standalone=False, pretty_print=True)
+    return self.__xml
 
-    detection = cscripts.cssrcdetect()
-    detection['inmap'] = skymap
-    detection['outmodel'] = self.__detectionXml
-    detection['outds9file'] = self.__detectionReg
-    detection['srcmodel'] = 'POINT'
-    detection['bkgmodel'] = self.bkgType.upper()
-    detection['threshold'] = int(self.sigma)
-    detection['maxsrcs'] = self.maxSrc
-    detection['exclrad'] = self.exclrad
-    detection['corr_rad'] = self.corr_rad
-    detection['corr_kern'] = 'GAUSSIAN'
-    detection['logfile'] = self.__detectionXml.replace('.xml', '.log')
-    detection['debug'] = bool('no')
-    detection.execute()
-
-    return
-
-  def __saveXml(self) :
-    self.srcLib.write(self.__detectionXml, encoding="UTF-8", xml_declaration=True,
-                 standalone=False, pretty_print=True)
-    return
-
-  def __setModel(self) :
-    if self.default_model is True :
-      Att_Prefactor = {'name':'Prefactor', 'scale':'1e-16', 'value':'5.7', 'min':'1e-07', 'max':'1000.0', 'free':'1'}
-      Att_Index = {'name':'Index', 'scale':'-1', 'value':'2.4', 'min':'0', 'max':'5.0', 'free':'1'}
-      Att_PivotEn = {'name':'PivotEnergy', 'scale':'1e6', 'value':'1', 'min':'1e-07', 'max':'1000.0', 'free':'0'}
-      Bkg_Prefactor = {'name':'Prefactor', 'scale':'1', 'value':'1', 'min':'1e-03', 'max':'1e+3', 'free':'1'}
-      Bkg_Index = {'name':'Index', 'scale':'1', 'value':'0.0', 'min':'-5', 'max':'+5.0', 'free':'1'}
-      Bkg_PivotEn = {'name':'PivotEnergy', 'scale':'1e6', 'value':'1', 'min':'0.01', 'max':'1000.0', 'free':'0'}
+  def __setModel(self):
+    if self.default_model is True:
+      Att_Prefactor = {'name': 'Prefactor', 'scale': '1e-16', 'value': '5.7', 'min': '1e-07', 'max': '1000.0', 'free': '1'}
+      Att_Index = {'name': 'Index', 'scale': '-1', 'value': '2.4', 'min': '0', 'max': '5.0', 'free': '1'}
+      Att_PivotEn = {'name': 'PivotEnergy', 'scale': '1e6', 'value': '1', 'min': '1e-07', 'max': '1000.0', 'free': '0'}
+      Bkg_Prefactor = {'name': 'Prefactor', 'scale': '1', 'value': '1', 'min': '1e-03', 'max': '1e+3', 'free': '1'}
+      Bkg_Index = {'name': 'Index', 'scale': '1', 'value': '0.0', 'min': '-5', 'max': '+5.0', 'free': '1'}
+      Bkg_PivotEn = {'name': 'PivotEnergy', 'scale': '1e6', 'value': '1', 'min': '0.01', 'max': '1000.0', 'free': '0'}
 
       self.srcAtt = [Att_Prefactor, Att_Index, Att_PivotEn]
       self.bkgAtt = [Bkg_Prefactor, Bkg_Index, Bkg_PivotEn]
+      if self.if_cut is True:
+        Att_CutOff = {'name': 'CutoffEnergy', 'scale': '1e6', 'value': '1.0', 'min': '0.01', 'max': '1000.0', 'free': '1'}
+        self.srcAtt.append(Att_CutOff)
+
       return self.srcAtt, self.bkgAtt
-    else :
+    else:
       pass
 
-  def modXml(self, skymap) :
-    self.__runDetection(skymap)
+  def modXml(self):
     self.__setModel()
-
+    # source ---!
     i = 0
-    for src in self.root.findall('source') :
-      if self.__skipNode(src, self.__cfg.xml.src) :
-        continue
-
+    for src in self.root.findall('source'):
       i += 1
-      src.set('tscalc', '1') if self.tscalc is True else None
-      # remove spectral component ---!
-      rm = src.find('spectrum')
-      src.remove(rm)
-      # new spectrum ---!
-      spc = ET.SubElement(src, 'spectrum', attrib={'type': 'PowerLaw'})
-      spc.text = '\n\t\t\t'.replace('\t', ' ' * 2)
-      spc.tail = '\n\t\t'.replace('\t', ' ' * 2)
-      src.insert(0, spc)
-      # new spectral params ---!
-      for j in range(3):
-        prm = ET.SubElement(spc, 'parameter', attrib=self.srcAtt[j])
-        if prm.attrib['name'] == 'Prefactor' and i > 1 :
-          prm.set('value', str(float(prm.attrib['value']) / 2 ** (i - 1)))
-          prm.tail = '\n\t\t\t'.replace('\t', ' ' * 2) if j < 2 else '\n\t\t'.replace('\t', ' ' * 2)
+      if src.attrib['name'] != 'Background' and src.attrib['name'] != 'CTABackgroundModel':
+      # if self.__skipNode(src=src, cfg=self.__cfg.get('xml').get('src')):
+      #   continue
+        src.set('tscalc', '1') if self.tscalc is True else None
+        # remove spectral component ---!
+        rm = src.find('spectrum')
+        src.remove(rm)
+        # new spectrum ---!
+        if self.if_cut is True:
+          spc = ET.SubElement(src, 'spectrum', attrib={'type': 'ExponentialCutoffPowerLaw'})
+        else:
+          spc = ET.SubElement(src, 'spectrum', attrib={'type': 'PowerLaw'})
+        spc.text = '\n\t\t\t'.replace('\t', ' ' * 2)
+        spc.tail = '\n\t\t'.replace('\t', ' ' * 2)
+        src.insert(0, spc)
+        # new spectral params ---!
+        for j in range(len(self.srcAtt)):
+          prm = ET.SubElement(spc, 'parameter', attrib=self.srcAtt[j])
+          if prm.attrib['name'] == 'Prefactor' and i > 1:
+            prm.set('value', str(float(prm.attrib['value']) / 2 ** (i - 1)))
+          prm.tail = '\n\t\t\t'.replace('\t', ' ' * 2) if j < len(self.srcAtt) else '\n\t\t'.replace('\t', ' ' * 2)
           spc.insert(j, prm)
-
-    for src in self.root.findall('source[@name]') :
-      if src.attrib[self.__cfg.idAttribute] in self.__cfg.skip :
+    # background ---!
+      else:
+      # for src in self.root.findall('source[@name]'):
+      #   if self.__skipNode(src=src, cfg=self.__cfg.get('xml').get('src')):
         # set bkg attributes ---!
         src.set('instrument', '%s' % self.instr.upper()) if self.instr.capitalize() != 'None' else None
-        if self.bkgType.capitalize() == 'Aeff' or self.bkgType.capitalize() == 'Irf' :
+        if self.bkgType.capitalize() == 'Aeff' or self.bkgType.capitalize() == 'Irf':
           src.set('type', 'CTA%sBackground' % self.bkgType.capitalize())
-        if self.bkgType.capitalize() == 'Racc' :
+        if self.bkgType.capitalize() == 'Racc':
           src.set('type', 'RadialAcceptance')
         # remove spectral component ---!
         rm = src.find('spectrum')
@@ -257,36 +256,39 @@ class xmlMng :
         spc.text = '\n\t\t\t'.replace('\t', ' ' * 2)
         spc.tail = '\n\t'.replace('\t', ' ' * 2)
         # new bkg params ---!
-        for j in range(3):
+        for j in range(len(self.bkgAtt)):
           prm = ET.SubElement(spc, 'parameter', attrib=self.bkgAtt[j])
-          prm.tail = '\n\t\t\t'.replace('\t', ' ' * 2) if j < 2 else '\n\t\t'.replace('\t', ' ' * 2)
+          prm.tail = '\n\t\t\t'.replace('\t', ' ' * 2) if j < len(self.bkgAtt) else '\n\t\t'.replace('\t', ' ' * 2)
 
-    self.__saveXml()
-    return self.__detectionXml, self.__detectionReg
+    self.__xml = self.__saveXml()
+    return
 
-  def FreeFixPrms(self) :
-    for src in self.root.findall('source') :
-      if self.__skipNode(src, self.__cfg.xml.src) :
-        continue
-
-      for free in self.__cfg.xml.src.free :
-        src.find('spatialModel/parameter[@name="%s"]' % free.value).set('free', '1')
-      for fix in self.__cfg.xml.src.fix :
-        src.find('spatialModel/parameter[@name="%s"]' % fix.value).set('free', '0')
-
-    for src in self.root.findall('source') :
-      if self.__skipNode(src, self.__cfg.xml.src) :
-        for bkg in self.__cfg.xml.src.bkg :
+  def FreeFixPrms(self):
+    for src in self.root.findall('source'):
+      if src.attrib['name'] != 'Background' and src.attrib['name'] != 'CTABackgroundModel':
+      # if self.__skipNode(src, self.__cfg.xml.src):
+      #   continue
+        for free in self.__cfg.xml.src.free:
+          src.find('spatialModel/parameter[@name="%s"]' % free.value).set('free', '1')
+        for fix in self.__cfg.xml.src.fix:
+          src.find('spatialModel/parameter[@name="%s"]' % fix.value).set('free', '0')
+      else:
+      # if self.__skipNode(src, self.__cfg.xml.src):
+        for bkg in self.__cfg.xml.src.bkg:
           src.find('spatialModel/parameter[@name="%s"]' % bkg.value).set('free', '1')
-        for prm in src not in self.__cfg.xml.src.bkg :
+        for prm in src not in self.__cfg.xml.src.bkg:
           prm.set('free', '0')
 
     self.__saveXml()
     return
 
-  def closeXml(self) :
-    self.file.close()
+  def sortSrcTS(self):
+    src = self.root.findall("*[@ts]")
+    self.root[:-1] = sorted(src, key=lambda el: (el.tag, el.attrib['ts']), reverse=True)
+    self.__saveXml()
     return
 
-
+  def closeXml(self):
+    self.file.close()
+    return
 

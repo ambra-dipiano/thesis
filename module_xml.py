@@ -45,11 +45,9 @@ def getRaDec(likeXml) :
   srcLib = ET.parse(file)
   root = srcLib.getroot()
 
-  i = 0
   raList = []
   decList = []
   for src in root.findall('source'):
-    i += 1
 
     # source candidates ---!
     if src.attrib['name'] != 'Background' and src.attrib['name'] != 'CTABackgroundModel' :
@@ -75,11 +73,9 @@ def getRaDec_errors(likeXml) :
   srcLib = ET.parse(file)
   root = srcLib.getroot()
 
-  i = 0
   raList = []
   decList = []
   for src in root.findall('source'):
-    i += 1
 
     # source candidates ---!
     if src.attrib['name'] != 'Background' and src.attrib['name'] != 'CTABackgroundModel' :
@@ -100,13 +96,11 @@ def getConfInt_gauss(errors) :
   srcLib = ET.parse(file)
   root = srcLib.getroot()
 
-  i = 0
   raList = []
   decList = []
 #  prefList = []
 #  indexList = []
   for src in root.findall('source'):
-    i += 1
 
     # source candidates ---!
     if src.attrib['name'] != 'Background' and src.attrib['name'] != 'CTABackgroundModel' :
@@ -135,14 +129,12 @@ def getSpectral(likeXml) :
   srcLib = ET.parse(file)
   root = srcLib.getroot()
 
-  i = 0
   indexList = []
   prefactorList = []
   pivotList = []
   indexList_error = []
   prefactorList_error = []
   for src in root.findall('source'):
-    i += 1
 
     # source candidates ---!
     if src.attrib['name'] != 'Background' and src.attrib['name'] != 'CTABackgroundModel' :
@@ -164,7 +156,7 @@ def getSpectral(likeXml) :
   return val, err
 
 # RUN DETECTION AND MODEL SPECTRAL COMPONENTS v09 ---!
-def srcDetection_spcModeling(skymap, sigma=5, instr='CTA', bkgType='Irf', src_attrib='none', bkg_attrib='none', tsv=True, maxSrc=20, exclrad = 0.5) :
+def srcDetection_spcModeling(skymap, sigma=5, instr='CTA', bkgType='Irf', src_attrib='none', bkg_attrib='none', tsv=True, maxSrc=20, exclrad = 0.5, if_cut=True) :
   ''''
   Runs cssrcdetect tool to detected src candidates in a counts map. The listing file is modeled in its spectral components.
   :param:
@@ -219,6 +211,9 @@ def srcDetection_spcModeling(skymap, sigma=5, instr='CTA', bkgType='Irf', src_at
     Att_Index = {'name':'Index', 'scale':'-1', 'value':'2.4', 'min':'0', 'max':'5.0', 'free':'1'}
     Att_PivotEn = {'name':'PivotEnergy', 'scale':'1e6', 'value':'1', 'min':'1e-07', 'max':'1000.0', 'free':'0'}
     srcAtt = [Att_Prefactor, Att_Index, Att_PivotEn]
+    if if_cut is True :
+      Att_CutOff = {'name': 'CutoffEnergy', 'scale': '1e6', 'value': '1.0', 'min': '0.01', 'max': '1000.0', 'free': '1'}
+      srcAtt.append(Att_CutOff)
 
   # alternative input dicts of params attributes ---!
   else :
@@ -250,17 +245,20 @@ def srcDetection_spcModeling(skymap, sigma=5, instr='CTA', bkgType='Irf', src_at
       rm = src.find('spectrum')
       src.remove(rm)
       # new spectrum ---!
-      spc = ET.SubElement(src, 'spectrum', attrib={'type': 'PowerLaw'})
+      if if_cut is True :
+        spc = ET.SubElement(src, 'spectrum', attrib={'type': 'ExponentialCutoffPowerLaw'})
+      else :
+        spc = ET.SubElement(src, 'spectrum', attrib={'type': 'PowerLaw'})
       spc.text = '\n\t\t\t'.replace('\t', ' ' * 2)
       spc.tail = '\n\t\t'.replace('\t', ' ' * 2)
       src.insert(0, spc)
 
       # new spectral params ---!
-      for j in range(3):
+      for j in range(len(srcAtt)):
         prm = ET.SubElement(spc, 'parameter', attrib=srcAtt[j])
         prm.set('value', str(float(prm.attrib['value']) / 2 ** (i - 1))) if prm.attrib['name'] == 'Prefactor' \
                                                                             and i > 1 else None
-        prm.tail = '\n\t\t\t'.replace('\t', ' ' * 2) if j < 2 else '\n\t\t'.replace('\t', ' ' * 2)
+        prm.tail = '\n\t\t\t'.replace('\t', ' ' * 2) if j < len(srcAtt) else '\n\t\t'.replace('\t', ' ' * 2)
         spc.insert(j, prm)
 
       # store detected src positions (RA & DEC) ---!
@@ -282,9 +280,9 @@ def srcDetection_spcModeling(skymap, sigma=5, instr='CTA', bkgType='Irf', src_at
       spc.text = '\n\t\t\t'.replace('\t', ' ' * 2)
       spc.tail = '\n\t'.replace('\t', ' ' * 2)
       # new bkg params ---!
-      for j in range(3):
+      for j in range(len(bkgAtt)):
         prm = ET.SubElement(spc, 'parameter', attrib=bkgAtt[j])
-        prm.tail = '\n\t\t\t'.replace('\t', ' ' * 2) if j < 2 else '\n\t\t'.replace('\t', ' ' * 2)
+        prm.tail = '\n\t\t\t'.replace('\t', ' ' * 2) if j < len(bkgAtt) else '\n\t\t'.replace('\t', ' ' * 2)
 
   # store ra & dec in position list ---!
   posList = [raList, decList]

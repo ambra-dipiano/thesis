@@ -28,7 +28,7 @@ trials = int(sys.argv[2]) # number of trials
 count = int(sys.argv[3]) # starting count  
 
 # work with absolute paths ---!
-workdir = '/mnt/nvme0n1p1/piano_analysis/working-dir/run0406/'
+workdir = '/mnt/nvme0n1p1/piano_analysis/working-dir/run0406_test/'
 runpath = workdir + 'run0406_ID000126/'
 simpath = runpath + 'sim/'
 selectpath = runpath + 'selected_sim/'
@@ -81,7 +81,7 @@ else :
 # !!! LOAD TEMPLATE !!!
 # =====================
 
-t, tbin_stop = load_template(template, tmax, extract_spec=False, if_ebl=if_ebl, model=model, pathout=datapath)
+t, tbin_stop = load_template(template, tmax, extract_spec=False, model=model, pathout=datapath)
 print('!!! check ---- tbin_stop=', tbin_stop) if checks is True else None
 
 for k in range(trials) :
@@ -149,7 +149,7 @@ for k in range(trials) :
   pos = []
   
   for i in range(tint) :
-    det, reg, coord = srcDetection_spcModeling(skymapName[i], sigma=sigma, maxSrc=1)
+    det, reg, coord = srcDetection_spcModeling(skymapName[i], sigma=sigma, maxSrc=10, if_cutoff=True)
     detXml.append(det)
     detReg.append(reg)
     pos.append(coord)
@@ -228,14 +228,13 @@ for k in range(trials) :
   # !!! ASYMMETRICAL ERRORS !!!
   # ===========================
 
-  errorsName = []  
-
-  for i in range(tint) :
-    errorsName.append(resultsName[i].replace('_results.xml', '_errors.xml'))
-    if Ndet[i] > 0:
-      if not os.path.isfile(errorsName[i]) :
-        errors_conf = confidence_lv(event_selected=selectedEvents[i], results=resultsName[i], asym_errors=errorsName[i], caldb=caldb, irf=irf)
-  print('!!! check --- asym errors: ', errors_conf) if checks is True else None
+  # errorsName = []
+  # for i in range(tint) :
+  #   errorsName.append(resultsName[i].replace('_results.xml', '_errors.xml'))
+  #   if Ndet[i] > 0:
+  #     if not os.path.isfile(errorsName[i]) :
+  #       errors_conf = confidence_lv(event_selected=selectedEvents[i], results=resultsName[i], asym_errors=errorsName[i], caldb=caldb, irf=irf)
+  # print('!!! check --- asym errors: ', errors_conf) if checks is True else None
 
   # ===========================
   # !!! LIKELIHOOD RA & DEC !!!
@@ -381,6 +380,7 @@ for k in range(trials) :
 
   print('!!! check --- ', count, ') trial done...') if checks is True else None
  
+
   if count > 4 :
     os.system('rm ' + simpath + '*sim%06d*' % count)
     os.system('rm ' + selectpath + '*sim%06d*' % count)
