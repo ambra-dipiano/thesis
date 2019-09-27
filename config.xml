@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<config>
+	<dir>
+		<workdir path="/home/ambra/Desktop/cluster-morgana/run0406_test/run0406/" />
+		<runpath path="${workdir}run0406_ID000126/" />
+		<datapath path="${runpath}data/" />
+		<simpath path="${runpath}sim/" />
+		<selectpath path="${runpath}selected_sim/" />
+		<detpath path="${runpath}detection_all/" />
+		<csvpath path="${runpath}csv/" />
+	</dir>
+	<xml>
+		<tsv idAttribute="name">
+			<skip>Background</skip>
+			<skip>CTABackgroundModel</skip>
+			<filters></filters>
+			<selectors attribute="tscalc" value="1" />
+		</tsv>
+		<RaDec idAttribute="name">
+			<skip>Background</skip>
+			<skip>CTABackgroundModel</skip>
+			<filters></filters>
+			<selectors></selectors>
+		</RaDec>
+		<ConfInt idAttribute="name">
+			<skip>Background</skip>
+			<skip>CTABackgroundModel</skip>
+			<filters></filters>
+			<selectors></selectors>
+		</ConfInt>
+		<src idAttribute="name">
+			<skip>Background</skip>
+			<skip>CTABackgroundModel</skip>
+			<filters></filters>
+			<selectors></selectors>
+			<free></free>
+			<fix></fix>
+		</src>
+	</xml>
+</config>
