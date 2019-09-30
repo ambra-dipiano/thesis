@@ -4,9 +4,9 @@ import sys
 import os
 from sys import argv
 
-N = int(sys.argv[1])
-trials = int(sys.argv[2])
-start_count = int(sys.argv[3])
+N = int(sys.argv[1]) # chunks 
+trials = int(sys.argv[2]) # trials per chunks
+start_count = int(sys.argv[3]) # chunk starting (global)
 start_chunk = 0
 
 task = ['run0406_task%03d.sh' % (start_chunk+i+1) for i in range(N)] 
@@ -21,7 +21,7 @@ for i in range(N):
     f.write('\n#SBATCH --ntasks-per-node=1')
     f.write('\n#SBATCH --account=pianoambra@morgana')
     f.write('\n\n')
-    f.write('python /mnt/nvme0n1p1/piano_analysis/working-dir/script_RTAdetection_v11.py %d %d %d' % (start_chunk+i+1, trials, start_count+trials*i))
+    f.write('python /mnt/nvme0n1p1/piano_analysis/working-dir/script_RTAdetection.py %d %d %d' % (start_chunk+i+1, trials, start_count+trials*i))
     f.close()
 
 

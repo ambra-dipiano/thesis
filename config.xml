@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <config>
 	<dir>
-		<workdir path="/home/ambra/Desktop/cluster-morgana/run0406_test/run0406/" />
+		<workdir path="/home/ambra/Desktop/cluster-morgana/run0406/" />
 		<runpath path="${workdir}run0406_ID000126/" />
 		<datapath path="${runpath}data/" />
 		<simpath path="${runpath}sim/" />

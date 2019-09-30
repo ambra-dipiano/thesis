@@ -54,13 +54,13 @@ if_cut = False
 if_ebl = True
 extract_spec = False
 irf_degrade = False
-src_sort = True
+src_sort = False
 skip_exist = False
 
 # files ---!
 fileroot = 'run0406_'
 cfg_file = '/config.xml'
-ebl_table = '/home/ambra/Desktop/cluster-morgana/gilmore_tau_fiducial.csv'
+ebl_table = './gilmore_tau_fiducial.csv'
 nominal_template = 'run0406_ID000126.fits'
 ebl_template = 'run0406_ID000126_ebl.fits'
 model_pl = 'run0406_ID000126.xml'
