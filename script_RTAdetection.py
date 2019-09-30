@@ -22,7 +22,7 @@ count = int(sys.argv[3])  # starting count
 # ctools/cscripts parameters ---!
 caldb = 'prod3b'
 caldb_degraded = caldb.replace('prod', 'degr')
-irf = 'South_z60_average_100s'
+irf = 'South_z40_average_100s'
 
 sigma = 5  # detection acceptance (Gaussian)
 texp = [1, 5, 10, 100]  # exposure times (s)
@@ -48,19 +48,19 @@ pointRA = trueRa + offmax[0]  # (deg)
 pointDEC = trueDec + offmax[1]  # (deg)
 
 # conditions control ---!
-checks = False
-if_fits = False
+checks = True
+ebl_fits = False
 if_cut = False
 if_ebl = True
 extract_spec = False
-irf_degrade = False
+irf_degrade = True
 src_sort = True
 skip_exist = False
 
 # files ---!
 fileroot = 'run0406_'
 cfg_file = '/config.xml'
-ebl_table = '/home/ambra/Desktop/cluster-morgana/gilmore_tau_fiducial.csv'
+ebl_table = './gilmore_tau_fiducial.csv'
 nominal_template = 'run0406_ID000126.fits'
 ebl_template = 'run0406_ID000126_ebl.fits'
 model_pl = 'run0406_ID000126.xml'
@@ -83,7 +83,7 @@ tObj.irf = irf
 if irf_degrade:
   tObj.degradeIRF()
 # add EBL to template ---!
-if if_fits:
+if ebl_fits:
   tObj.template = p.getWorkingDir() + nominal_template # nominal ---!
   new_template = p.getWorkingDir() + ebl_template # absorbed ---!
   tObj.table = ebl_table # fiducial ---!
@@ -105,6 +105,8 @@ tObj.if_ebl = if_ebl
 tObj.extract_spec = extract_spec
 tbin_stop = tObj.load_template()
 print('!!! check ---- tbin_stop=', tbin_stop) if checks is True else None
+
+breakpoint()
 
 # --------------------------------- 1° LOOP :: trials  --------------------------------- !!!
 
@@ -130,11 +132,11 @@ for k in range(trials):
     if if_ebl:
       tObj.model = p.getDataDir() + 'run0406_ID000126_ebl_tbin%02d.xml' % i
       tObj.event = p.getSimDir() + f + "_ebl_tbin%02d.fits" % i
-      print('!!! check ---- simulation with EBL') if checks is True else None
+      print('!!! check ---- simulation %d with EBL' %(i+1)) if checks is True else None
     else:
       tObj.model = p.getDataDir() + 'run0406_ID000126_tbin%02d.xml' % i
       tObj.event = p.getSimDir() + f + "_tbin%02d.fits" % i
-      print('!!! check ---- simulation without EBL') if checks is True else None
+      print('!!! check ---- simulation%d without EBL' %(i+1)) if checks is True else None
     event_bins.append(tObj.event)
     if skip_exist:
       if not os.path.isfile(tObj.event):
@@ -276,9 +278,9 @@ for k in range(trials):
 
     raFit[i].append(raList[0][0])
     decFit[i].append(decList[0][0])
-    print('!!! check --- RA FIT for all sources: ', raList[0], '\n!!!check --- RA FIT for candidate:',
+    print('!!! check --- RA FIT for all sources: ', raList[0], '\n!!! check --- RA FIT for candidate:',
           raFit[i][0]) if checks is True else None
-    print('!!! check --- DEC FIT for all sources: ', decList[0], '\n!!!check --- DEC FIT for candidate:',
+    print('!!! check --- DEC FIT for all sources: ', decList[0], '\n!!! check --- DEC FIT for candidate:',
           decFit[i][0]) if checks is True else None
 
   # --------------------------------- BEST FIT SPECTRAL --------------------------------- !!!
