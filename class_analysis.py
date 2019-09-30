@@ -89,7 +89,7 @@ class analysis() :
     self.sensCsv = str()
     self.caldb = 'prod2'
     self.irf = 'South_0.5h'
-    self.irf_nominal = '$CTOOLS/share/caldb/data/cta/%s/bcf/%s/irf_file.fits' % (self.caldb, self.irf)
+    self.irf_nominal = '/usr/local/gamma/share/caldb/data/cta/%s/bcf/%s/irf_file.fits' % (self.caldb, self.irf)
     self.irf_degraded = self.irf_nominal.replace('prod', 'degr')
     # condition control ---!
     self.if_ebl = True
@@ -497,8 +497,12 @@ class analysis() :
     caldb_degr = self.caldb.replace('prod', 'degr')
     # check caldb and change permissions ---!
     if not os.path.isfile(self.irf_degraded):
-      os.system('cp -r $CTOOLS/share/caldb/data/cta/%s/ $CTOOLS/share/caldb/data/cta/%s/' % (self.caldb, caldb_degr))
-    os.system('chmod 777 $CTOOLS/share/caldb/data/cta/%s/' % caldb_degr)
+      os.system('cp -r /usr/local/gamma/share/caldb/data/cta/%s/ $CTOOLS/share/caldb/data/cta/%s/' % (self.caldb, caldb_degr))
+    # check permissions ---!
+    if not os.geteuid():
+      os.system('sudo chmod 777 -R /usr/local/gamma/share/caldb/data/cta/%s/' % caldb_degr)
+    else:
+      os.system('chmod 777 -R /usr/local/gamma/share/caldb/data/cta/%s/' % caldb_degr)
     # degrade ---!
     extension = ['EFFECTIVE AREA', 'BACKGROUND']
     field = [4, 6]
@@ -508,7 +512,7 @@ class analysis() :
       col = []
       for i in range(len(extension)):
         col.append(hdul[extension[i]].data.field(field[i])[:].astype(float))
-      np.array(col)
+      # np.array(col)
 
     a = np.where(np.array([i * inv for i in col[0]]) is np.nan, 0., np.array([i * inv for i in col[0]]))
     b = []
@@ -522,10 +526,14 @@ class analysis() :
       for i in range(len(extension)):
         hdul[extension[i]].data.field(field[i])[:] = tmp[i]
       # save changes ---!
-      hdul.flush
+      hdul.flush()
     # update and change permissions back ---!
     self.caldb.replace('prod', 'degr')
-    os.system('chmod 755 $CTOOLS/share/caldb/data/cta/%s/' % caldb_degr)
+    # check permissions ---!
+    if not os.geteuid():
+      os.system('sudo chmod 755 -R /usr/local/gamma/share/caldb/data/cta/%s/' % caldb_degr)
+    else:
+      os.system('chmod 755 -R /usr/local/gamma/share/caldb/data/cta/%s/' % caldb_degr)
     return
 
   def eventSens(self, bins=20, wbin=0.05):
