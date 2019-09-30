@@ -22,7 +22,7 @@ count = int(sys.argv[3])  # starting count
 # ctools/cscripts parameters ---!
 caldb = 'prod3b'
 caldb_degraded = caldb.replace('prod', 'degr')
-irf = 'South_z60_average_100s'
+irf = 'South_z40_average_100s'
 
 sigma = 5  # detection acceptance (Gaussian)
 texp = [1, 5, 10, 100]  # exposure times (s)
