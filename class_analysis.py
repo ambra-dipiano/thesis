@@ -13,6 +13,7 @@ from scipy.interpolate import interp1d
 import untangle
 import csv
 import re
+import subprocess
 
 def xmlConfig(cfg_file) :
   #Load configuration file
@@ -76,7 +77,8 @@ class cfgMng_xml() :
 
 class analysis() :
   def __init__(self, cfg_file):
-    global p
+    global p, CTOOLS
+    CTOOLS = os.environ.get('CTOOLS')
     # conf ---!
     self.__cfg = xmlConfig(cfg_file)
     p = cfgMng_xml(self.__cfg)
@@ -89,7 +91,7 @@ class analysis() :
     self.sensCsv = str()
     self.caldb = 'prod2'
     self.irf = 'South_0.5h'
-    self.irf_nominal = '/usr/local/gamma/share/caldb/data/cta/%s/bcf/%s/irf_file.fits' % (self.caldb, self.irf)
+    self.irf_nominal =  CTOOLS + '/share/caldb/data/cta/%s/bcf/%s/irf_file.fits' % (self.caldb, self.irf)
     self.irf_degraded = self.irf_nominal.replace('prod', 'degr')
     # condition control ---!
     self.if_ebl = True
@@ -120,7 +122,7 @@ class analysis() :
     self.confidence = 0.95
     self.eref = 1
     # irf degradation ---!
-    self.factor = 3
+    self.factor = 2
     self.sensType = 'Differential'
 
   def __openFITS(self):
@@ -495,14 +497,19 @@ class analysis() :
 
   def degradeIRF(self):
     caldb_degr = self.caldb.replace('prod', 'degr')
-    # check caldb and change permissions ---!
-    if not os.path.isfile(self.irf_degraded):
-      os.system('cp -r /usr/local/gamma/share/caldb/data/cta/%s/ $CTOOLS/share/caldb/data/cta/%s/' % (self.caldb, caldb_degr))
-    # check permissions ---!
-    if not os.geteuid():
-      os.system('sudo chmod 777 -R /usr/local/gamma/share/caldb/data/cta/%s/' % caldb_degr)
+    nominal_cal = CTOOLS + '/share/caldb/data/cta/' + self.caldb
+    degraded_cal = CTOOLS + '/share/caldb/data/cta/' + caldb_degr
+    # copy caldb if not ---!
+    if not os.path.isdir(degraded_cal):
+      os.system('cp -r %s %s' % (nominal_cal, degraded_cal))
+    # permissions ---!
+    if os.geteuid() == 0:
+      print('!!! root')
+      subprocess.run(['sudo', 'chmod', '-R', '777', degraded_cal], check=True)
     else:
-      os.system('chmod 777 -R /usr/local/gamma/share/caldb/data/cta/%s/' % caldb_degr)
+      print('!!! not root')
+      subprocess.run(['sudo', 'chmod', '-R', '777', degraded_cal], check=True)
+
     # degrade ---!
     extension = ['EFFECTIVE AREA', 'BACKGROUND']
     field = [4, 6]
@@ -525,15 +532,16 @@ class analysis() :
     with fits.open(self.irf_degraded, mode='update') as hdul:
       for i in range(len(extension)):
         hdul[extension[i]].data.field(field[i])[:] = tmp[i]
+        print('!!! DEGRADING IRF BY FACTOR %d !!!' %self.factor)
       # save changes ---!
       hdul.flush()
     # update and change permissions back ---!
     self.caldb.replace('prod', 'degr')
-    # check permissions ---!
-    if not os.geteuid():
-      os.system('sudo chmod 755 -R /usr/local/gamma/share/caldb/data/cta/%s/' % caldb_degr)
+    # permissions ---!
+    if os.geteuid() == 0:
+      subprocess.run(['sudo', 'chmod', '-R', '755', degraded_cal], check=True)
     else:
-      os.system('chmod 755 -R /usr/local/gamma/share/caldb/data/cta/%s/' % caldb_degr)
+      subprocess.run(['sudo', 'chmod', '-R', '755', degraded_cal], check=True)
     return
 
   def eventSens(self, bins=20, wbin=0.05):
