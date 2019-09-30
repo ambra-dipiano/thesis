@@ -22,7 +22,7 @@ count = int(sys.argv[3])  # starting count
 # ctools/cscripts parameters ---!
 caldb = 'prod3b'
 caldb_degraded = caldb.replace('prod', 'degr')
-irf = 'South_z40_average_100s'
+irf = 'South_z40_average_5h'
 
 texp = [20000]  # exposure times (s)
 texp.sort()
@@ -116,11 +116,9 @@ print('!!! check ---- file=', f) if checks is True else None
 event_bins = []
 tObj.table = p.getDataDir() + tcsv
 time = tObj.getTimeSlices()  # methods which returns time slice edges
-print('!!! check --- time array', time)
 # simulate ---!
 for i in range(tbin_stop):
   tObj.t = [time[i], time[i + 1]]
-  print('!!! check --- t0 & t1', time[i], time[i + 1])
   if if_ebl:
     tObj.model = p.getDataDir() + 'run0406_ID000126_ebl_tbin%02d.xml' % i
     tObj.event = p.getSimDir() + f + "_ebl_tbin%02d.fits" % i
