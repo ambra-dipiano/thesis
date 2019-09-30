@@ -52,7 +52,7 @@ checks = False
 if_fits = False
 if_cut = False
 if_ebl = True
-extract_spec = True
+extract_spec = False
 irf_degrade = False
 src_sort = False
 skip_exist = False
@@ -233,8 +233,6 @@ for k in range(trials):
       likeObj = xmlMng(tObj.likeXml)
       if src_sort:
         likeObj.sortSrcTS()
-    else:
-      likeObj = np.nan
     print('!!! check --- max likelihoods: ', tObj.likeXml) if checks is True else None
 
   # --------------------------------- BEST FIT TSV --------------------------------- !!!
@@ -329,7 +327,8 @@ for k in range(trials):
   # --------------------------------- CLOSE XMLs --------------------------------- !!!
 
     detObj.closeXml()
-    likeObj.closeXml()
+    if Ndet[i][0] > 0:
+      likeObj.closeXml()
 
   # --------------------------------- RESULTS TABLE (csv) --------------------------------- !!!
 
