@@ -22,7 +22,7 @@ count = int(sys.argv[3])  # starting count
 # ctools/cscripts parameters ---!
 caldb = 'prod3b'
 caldb_degraded = caldb.replace('prod', 'degr')
-irf = 'South_z40_average_100s'
+irf = 'South_z60_average_100s'
 
 sigma = 5  # detection acceptance (Gaussian)
 texp = [1, 5, 10, 100]  # exposure times (s)
@@ -48,7 +48,7 @@ pointRA = trueRa + offmax[0]  # (deg)
 pointDEC = trueDec + offmax[1]  # (deg)
 
 # conditions control ---!
-checks = True
+checks = False
 if_fits = False
 if_cut = False
 if_ebl = True
@@ -92,7 +92,7 @@ if if_fits:
   tObj.fits_ebl(new_template)
   if_ebl = True
 # assign template ---!
-if if_ebl is True:
+if if_ebl:
   template = p.getWorkingDir() + ebl_template
   tObj.if_ebl = if_ebl
 else :
@@ -113,7 +113,7 @@ for k in range(trials):
   tObj.seed = count
   print('!!! check ---- seed=', tObj.seed) if checks is True else None
   # attach ID to fileroot ---!
-  if if_ebl is True :
+  if if_ebl:
     f = fileroot + 'ebl%06d' % (count)
   else :
     f = fileroot + 'sim%06d' % (count)
@@ -124,28 +124,29 @@ for k in range(trials):
   event_bins = []
   tObj.table = p.getDataDir() + tcsv
   time = tObj.getTimeSlices()  # methods which returns time slice edges
-  print(time)
   # simulate ---!
   for i in range(tbin_stop):
     tObj.t = [time[i], time[i+1]]
-    print(time[i], time[i+1])
-    if if_ebl is False:
-      tObj.model = p.getDataDir() + 'run0406_ID000126_tbin%02d.xml' % i
-      tObj.event = p.getSimDir() + f + "_tbin%02d.fits" % i
-    else:
+    if if_ebl:
       tObj.model = p.getDataDir() + 'run0406_ID000126_ebl_tbin%02d.xml' % i
       tObj.event = p.getSimDir() + f + "_ebl_tbin%02d.fits" % i
+      print('!!! check ---- simulation with EBL') if checks is True else None
+    else:
+      tObj.model = p.getDataDir() + 'run0406_ID000126_tbin%02d.xml' % i
+      tObj.event = p.getSimDir() + f + "_tbin%02d.fits" % i
+      print('!!! check ---- simulation without EBL') if checks is True else None
     event_bins.append(tObj.event)
-    if skip_exist is True:
+    if skip_exist:
       if not os.path.isfile(tObj.event):
         tObj.eventSim()
     else:
+      os.system('rm ' + tObj.event)
       tObj.eventSim()
   print('!!! check ---- simulation=', tObj.event) if checks is True else None
   # observation list ---!
   tObj.event = event_bins
   tObj.event_list = p.getSimDir() + 'obs_%s.xml' % f
-  if skip_exist is True:
+  if skip_exist:
     if not os.path.isfile(tObj.event_list):
       tObj.obsList(obsname=f)
   else:
@@ -167,17 +168,18 @@ for k in range(trials):
     tObj.t = [tmin, tmax[i]]
     tObj.event_selected = tObj.event_list.replace(p.getSimDir(), p.getSelectDir()).replace('obs_', 'texp%ds_' % texp[i])
     prefix = p.getSelectDir() + 'texp%ds_' % texp[i]
-    if skip_exist is True:
+    if skip_exist:
       if not os.path.isfile(tObj.event_selected):
         tObj.eventSelect(prefix=prefix)
     else:
+      os.system('rm ' + tObj.event_selected)
       tObj.eventSelect(prefix=prefix)
     print('!!! check --- selection: ', tObj.event_selected) if checks is True else None
 
   # --------------------------------- SKYMAP --------------------------------- !!!
 
     tObj.skymap = tObj.event_selected.replace(p.getSelectDir(), p.getDetDir()).replace('.xml', '_skymap.fits')
-    if skip_exist is True:
+    if skip_exist:
       if not os.path.isfile(tObj.skymap):
         tObj.eventSkymap(wbin=wbin)
     else:
@@ -187,10 +189,11 @@ for k in range(trials):
   # --------------------------------- DETECTION & MODELING --------------------------------- !!!
 
     tObj.maxSrc = 10
-    if skip_exist is True:
+    if skip_exist:
       if not os.path.isfile(str(tObj.detectionXml)):
         tObj.runDetection()
     else:
+      os.system('rm ' + tObj.detectionXml)
       tObj.runDetection()
     detObj = xmlMng(tObj.detectionXml)
     detObj.sigma = sigma
@@ -213,13 +216,14 @@ for k in range(trials):
 
     tObj.likeXml = tObj.detectionXml.replace('_det%dsgm.xml' % tObj.sigma, '_like%dsgm.xml' % tObj.sigma)
     if Ndet[i][0] > 0:
-      if skip_exist is True:
+      if skip_exist:
         if not os.path.isfile(tObj.likeXml):
           tObj.maxLikelihood()
       else:
+        os.system('rm ' + tObj.likeXml)
         tObj.maxLikelihood()
       likeObj = xmlMng(tObj.likeXml)
-      if src_sort is True:
+      if src_sort:
         likeObj.sortSrcTS()
     else:
       likeObj = np.nan
@@ -280,24 +284,24 @@ for k in range(trials):
       index.append(spectral[0])
       pref.append(spectral[1])
       pivot.append(spectral[2])
-      if if_cut is True :
+      if if_cut:
         cutoff.append(spectral[3])
     else:
       pref.append([np.nan])
       index.append([np.nan])
       pivot.append([np.nan])
-      if if_cut is True :
+      if if_cut:
         cutoff.append([np.nan])
 
     Index[i].append(index[0][0])
     Pref[i].append(pref[0][0])
     Pivot[i].append(pivot[0][0])
-    if if_cut is True:
+    if if_cut:
       Cutoff[i].append(cutoff[0][0])
     print('!!! check ----- index:', Index[i][0]) if checks is True else None
     print('!!! check ----- prefactor:', Pref[i][0]) if checks is True else None
     print('!!! check ----- pivot:', Pivot[i][0]) if checks is True else None
-    if if_cut is True:
+    if if_cut:
       print('!!! check ----- cutoff:', Cutoff[i]) if checks is True else None
 
   # --------------------------------- INTEGRATED FLUX --------------------------------- !!!
@@ -339,7 +343,7 @@ for k in range(trials):
 
     row.append([ID, texp[i], sigma, Ndet[i][0], Nsrc[i][0], raDet[i][0], decDet[i][0], raFit[i][0], decFit[i][0], flux_ph[i][0], flux_en[i][0], ts[i][0]])
     print('!!! check row --- iter', i, '=====', row) if checks is True else None
-    if os.path.isfile(csvName) is True:
+    if os.path.isfile(csvName):
       with open(csvName, 'a') as f:
         w = csv.writer(f)
         w.writerows(row)
