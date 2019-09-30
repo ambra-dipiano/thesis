@@ -140,7 +140,8 @@ for k in range(trials):
       if not os.path.isfile(tObj.event):
         tObj.eventSim()
     else:
-      os.system('rm ' + tObj.event)
+      if os.path.isfile(tObj.event):
+        os.system('rm ' + tObj.event)
       tObj.eventSim()
   print('!!! check ---- simulation=', tObj.event) if checks is True else None
   # observation list ---!
@@ -150,6 +151,8 @@ for k in range(trials):
     if not os.path.isfile(tObj.event_list):
       tObj.obsList(obsname=f)
   else:
+    if os.path.isfile(tObj.event_list):
+      os.system('rm ' + tObj.event_list)
     tObj.obsList(obsname=f)
   print('!!! check ---- obs list=', tObj.event_list) if checks is True else None
 
@@ -172,7 +175,8 @@ for k in range(trials):
       if not os.path.isfile(tObj.event_selected):
         tObj.eventSelect(prefix=prefix)
     else:
-      os.system('rm ' + tObj.event_selected)
+      if os.path.isfile(tObj.event_selected):
+        os.system('rm ' + tObj.event_selected)
       tObj.eventSelect(prefix=prefix)
     print('!!! check --- selection: ', tObj.event_selected) if checks is True else None
 
@@ -183,6 +187,8 @@ for k in range(trials):
       if not os.path.isfile(tObj.skymap):
         tObj.eventSkymap(wbin=wbin)
     else:
+      if os.path.isfile(tObj.skymap):
+        os.system('rm ' + tObj.skymap)
       tObj.eventSkymap(wbin=wbin)
     print('!!! check --- skymaps: ', tObj.skymap) if checks is True else None
 
@@ -193,7 +199,8 @@ for k in range(trials):
       if not os.path.isfile(str(tObj.detectionXml)):
         tObj.runDetection()
     else:
-      os.system('rm ' + tObj.detectionXml)
+      if os.path.isfile(tObj.detectionXml):
+        os.system('rm ' + tObj.detectionXml)
       tObj.runDetection()
     detObj = xmlMng(tObj.detectionXml)
     detObj.sigma = sigma
@@ -220,7 +227,8 @@ for k in range(trials):
         if not os.path.isfile(tObj.likeXml):
           tObj.maxLikelihood()
       else:
-        os.system('rm ' + tObj.likeXml)
+        if os.path.isfile(tObj.likeXml):
+          os.system('rm ' + tObj.likeXml)
         tObj.maxLikelihood()
       likeObj = xmlMng(tObj.likeXml)
       if src_sort:
