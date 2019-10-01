@@ -50,7 +50,7 @@ pointDEC = trueDec + offmax[1]  # (deg)
 # conditions control ---!
 checks = True
 if_fits = True
-if_cut = True
+if_cut = False
 if_ebl = True
 extract_spec = True
 irf_degrade = False
@@ -130,11 +130,11 @@ for k in range(trials):
     if if_ebl:
       tObj.model = p.getDataDir() + 'run0406_ID000126_ebl_tbin%02d.xml' % i
       tObj.event = p.getSimDir() + f + "_ebl_tbin%02d.fits" % i
-      print('!!! check ---- simulation with EBL') if checks is True else None
+      print('!!! check ---- simulation %d with EBL' %(i+1)) if checks is True else None
     else:
       tObj.model = p.getDataDir() + 'run0406_ID000126_tbin%02d.xml' % i
       tObj.event = p.getSimDir() + f + "_tbin%02d.fits" % i
-      print('!!! check ---- simulation without EBL') if checks is True else None
+      print('!!! check ---- simulation %d without EBL' %(i+1)) if checks is True else None
     event_bins.append(tObj.event)
     if skip_exist:
       if not os.path.isfile(tObj.event):
@@ -194,7 +194,7 @@ for k in range(trials):
 
   # --------------------------------- DETECTION & MODELING --------------------------------- !!!
 
-    tObj.corr_rad = 0.2
+    tObj.corr_rad = 0.05
     tObj.maxSrc = 10
     if skip_exist:
       if not os.path.isfile(str(tObj.detectionXml)):
@@ -275,9 +275,9 @@ for k in range(trials):
 
     raFit[i].append(raList[0][0])
     decFit[i].append(decList[0][0])
-    print('!!! check ---- RA FIT for all sources: ', raList[0], '\n!!!check ---- RA FIT for candidate:',
+    print('!!! check ---- RA FIT for all sources: ', raList[0], '\n!!! check ---- RA FIT for candidate:',
           raFit[i][0]) if checks is True else None
-    print('!!! check ---- DEC FIT for all sources: ', decList[0], '\n!!!check ---- DEC FIT for candidate:',
+    print('!!! check ---- DEC FIT for all sources: ', decList[0], '\n!!! check ---- DEC FIT for candidate:',
           decFit[i][0]) if checks is True else None
 
   # --------------------------------- BEST FIT SPECTRAL --------------------------------- !!!
