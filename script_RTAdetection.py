@@ -50,7 +50,7 @@ pointDEC = trueDec + offmax[1]  # (deg)
 # conditions control ---!
 checks = True
 ebl_fits = False
-if_cut = False
+if_cut = True
 if_ebl = True
 extract_spec = False
 irf_degrade = True
@@ -290,6 +290,8 @@ for k in range(trials):
     pivot = []
     cutoff = [] if if_cut is True else None
     if Ndet[i][0] > 0:
+      if if_cut:
+        likeObj.if_cut = if_cut
       spectral = likeObj.loadSpectral()
       index.append(spectral[0])
       pref.append(spectral[1])
