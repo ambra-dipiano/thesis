@@ -49,14 +49,13 @@ pointDEC = trueDec + offmax[1]  # (deg)
 
 # conditions control ---!
 checks = True
-if_fits = True
 if_cut = False
 if_ebl = True
 extract_spec = True
-irf_degrade = False
+irf_degrade = True
 src_sort = False
 skip_exist = False
-ebl_fits=False
+ebl_fits = True
 
 # files ---!
 fileroot = 'run0406_'
@@ -139,23 +138,17 @@ for k in range(trials):
       tObj.event = p.getSimDir() + f + "_tbin%02d.fits" % i
       print('!!! check ---- simulation %d without EBL' %(i+1)) if checks is True else None
     event_bins.append(tObj.event)
-    if skip_exist:
-      if not os.path.isfile(tObj.event):
-        tObj.eventSim()
-    else:
+    if not skip_exist:
       if os.path.isfile(tObj.event):
-        os.system('rm ' + tObj.event)
+        os.remove(tObj.event)
       tObj.eventSim()
   print('!!! check ---- simulation=', tObj.event) if checks is True else None
   # observation list ---!
   tObj.event = event_bins
   tObj.event_list = p.getSimDir() + 'obs_%s.xml' % f
-  if skip_exist:
-    if not os.path.isfile(tObj.event_list):
-      tObj.obsList(obsname=f)
-  else:
+  if not skip_exist:
     if os.path.isfile(tObj.event_list):
-      os.system('rm ' + tObj.event_list)
+      os.remove(tObj.event_list)
     tObj.obsList(obsname=f)
   print('!!! check ---- obs list=', tObj.event_list) if checks is True else None
 
@@ -174,24 +167,18 @@ for k in range(trials):
     tObj.t = [tmin, tmax[i]]
     tObj.event_selected = tObj.event_list.replace(p.getSimDir(), p.getSelectDir()).replace('obs_', 'texp%ds_' % texp[i])
     prefix = p.getSelectDir() + 'texp%ds_' % texp[i]
-    if skip_exist:
-      if not os.path.isfile(tObj.event_selected):
-        tObj.eventSelect(prefix=prefix)
-    else:
+    if not skip_exist:
       if os.path.isfile(tObj.event_selected):
-        os.system('rm ' + tObj.event_selected)
+        os.system(tObj.event_selected)
       tObj.eventSelect(prefix=prefix)
     print('!!! check ---- selection: ', tObj.event_selected) if checks is True else None
 
   # --------------------------------- SKYMAP --------------------------------- !!!
 
     tObj.skymap = tObj.event_selected.replace(p.getSelectDir(), p.getDetDir()).replace('.xml', '_skymap.fits')
-    if skip_exist:
-      if not os.path.isfile(tObj.skymap):
-        tObj.eventSkymap(wbin=wbin)
-    else:
+    if not skip_exist:
       if os.path.isfile(tObj.skymap):
-        os.system('rm ' + tObj.skymap)
+        os.remove(tObj.skymap)
       tObj.eventSkymap(wbin=wbin)
     print('!!! check ---- skymaps: ', tObj.skymap) if checks is True else None
 
@@ -199,12 +186,9 @@ for k in range(trials):
 
     tObj.corr_rad = 0.05
     tObj.maxSrc = 10
-    if skip_exist:
-      if not os.path.isfile(str(tObj.detectionXml)):
-        tObj.runDetection()
-    else:
-      if os.path.isfile(tObj.detectionXml):
-        os.system('rm ' + tObj.detectionXml)
+    if not skip_exist:
+      if os.path.isfile(str(tObj.detectionXml)):
+        os.remove(tObj.detectionXml)
       tObj.runDetection()
     detObj = xmlMng(tObj.detectionXml)
     detObj.sigma = sigma
@@ -227,12 +211,9 @@ for k in range(trials):
 
     tObj.likeXml = tObj.detectionXml.replace('_det%dsgm.xml' % tObj.sigma, '_like%dsgm.xml' % tObj.sigma)
     if Ndet[i][0] > 0:
-      if skip_exist:
-        if not os.path.isfile(tObj.likeXml):
-          tObj.maxLikelihood()
-      else:
+      if not skip_exist:
         if os.path.isfile(tObj.likeXml):
-          os.system('rm ' + tObj.likeXml)
+          os.remove(tObj.likeXml)
         tObj.maxLikelihood()
       likeObj = xmlMng(tObj.likeXml)
       if src_sort:
@@ -374,9 +355,9 @@ for k in range(trials):
 
   print('!!! check ---- ', count, ') trial done...') if checks is True else None
   if count > 4:
-    os.system('rm ' + p.getSimDir() + '*run0406*%06d*' % count)
-    os.system('rm ' + p.getSelectDir() + '*run0406*%06d*' % count)
-    os.system('rm ' + p.getDetDir() + '*run0406*%06d*' % count)
+    os.remove(p.getSimDir() + '*run0406*%06d*' % count)
+    os.remove(p.getSelectDir() + '*run0406*%06d*' % count)
+    os.remove(p.getDetDir() + '*run0406*%06d*' % count)
 print('!!! check end\n\ndone......chunk ', chunk, 'sim id from ', trials * (chunk - 1) + 1, ' to ',
       count) if checks is True else None
 print('!!! check end\n\ndone...... removed all files in sim, selected_sim and detection_all except seeds from 1 to 4') if checks is True else None
