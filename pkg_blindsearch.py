@@ -91,8 +91,6 @@ class analysis() :
     self.sensCsv = str()
     self.caldb = 'prod2'
     self.irf = 'South_0.5h'
-    self.irf_nominal =  self.__CTOOLS + '/share/caldb/data/cta/%s/bcf/%s/irf_file.fits' % (self.caldb, self.irf)
-    self.irf_degraded = self.irf_nominal.replace('prod', 'degr')
     # condition control ---!
     self.if_ebl = True
     self.extract_spec = False
@@ -282,10 +280,7 @@ class analysis() :
     return
 
   def load_template(self) :
-    if self.if_ebl is True :
-      self.__energy, self.__time, self.__spectra, self.__ebl = self.__getFitsData
-    if self.if_ebl is False:
-      self.__energy, self.__time, self.__spectra = self.__getFitsData
+    self.__getFitsData()
 
     self.__Nt = len(self.__time)
     self.__Ne = len(self.__energy)
@@ -488,17 +483,36 @@ class analysis() :
 
   def degradeIRF(self):
     caldb_degr = self.caldb.replace('prod', 'degr')
+    self.irf_nominal =  self.__CTOOLS + '/share/caldb/data/cta/%s/bcf/%s/irf_file.fits' % (self.caldb, self.irf)
+    self.irf_degraded = self.irf_nominal.replace('prod', 'degr')
     nominal_cal = self.__CTOOLS + '/share/caldb/data/cta/' + self.caldb
     degraded_cal = self.__CTOOLS + '/share/caldb/data/cta/' + caldb_degr
-    # copy caldb if not ---!
-    if not os.path.isdir(degraded_cal):
-      os.system('cp -r %s %s' % (nominal_cal, degraded_cal))
     # permissions ---!
-    if os.geteuid() == 0:
-      print('!!! root')
-      subprocess.run(['sudo', 'chmod', '-R', '777', degraded_cal], check=True)
+    if os.geteuid() == 0 or os.geteuid() == 1126:
+      print('!!! with permission')
+      subprocess.run(['chmod', '-R', '777', self.__CTOOLS + '/share/caldb/data/cta/'], check=True)
     else:
-      print('!!! not root')
+      print('!!! as sudo')
+      subprocess.run(['sudo', 'chmod', '-R', '777', self.__CTOOLS + '/share/caldb/data/cta/'], check=True)
+    # create degr caldb if not ---!
+    if not os.path.isdir(degraded_cal):
+      os.mkdir(degraded_cal)
+    if not os.path.isfile(degraded_cal+'/caldb.indx'):
+      os.system('cp %s/caldb.indx %s/caldb.indx' %(nominal_cal, degraded_cal))
+    if not os.path.isdir(degraded_cal+'/bcf'):
+      os.mkdir(degraded_cal+'/bcf')
+    if not os.path.isdir(degraded_cal+'/bcf/'+self.irf):
+      os.mkdir(degraded_cal+'/bcf/'+self.irf)
+    if not os.path.isfile(self.irf_degraded):
+      os.system('cp %s %s' %(self.irf_nominal, self.irf_degraded))
+    # permissions ---!
+    if os.geteuid() == 0 or os.geteuid() == 1126:
+      print('!!! with permission')
+      subprocess.run(['chmod', '-R', '755', self.__CTOOLS + '/share/caldb/data/cta/'], check=True)
+      subprocess.run(['chmod', '-R', '777', degraded_cal], check=True)
+    else:
+      print('!!! as sudo')
+      subprocess.run(['sudo', 'chmod', '-R', '755', self.__CTOOLS + '/share/caldb/data/cta/'], check=True)
       subprocess.run(['sudo', 'chmod', '-R', '777', degraded_cal], check=True)
 
     # degrade ---!
@@ -529,9 +543,11 @@ class analysis() :
     # update and change permissions back ---!
     self.caldb.replace('prod', 'degr')
     # permissions ---!
-    if os.geteuid() == 0:
-      subprocess.run(['sudo', 'chmod', '-R', '755', degraded_cal], check=True)
+    if os.geteuid() == 0 or os.geteuid() == 1126:
+      print('!!! with permission')
+      subprocess.run(['chmod', '-R', '755', degraded_cal], check=True)
     else:
+      print('!!! as sudo')
       subprocess.run(['sudo', 'chmod', '-R', '755', degraded_cal], check=True)
     return
 
