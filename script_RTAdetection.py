@@ -3,14 +3,11 @@
 # ======================================================= #
 
 # IMpORTS ---!
-import gammalib
-from class_analysis import *
-from class_xml import *
+from pkg_blindsearch import *
 import numpy as np
 import csv
 import os
 import sys
-from sys import argv
 
 # --------------------------------- SETUP --------------------------------- !!!
 
@@ -56,6 +53,8 @@ irf_degrade = True
 src_sort = False
 skip_exist = False
 ebl_fits = True
+debug = False
+if_log = False
 
 # files ---!
 fileroot = 'run0406_'
@@ -79,7 +78,7 @@ tObj.tmax = tmax
 tObj.model = p.getWorkingDir() + model_pl
 tObj.caldb = caldb
 tObj.irf = irf
-tObj.debug=True
+tObj.debug = debug
 # degrade IRF if required ---!
 if irf_degrade:
   tObj.degradeIRF()
@@ -107,7 +106,7 @@ tObj.extract_spec = extract_spec
 tbin_stop = tObj.load_template()
 print('!!! check ---- tbin_stop=', tbin_stop) if checks is True else None
 
-
+breakpoint()
 # --------------------------------- 1° LOOP :: trials  --------------------------------- !!!
 
 for k in range(trials):
