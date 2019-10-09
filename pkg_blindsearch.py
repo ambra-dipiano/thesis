@@ -17,7 +17,7 @@ import subprocess
 from lxml import etree as ET
 
 def xmlConfig(cfg_file) :
-  #Load configuration file
+  # load configuration file ---!
   cfgFile = os.path.dirname(__file__)+str(cfg_file)
   with open(cfgFile) as fd:
     cfg = untangle.parse(fd.read())
@@ -77,10 +77,10 @@ class cfgMng_xml() :
 # --------------------------------- CLASS ANALYSIS --------------------------------- !!!
 
 class analysis() :
-  def __init__(self, cfg_file):
+  def __init__(self, cfgFile):
     self.__CTOOLS = os.environ.get('CTOOLS')
     # conf ---!
-    self.__cfg = xmlConfig(cfg_file)
+    self.__cfg = xmlConfig(cfgFile)
     p = cfgMng_xml(self.__cfg)
     self.__pathout = p.getDataDir()
     self.seed = 1
@@ -237,10 +237,10 @@ class analysis() :
 
     # spectra and models ---!
     for i in range(self.__Nt):
-      if self.if_ebl is False:
-        filename = self.__pathout + 'spec_tbin%02.out' % i
-      else:
+      if self.if_ebl:
         filename = self.__pathout + 'spec_ebl_tbin%02d.out' % i
+      else:
+        filename = self.__pathout + 'spec_tbin%02d.out' % i
 
       if os.path.isfile(filename):
         os.remove(filename)
@@ -273,7 +273,7 @@ class analysis() :
         # write bin models ---!
         os.system('cp ' + str(self.model) + ' ' + str(self.__pathout) + 'run0406_ID000126_tbin%02d.xml' % i)
         s = open(self.__pathout + 'run0406_ID000126_tbin%02d.xml' % i).read()
-        s = s.replace('spec', 'spec_tbin%02d' % i)
+        s = s.replace('data/spec', 'spec_tbin%02d' % i)
         with open(self.__pathout + 'run0406_ID000126_tbin%02d.xml' % i, 'w') as f:
           f.write(s)
 
@@ -482,73 +482,75 @@ class analysis() :
     return flux
 
   def degradeIRF(self):
-    caldb_degr = self.caldb.replace('prod', 'degr')
     self.irf_nominal =  self.__CTOOLS + '/share/caldb/data/cta/%s/bcf/%s/irf_file.fits' % (self.caldb, self.irf)
     self.irf_degraded = self.irf_nominal.replace('prod', 'degr')
-    nominal_cal = self.__CTOOLS + '/share/caldb/data/cta/' + self.caldb
-    degraded_cal = self.__CTOOLS + '/share/caldb/data/cta/' + caldb_degr
-    # permissions ---!
-    if os.geteuid() == 0 or os.geteuid() == 1126:
-      print('!!! with permission')
-      subprocess.run(['chmod', '-R', '777', self.__CTOOLS + '/share/caldb/data/cta/'], check=True)
-    else:
-      print('!!! as sudo')
-      subprocess.run(['sudo', 'chmod', '-R', '777', self.__CTOOLS + '/share/caldb/data/cta/'], check=True)
-    # create degr caldb if not ---!
-    if not os.path.isdir(degraded_cal):
-      os.mkdir(degraded_cal)
-    if not os.path.isfile(degraded_cal+'/caldb.indx'):
-      os.system('cp %s/caldb.indx %s/caldb.indx' %(nominal_cal, degraded_cal))
-    if not os.path.isdir(degraded_cal+'/bcf'):
-      os.mkdir(degraded_cal+'/bcf')
-    if not os.path.isdir(degraded_cal+'/bcf/'+self.irf):
-      os.mkdir(degraded_cal+'/bcf/'+self.irf)
+    # only if not existing ---!
     if not os.path.isfile(self.irf_degraded):
-      os.system('cp %s %s' %(self.irf_nominal, self.irf_degraded))
-    # permissions ---!
-    if os.geteuid() == 0 or os.geteuid() == 1126:
-      print('!!! with permission')
-      subprocess.run(['chmod', '-R', '755', self.__CTOOLS + '/share/caldb/data/cta/'], check=True)
-      subprocess.run(['chmod', '-R', '777', degraded_cal], check=True)
-    else:
-      print('!!! as sudo')
-      subprocess.run(['sudo', 'chmod', '-R', '755', self.__CTOOLS + '/share/caldb/data/cta/'], check=True)
-      subprocess.run(['sudo', 'chmod', '-R', '777', degraded_cal], check=True)
+      caldb_degr = self.caldb.replace('prod', 'degr')
+      nominal_cal = self.__CTOOLS + '/share/caldb/data/cta/' + self.caldb
+      degraded_cal = self.__CTOOLS + '/share/caldb/data/cta/' + caldb_degr
+      # permissions ---!
+      if os.geteuid() == 0 or os.geteuid() == 1126:
+        print('!!! with permission')
+        subprocess.run(['chmod', '-R', '777', self.__CTOOLS + '/share/caldb/data/cta/'], check=True)
+      else:
+        print('!!! as sudo')
+        subprocess.run(['sudo', 'chmod', '-R', '777', self.__CTOOLS + '/share/caldb/data/cta/'], check=True)
+      # create degr caldb if not ---!
+      if not os.path.isdir(degraded_cal):
+        os.mkdir(degraded_cal)
+      if not os.path.isfile(degraded_cal+'/caldb.indx'):
+        os.system('cp %s/caldb.indx %s/caldb.indx' %(nominal_cal, degraded_cal))
+      if not os.path.isdir(degraded_cal+'/bcf'):
+        os.mkdir(degraded_cal+'/bcf')
+      if not os.path.isdir(degraded_cal+'/bcf/'+self.irf):
+        os.mkdir(degraded_cal+'/bcf/'+self.irf)
+      if not os.path.isfile(self.irf_degraded):
+        os.system('cp %s %s' %(self.irf_nominal, self.irf_degraded))
+      # permissions ---!
+      if os.geteuid() == 0 or os.geteuid() == 1126:
+        print('!!! with permission')
+        subprocess.run(['chmod', '-R', '755', self.__CTOOLS + '/share/caldb/data/cta/'], check=True)
+        subprocess.run(['chmod', '-R', '777', degraded_cal], check=True)
+      else:
+        print('!!! as sudo')
+        subprocess.run(['sudo', 'chmod', '-R', '755', self.__CTOOLS + '/share/caldb/data/cta/'], check=True)
+        subprocess.run(['sudo', 'chmod', '-R', '777', degraded_cal], check=True)
 
-    # degrade ---!
-    extension = ['EFFECTIVE AREA', 'BACKGROUND']
-    field = [4, 6]
-    #  field = ['EFFAREA', 'BKG']
-    inv = 1 / self.factor
-    with fits.open(self.irf_nominal) as hdul:
-      col = []
-      for i in range(len(extension)):
-        col.append(hdul[extension[i]].data.field(field[i])[:].astype(float))
-      # np.array(col)
+      # degrade ---!
+      extension = ['EFFECTIVE AREA', 'BACKGROUND']
+      field = [4, 6]
+      #  field = ['EFFAREA', 'BKG']
+      inv = 1 / self.factor
+      with fits.open(self.irf_nominal) as hdul:
+        col = []
+        for i in range(len(extension)):
+          col.append(hdul[extension[i]].data.field(field[i])[:].astype(float))
+        # np.array(col)
 
-    a = np.where(np.array([i * inv for i in col[0]]) is np.nan, 0., np.array([i * inv for i in col[0]]))
-    b = []
-    for i in range(len(col[1][0])):
-      b.append(np.where(col[1][0][i] is np.nan, 0., col[1][0][i]) * inv)
+      a = np.where(np.array([i * inv for i in col[0]]) is np.nan, 0., np.array([i * inv for i in col[0]]))
+      b = []
+      for i in range(len(col[1][0])):
+        b.append(np.where(col[1][0][i] is np.nan, 0., col[1][0][i]) * inv)
 
-    b = np.array(b)
-    tmp = [a, b]
+      b = np.array(b)
+      tmp = [a, b]
 
-    with fits.open(self.irf_degraded, mode='update') as hdul:
-      for i in range(len(extension)):
-        hdul[extension[i]].data.field(field[i])[:] = tmp[i]
-        print('!!! DEGRADING IRF BY FACTOR %d !!!' %self.factor)
-      # save changes ---!
-      hdul.flush()
-    # update and change permissions back ---!
-    self.caldb.replace('prod', 'degr')
-    # permissions ---!
-    if os.geteuid() == 0 or os.geteuid() == 1126:
-      print('!!! with permission')
-      subprocess.run(['chmod', '-R', '755', degraded_cal], check=True)
-    else:
-      print('!!! as sudo')
-      subprocess.run(['sudo', 'chmod', '-R', '755', degraded_cal], check=True)
+      with fits.open(self.irf_degraded, mode='update') as hdul:
+        for i in range(len(extension)):
+          hdul[extension[i]].data.field(field[i])[:] = tmp[i]
+          print('!!! DEGRADING IRF BY FACTOR %d !!!' %self.factor)
+        # save changes ---!
+        hdul.flush()
+      # update and change permissions back ---!
+      self.caldb.replace('prod', 'degr')
+      # permissions ---!
+      if os.geteuid() == 0 or os.geteuid() == 1126:
+        print('!!! with permission')
+        subprocess.run(['chmod', '-R', '755', degraded_cal], check=True)
+      else:
+        print('!!! as sudo')
+        subprocess.run(['sudo', 'chmod', '-R', '755', degraded_cal], check=True)
     return
 
   def eventSens(self, bins=20, wbin=0.05):
@@ -577,10 +579,10 @@ class analysis() :
 # --------------------------------- CLASS xml HANDLING --------------------------------- !!!
 
 class xmlMng():
-
-  def __init__(self, xml):
+  def __init__(self, xml, cfgFile):
     self.__xml = xml
-    self.__cfg = xmlConfig()
+    self.__cfg = xmlConfig(cfgFile)
+    p = cfgMng_xml(self.__cfg)
     self.file = open(self.__xml)
     self.srcLib = ET.parse(self.file)
     self.root = self.srcLib.getroot()
