@@ -49,13 +49,14 @@ pointDEC = trueDec + offmax[1]  # (deg)
 
 # conditions control ---!
 checks = True
-ebl_fits = False
-if_cut = True
+if_fits = True
+if_cut = False
 if_ebl = True
-extract_spec = False
-irf_degrade = True
-src_sort = True
+extract_spec = True
+irf_degrade = False
+src_sort = False
 skip_exist = False
+ebl_fits=False
 
 # files ---!
 fileroot = 'run0406_'
@@ -79,6 +80,7 @@ tObj.tmax = tmax
 tObj.model = p.getWorkingDir() + model_pl
 tObj.caldb = caldb
 tObj.irf = irf
+tObj.debug=True
 # degrade IRF if required ---!
 if irf_degrade:
   tObj.degradeIRF()
@@ -106,7 +108,6 @@ tObj.extract_spec = extract_spec
 tbin_stop = tObj.load_template()
 print('!!! check ---- tbin_stop=', tbin_stop) if checks is True else None
 
-breakpoint()
 
 # --------------------------------- 1° LOOP :: trials  --------------------------------- !!!
 
@@ -136,7 +137,7 @@ for k in range(trials):
     else:
       tObj.model = p.getDataDir() + 'run0406_ID000126_tbin%02d.xml' % i
       tObj.event = p.getSimDir() + f + "_tbin%02d.fits" % i
-      print('!!! check ---- simulation%d without EBL' %(i+1)) if checks is True else None
+      print('!!! check ---- simulation %d without EBL' %(i+1)) if checks is True else None
     event_bins.append(tObj.event)
     if skip_exist:
       if not os.path.isfile(tObj.event):
@@ -180,7 +181,7 @@ for k in range(trials):
       if os.path.isfile(tObj.event_selected):
         os.system('rm ' + tObj.event_selected)
       tObj.eventSelect(prefix=prefix)
-    print('!!! check --- selection: ', tObj.event_selected) if checks is True else None
+    print('!!! check ---- selection: ', tObj.event_selected) if checks is True else None
 
   # --------------------------------- SKYMAP --------------------------------- !!!
 
@@ -192,10 +193,11 @@ for k in range(trials):
       if os.path.isfile(tObj.skymap):
         os.system('rm ' + tObj.skymap)
       tObj.eventSkymap(wbin=wbin)
-    print('!!! check --- skymaps: ', tObj.skymap) if checks is True else None
+    print('!!! check ---- skymaps: ', tObj.skymap) if checks is True else None
 
   # --------------------------------- DETECTION & MODELING --------------------------------- !!!
 
+    tObj.corr_rad = 0.05
     tObj.maxSrc = 10
     if skip_exist:
       if not os.path.isfile(str(tObj.detectionXml)):
@@ -208,18 +210,18 @@ for k in range(trials):
     detObj.sigma = sigma
     detObj.if_cut = if_cut
     detObj.modXml()
-    print('!!! check --- detection.............', texp[i], 's done') if checks is True else None
+    print('!!! check ---- detection.............', texp[i], 's done') if checks is True else None
 
   # --------------------------------- DETECTION RA & DEC --------------------------------- !!!
 
     pos = []
     pos.append(detObj.loadRaDec())
-    print('!!! coords:', pos[0]) if checks is True else None
+    print('!!! check ---- coords:', pos[0]) if checks is True else None
     raDet[i].append(pos[0][0][0]) if len(pos[0][0]) > 0 else raDet[i].append(np.nan)
     decDet[i].append(pos[0][1][0]) if len(pos[0][0]) > 0 else decDet[i].append(np.nan)
     Ndet[i].append(len(pos[0][0]))
-    print('!!! check number of detections in trial', k + 1, ' ====== ', Ndet[i][0]) if checks is True else None
-    print('!!! check ------- 1° src DETECTED RA:', raDet[i][0], ' and DEC:', decDet[i][0]) if checks is True else None
+    print('!!! check ---- number of detections in trial', k + 1, ' ====== ', Ndet[i][0]) if checks is True else None
+    print('!!! check ---- 1° src DETECTED RA:', raDet[i][0], ' and DEC:', decDet[i][0]) if checks is True else None
 
   # --------------------------------- MAX LIKELIHOOD --------------------------------- !!!
 
@@ -235,9 +237,7 @@ for k in range(trials):
       likeObj = xmlMng(tObj.likeXml)
       if src_sort:
         likeObj.sortSrcTS()
-    else:
-      likeObj = np.nan
-    print('!!! check --- max likelihoods: ', tObj.likeXml) if checks is True else None
+    print('!!! check ---- max likelihoods: ', tObj.likeXml) if checks is True else None
 
   # --------------------------------- BEST FIT TSV --------------------------------- !!!
 
@@ -246,11 +246,11 @@ for k in range(trials):
       tsList.append(likeObj.loadTSV())
     else:
       tsList.append([np.nan])
-    print('!!! check --- TSV List for all sources: ', tsList[0]) if checks is True else None
+    print('!!! check ---- TSV List for all sources: ', tsList[0]) if checks is True else None
 
     # only first elem ---!
     ts[i].append(tsList[0][0])
-    print('!!! check --- SRC001 TSV for candidate:', ts[i][0]) if checks is True else None
+    print('!!! check ---- SRC001 TSV for candidate:', ts[i][0]) if checks is True else None
 
   # --------------------------------- Nsrc FOR TSV THRESHOLD --------------------------------- !!!
 
@@ -278,6 +278,7 @@ for k in range(trials):
 
     raFit[i].append(raList[0][0])
     decFit[i].append(decList[0][0])
+
     print('!!! check --- RA FIT for all sources: ', raList[0], '\n!!! check --- RA FIT for candidate:',
           raFit[i][0]) if checks is True else None
     print('!!! check --- DEC FIT for all sources: ', decList[0], '\n!!! check --- DEC FIT for candidate:',
@@ -333,7 +334,8 @@ for k in range(trials):
   # --------------------------------- CLOSE XMLs --------------------------------- !!!
 
     detObj.closeXml()
-    likeObj.closeXml()
+    if Ndet[i][0] > 0:
+      likeObj.closeXml()
 
   # --------------------------------- RESULTS TABLE (csv) --------------------------------- !!!
 
@@ -366,15 +368,15 @@ for k in range(trials):
         w = csv.writer(f)
         w.writerows(row)
         f.close()
-    print('!!! check --- data file: ', csvName) if checks is True else None
+    print('!!! check ---- data file: ', csvName) if checks is True else None
 
   # --------------------------------- CLEAR SPACE --------------------------------- !!!
 
-  print('!!! check --- ', count, ') trial done...') if checks is True else None
+  print('!!! check ---- ', count, ') trial done...') if checks is True else None
   if count > 4:
-    os.system('rm ' + p.getSimDir() + '*sim%06d*' % count)
-    os.system('rm ' + p.getSelectDir() + '*sim%06d*' % count)
-    os.system('rm ' + p.getDetDir() + '*sim%06d*' % count)
+    os.system('rm ' + p.getSimDir() + '*run0406*%06d*' % count)
+    os.system('rm ' + p.getSelectDir() + '*run0406*%06d*' % count)
+    os.system('rm ' + p.getDetDir() + '*run0406*%06d*' % count)
 print('!!! check end\n\ndone......chunk ', chunk, 'sim id from ', trials * (chunk - 1) + 1, ' to ',
       count) if checks is True else None
 print('!!! check end\n\ndone...... removed all files in sim, selected_sim and detection_all except seeds from 1 to 4') if checks is True else None

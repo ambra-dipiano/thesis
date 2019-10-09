@@ -227,7 +227,7 @@ class analysis() :
     # save to new ---!
     if os.path.isfile(template_ebl):
       os.system('rm ' + template_ebl)
-    hdul.writeto(template_ebl, overwrite=False) # write new template ---!
+    hdul.writeto(template_ebl, overwrite=True) # write new template ---!
     self.__closeFITS(hdul) # close template ---!
     if self.plot is True:
       return x, y, x2, y2

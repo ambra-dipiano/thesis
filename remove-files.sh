@@ -1,10 +1,10 @@
 #!/bin/bash
 
-#rm $WORK/run0406/run0406_ID000126/sim/*
-#rm $WORK/run0406/run0406_ID000126/selected_sim/*
-#rm $WORK/run0406/run0406_ID000126/detection_all/*
-#rm $WORK/run0406/run0406_ID000126/csv/*
-#rm $WORK/run0406/sl*
+rm $WORK/run0406/run0406_ID000126/sim/*
+rm $WORK/run0406/run0406_ID000126/selected_sim/*
+rm $WORK/run0406/run0406_ID000126/detection_all/*
+rm $WORK/run0406/run0406_ID000126/csv/*
+rm $WORK/run0406/sl*
 # ----------------------
 #rm $WORK/run0406_test/run0406/run0406_ID000126/sim/*
 #rm $WORK/run0406_test/run0406/run0406_ID000126/selected_sim/*
@@ -18,8 +18,8 @@
 #rm $WORK/run0406_bkg/run0406_ID000126/csv/*
 #rm $WORK/run0406_bkg/sl*
 # -----------------------
-rm $WORK/run0406_archive/run0406_ID000126/sim/*
-rm $WORK/run0406_archive/sl*
+#rm $WORK/run0406_archive/run0406_ID000126/sim/*
+#rm $WORK/run0406_archive/sl*
 # -----------------------
 #rm $WORK/run0406_lc/run0406_ID000126/sim/*
 #rm $WORK/run0406_lc/run0406_ID000126/selected_sim/*
