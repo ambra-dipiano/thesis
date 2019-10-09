@@ -81,6 +81,7 @@ tObj.model = p.getWorkingDir() + model_pl
 tObj.caldb = caldb
 tObj.irf = irf
 tObj.debug = debug
+tObj.if_log = if_log
 # degrade IRF if required ---!
 if irf_degrade:
   tObj.degradeIRF()
