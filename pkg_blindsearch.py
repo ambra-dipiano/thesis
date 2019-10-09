@@ -97,6 +97,7 @@ class analysis() :
     self.plot = False
     self.zfetch = False
     self.debug = False
+    self.if_log = True
     # data ---!
     self.z = 0.1
     self.t = [0, 2000]
@@ -331,6 +332,8 @@ class analysis() :
     sim["seed"] = self.seed
     sim["logfile"] = self.event.replace('.fits', '.log')
     sim["debug"] = self.debug
+    if self.if_log:
+      sim.logFileOpen()
     sim.execute()
 
     return
@@ -363,6 +366,8 @@ class analysis() :
     selection['emax'] = self.e[1]
     selection['logfile'] = self.event_selected.replace('.xml', '.log')
     selection['debug'] = self.debug
+    if self.if_log:
+      selection.logFileOpen()
     selection.execute()
 
     return
@@ -385,6 +390,8 @@ class analysis() :
     skymap['bkgsubtract'] = self.sky_subtraction.upper()
     skymap['logfile'] = self.skymap.replace('.fits', '.log')
     skymap['debug'] = self.debug
+    if self.if_log:
+      skymap.logFileOpen()
     skymap.execute()
 
     return
@@ -406,6 +413,8 @@ class analysis() :
     detection['corr_kern'] = self.corr_kern.upper()
     detection['logfile'] = self.detectionXml.replace('.xml', '.log')
     detection['debug'] = self.debug
+    if self.if_log:
+      detection.logFileOpen()
     detection.execute()
 
     return
@@ -417,9 +426,11 @@ class analysis() :
     like['outmodel'] = self.likeXml
     like['caldb'] = self.caldb
     like['irf'] = self.irf
-    like['fix_spat_for_ts'] = True
+    like['fix_spat_for_ts'] = False
     like['logfile'] = self.likeXml.replace('.xml', '.log')
     like['debug'] = self.debug
+    if self.if_log:
+      like.logFileOpen()
     like.execute()
 
     return
@@ -440,6 +451,8 @@ class analysis() :
         err['confidence'] = self.confidence_level[i]
         err['logfile'] = asym_errors.replace('.xml', '.log')
         err['debug'] = self.debug
+        if self.if_log:
+          err.logFileOpen()
         err.execute()
 
     return self.errors_conf
@@ -459,6 +472,8 @@ class analysis() :
     uplim['emax'] = self.e[1]  # default maximum energy for integral flux limit (in TeV)
     uplim['logfile'] = self.likeXml.replace('results.xml', 'flux.log')
     uplim['debug'] = self.debug
+    if self.if_log:
+      uplim.logFileOpen()
     uplim.execute()
 
     return
@@ -572,6 +587,8 @@ class analysis() :
     sens['npix'] = nbin
     sens['binsz'] = wbin
     sens['logfile'] = self.sensCsv.replace('', '.log')
+    if self.if_log:
+      sens.logFileOpen()
     sens.execute()
 
     return
