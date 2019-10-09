@@ -36,6 +36,8 @@ emax = 0.5  # selection maximum energy (TeV)
 roi = 5  # region of interest for simulation and selection (deg)
 wbin = 0.02  # skymap bin width (deg)
 confidence = (0.68, 0.95, 0.9973)  # confidence interval for asymmetrical errors (%)
+maxSrc = 1  # max candidates
+corr_rad = 0.1  # Gaussian
 
 # pointing with off-axis equal to max prob GW ---!
 offmax = (-1.475, -1.371)  # (deg)
@@ -47,19 +49,19 @@ pointDEC = trueDec + offmax[1]  # (deg)
 # conditions control ---!
 checks = True
 if_cut = False
-if_ebl = True
+if_ebl = False
 extract_spec = True
-irf_degrade = True
+irf_degrade = False
 src_sort = False
 skip_exist = False
-ebl_fits = True
+ebl_fits = False
 debug = False
 if_log = False
 
 # files ---!
 fileroot = 'run0406_'
 cfg_file = '/config.xml'
-ebl_table = './gilmore_tau_fiducial.csv'
+ebl_table = os.environ.get('MORGANA') + '/gilmore_tau_fiducial.csv'
 nominal_template = 'run0406_ID000126.fits'
 ebl_template = 'run0406_ID000126_ebl.fits'
 model_pl = 'run0406_ID000126.xml'
@@ -94,19 +96,16 @@ if ebl_fits:
 # assign template ---!
 if if_ebl:
   template = p.getWorkingDir() + ebl_template
-  tObj.if_ebl = if_ebl
 else :
   template = p.getWorkingDir() + nominal_template
-  tObj.if_ebl = False
+tObj.if_ebl = if_ebl
 tObj.template = template
 print('!!! check ---- template=', tObj.template) if checks is True else None
 # load template ---!
-tObj.if_ebl = if_ebl
 tObj.extract_spec = extract_spec
 tbin_stop = tObj.load_template()
 print('!!! check ---- tbin_stop=', tbin_stop) if checks is True else None
-
-breakpoint()
+print('!!! check ---- caldb:', tObj.caldb)
 # --------------------------------- 1° LOOP :: trials  --------------------------------- !!!
 
 for k in range(trials):
@@ -183,13 +182,14 @@ for k in range(trials):
 
   # --------------------------------- DETECTION & MODELING --------------------------------- !!!
 
-    tObj.corr_rad = 0.05
-    tObj.maxSrc = 10
+    tObj.corr_rad = corr_rad
+    tObj.maxSrc = maxSrc
+    tObj.detectionXml = tObj.skymap.replace('_skymap.fits', '_det%dsgm.xml' %sigma)
     if not skip_exist:
-      if os.path.isfile(str(tObj.detectionXml)):
+      if os.path.isfile(tObj.detectionXml):
         os.remove(tObj.detectionXml)
       tObj.runDetection()
-    detObj = xmlMng(tObj.detectionXml)
+    detObj = xmlMng(tObj.detectionXml, cfg_file)
     detObj.sigma = sigma
     detObj.if_cut = if_cut
     detObj.modXml()
@@ -214,7 +214,7 @@ for k in range(trials):
         if os.path.isfile(tObj.likeXml):
           os.remove(tObj.likeXml)
         tObj.maxLikelihood()
-      likeObj = xmlMng(tObj.likeXml)
+      likeObj = xmlMng(tObj.likeXml, cfg_file)
       if src_sort:
         likeObj.sortSrcTS()
     print('!!! check ---- max likelihoods: ', tObj.likeXml) if checks is True else None
@@ -325,15 +325,15 @@ for k in range(trials):
     csvName = p.getCsvDir() + fileroot + '%ds_chunk%02d.csv' % (texp[i], chunk)
 
     row = []
-    print('!!! check Ndet:', Ndet)
-    print('!!! check Nsrc:', Nsrc)
-    print('!!! check raDet:', raDet)
-    print('!!! check decDet:', decDet)
-    print('!!! check raFit:', raFit)
-    print('!!! check decFit:', decFit)
-    print('!!! check flux_ph:', flux_ph)
-    print('!!! check flux_en:', flux_en)
-    print('!!! check ts:', ts)
+    print('!!! *** check Ndet:', Ndet[0])
+    print('!!! *** check Nsrc:', Nsrc[0])
+    print('!!! *** check raDet:', raDet[0])
+    print('!!! *** check decDet:', decDet[0])
+    print('!!! *** check raFit:', raFit[0])
+    print('!!! *** check decFit:', decFit[0])
+    print('!!! *** check flux_ph:', flux_ph[0])
+    print('!!! *** check flux_en:', flux_en[0])
+    print('!!! *** check ts:', ts[0])
 
     row.append([ID, texp[i], sigma, Ndet[i][0], Nsrc[i][0], raDet[i][0], decDet[i][0], raFit[i][0], decFit[i][0], flux_ph[i][0], flux_en[i][0], ts[i][0]])
     print('!!! check row --- iter', i, '=====', row) if checks is True else None
@@ -353,10 +353,10 @@ for k in range(trials):
   # --------------------------------- CLEAR SPACE --------------------------------- !!!
 
   print('!!! check ---- ', count, ') trial done...') if checks is True else None
-  if count > 4:
-    os.remove(p.getSimDir() + '*run0406*%06d*' % count)
-    os.remove(p.getSelectDir() + '*run0406*%06d*' % count)
-    os.remove(p.getDetDir() + '*run0406*%06d*' % count)
+  if count > 1:
+    os.system('rm ' + p.getSimDir() + '*run0406*%06d*' % count)
+    os.system('rm ' + p.getSelectDir() + '*run0406*%06d*' % count)
+    os.system('rm ' + p.getDetDir() + '*run0406*%06d*' % count)
 print('!!! check end\n\ndone......chunk ', chunk, 'sim id from ', trials * (chunk - 1) + 1, ' to ',
       count) if checks is True else None
 print('!!! check end\n\ndone...... removed all files in sim, selected_sim and detection_all except seeds from 1 to 4') if checks is True else None
