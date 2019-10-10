@@ -36,7 +36,7 @@ emax = 0.5  # selection maximum energy (TeV)
 roi = 5  # region of interest for simulation and selection (deg)
 wbin = 0.02  # skymap bin width (deg)
 confidence = (0.68, 0.95, 0.9973)  # confidence interval for asymmetrical errors (%)
-maxSrc = 1  # max candidates
+maxSrc = 10  # max candidates
 corr_rad = 0.1  # Gaussian
 
 # pointing with off-axis equal to max prob GW ---!
@@ -56,7 +56,7 @@ src_sort = False
 skip_exist = False
 ebl_fits = False
 debug = False
-if_log = False
+if_log = True
 
 # files ---!
 fileroot = 'run0406_'
@@ -112,6 +112,7 @@ print('!!! check ---- caldb:', tObj.caldb)
 for k in range(trials):
   count += 1
   tObj.seed = count
+  print('\n\n!!! ************ STARTING TRIAL %d ************ !!!\n\n' %count)
   print('!!! check ---- seed=', tObj.seed) if checks is True else None
   # attach ID to fileroot ---!
   if if_ebl:
@@ -163,12 +164,13 @@ for k in range(trials):
 
   tObj.e = [emin, emax]
   for i in range(tint):
+    print('\n\n!!! ************ STARTING TEXP %d ************ !!!\n\n' % texp[i])
     tObj.t = [tmin, tmax[i]]
     tObj.event_selected = tObj.event_list.replace(p.getSimDir(), p.getSelectDir()).replace('obs_', 'texp%ds_' % texp[i])
     prefix = p.getSelectDir() + 'texp%ds_' % texp[i]
     if not skip_exist:
       if os.path.isfile(tObj.event_selected):
-        os.system(tObj.event_selected)
+        os.remove(tObj.event_selected)
       tObj.eventSelect(prefix=prefix)
     print('!!! check ---- selection: ', tObj.event_selected) if checks is True else None
 
@@ -194,7 +196,7 @@ for k in range(trials):
     detObj.sigma = sigma
     detObj.if_cut = if_cut
     detObj.modXml()
-    print('!!! check ---- detection.............', texp[i], 's done') if checks is True else None
+    print('!!! check ---- detection.............', texp[i], 's done\n\n') if checks is True else None
 
   # --------------------------------- DETECTION RA & DEC --------------------------------- !!!
 
@@ -204,8 +206,12 @@ for k in range(trials):
     raDet[i].append(pos[0][0][0]) if len(pos[0][0]) > 0 else raDet[i].append(np.nan)
     decDet[i].append(pos[0][1][0]) if len(pos[0][0]) > 0 else decDet[i].append(np.nan)
     Ndet[i].append(len(pos[0][0]))
-    print('!!! check ---- number of detections in trial', k + 1, ' ====== ', Ndet[i][0]) if checks is True else None
-    print('!!! check ---- 1° src DETECTED RA:', raDet[i][0], ' and DEC:', decDet[i][0]) if checks is True else None
+    print('!!! check ---- number of detections in trial', k + 1, ' ====== ', Ndet) if checks is True else None
+    print('!!! check ---- 1° src DETECTED RA:', raDet, ' and DEC:', decDet) if checks is True else None
+
+  # --------------------------------- CLOSE DET XML --------------------------------- !!!
+
+    detObj.closeXml()
 
   # --------------------------------- MAX LIKELIHOOD --------------------------------- !!!
 
@@ -227,11 +233,11 @@ for k in range(trials):
       tsList.append(likeObj.loadTSV())
     else:
       tsList.append([np.nan])
-    print('!!! check ---- TSV List for all sources: ', tsList[0]) if checks is True else None
+    print('!!! check ---- TSV List for all sources: ', tsList) if checks is True else None
 
     # only first elem ---!
     ts[i].append(tsList[0][0])
-    print('!!! check ---- SRC001 TSV for candidate:', ts[i][0]) if checks is True else None
+    print('!!! check ---- SRC001 TSV for candidate:', ts) if checks is True else None
 
   # --------------------------------- Nsrc FOR TSV THRESHOLD --------------------------------- !!!
 
@@ -260,10 +266,10 @@ for k in range(trials):
     raFit[i].append(raList[0][0])
     decFit[i].append(decList[0][0])
 
-    print('!!! check --- RA FIT for all sources: ', raList[0], '\n!!! check --- RA FIT for candidate:',
-          raFit[i][0]) if checks is True else None
-    print('!!! check --- DEC FIT for all sources: ', decList[0], '\n!!! check --- DEC FIT for candidate:',
-          decFit[i][0]) if checks is True else None
+    print('!!! check --- RA FIT for all sources: ', raList, '\n!!! check --- RA FIT for candidate:',
+          raFit) if checks is True else None
+    print('!!! check --- DEC FIT for all sources: ', decList, '\n!!! check --- DEC FIT for candidate:',
+          decFit) if checks is True else None
 
   # --------------------------------- BEST FIT SPECTRAL --------------------------------- !!!
 
@@ -292,11 +298,11 @@ for k in range(trials):
     Pivot[i].append(pivot[0][0])
     if if_cut:
       Cutoff[i].append(cutoff[0][0])
-    print('!!! check ----- index:', Index[i][0]) if checks is True else None
-    print('!!! check ----- prefactor:', Pref[i][0]) if checks is True else None
-    print('!!! check ----- pivot:', Pivot[i][0]) if checks is True else None
+    print('!!! check ----- index:', Index) if checks is True else None
+    print('!!! check ----- prefactor:', Pref) if checks is True else None
+    print('!!! check ----- pivot:', Pivot) if checks is True else None
     if if_cut:
-      print('!!! check ----- cutoff:', Cutoff[i]) if checks is True else None
+      print('!!! check ----- cutoff:', Cutoff) if checks is True else None
 
   # --------------------------------- INTEGRATED FLUX --------------------------------- !!!
 
@@ -307,14 +313,13 @@ for k in range(trials):
       flux_ph[i].append(np.nan)
       flux_en[i].append(np.nan)
 
-    print('!!! check ----- my flux [ph/cm2/s]:', flux_ph[i][0]) if checks is True else None
-    print('!!! check ----- my flux [erg/cm2/s]:', flux_en[i][0], '(*)') if checks is True else None
+    print('!!! check ----- my flux [ph/cm2/s]:', flux_ph) if checks is True else None
+    print('!!! check ----- my flux [erg/cm2/s]:', flux_en, '(*)') if checks is True else None
 
     # MISSING THE CUT-OFF OPTION ---!!!
 
-  # --------------------------------- CLOSE XMLs --------------------------------- !!!
+  # --------------------------------- CLOSE LIKE XML --------------------------------- !!!
 
-    detObj.closeXml()
     if Ndet[i][0] > 0:
       likeObj.closeXml()
 
@@ -326,18 +331,18 @@ for k in range(trials):
     csvName = p.getCsvDir() + fileroot + '%ds_chunk%02d.csv' % (texp[i], chunk)
 
     row = []
-    print('!!! *** check Ndet:', Ndet[0])
-    print('!!! *** check Nsrc:', Nsrc[0])
-    print('!!! *** check raDet:', raDet[0])
-    print('!!! *** check decDet:', decDet[0])
-    print('!!! *** check raFit:', raFit[0])
-    print('!!! *** check decFit:', decFit[0])
-    print('!!! *** check flux_ph:', flux_ph[0])
-    print('!!! *** check flux_en:', flux_en[0])
-    print('!!! *** check ts:', ts[0])
+    print('\n\n!!! *** check Ndet:', Ndet[i][0])
+    print('!!! *** check Nsrc:', Nsrc[i][0])
+    print('!!! *** check raDet:', raDet[i][0])
+    print('!!! *** check decDet:', decDet[i][0])
+    print('!!! *** check raFit:', raFit[i][0])
+    print('!!! *** check decFit:', decFit[i][0])
+    print('!!! *** check flux_ph:', flux_ph[i][0])
+    print('!!! *** check flux_en:', flux_en[i][0])
+    print('!!! *** check ts:', ts[i][0])
 
     row.append([ID, texp[i], sigma, Ndet[i][0], Nsrc[i][0], raDet[i][0], decDet[i][0], raFit[i][0], decFit[i][0], flux_ph[i][0], flux_en[i][0], ts[i][0]])
-    print('!!! check row --- iter', i, '=====', row) if checks is True else None
+    print('!!! check row: seed %d --- texp' %i, texp[i], 's =====', row) if checks is True else None
     if os.path.isfile(csvName):
       with open(csvName, 'a') as f:
         w = csv.writer(f)
