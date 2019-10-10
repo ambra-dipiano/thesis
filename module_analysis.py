@@ -17,9 +17,9 @@ def extract_spectrum(model, Nt, Ne, tbin_stop, energy, spectra, ebl=None, tau=No
 
   for i in range(tbin_stop):
     if if_ebl is False:
-      filename = pathout + 'spec_tbin' + str(i) + '.out'
+      filename = pathout + 'spec_tbin%02d.out' %i
     else:
-      filename = pathout + 'spec_ebl_tbin' + str(i) + '.out'
+      filename = pathout + 'spec_ebl_tbin%02d.out' %i
 
     if os.path.isfile(filename):
       os.system('rm ' + filename)
@@ -32,7 +32,7 @@ def extract_spectrum(model, Nt, Ne, tbin_stop, energy, spectra, ebl=None, tau=No
   # ebl ---!
   if if_ebl == True:
     for i in range(Nt):
-      outfile = pathout + 'spec_ebl_tbin' + str(i) + '.out'
+      outfile = pathout + 'spec_ebl_tbin%02d.out' %i
       out_file = open(outfile, 'a')
       for j in range(Ne):
         # write spectral data in E [MeV] and I [ph/cm2/s/MeV]
@@ -42,17 +42,17 @@ def extract_spectrum(model, Nt, Ne, tbin_stop, energy, spectra, ebl=None, tau=No
           out_file.write(str(energy[j][0] * 1000.0) + ' ' + str((spectra[i][j] / 1000.0) * np.exp(-tau[j])) + "\n")
       out_file.close()
 
-      os.system('cp ' + model + ' ' + pathout + 'run0406_ID000126_ebl_tbin' + str(i) + '.xml')
-      s = open(pathout + 'run0406_ID000126_ebl_tbin' + str(i) + '.xml').read()
-      s = s.replace('data/spec', 'spec_ebl_tbin' + str(i))
-      f = open(pathout + 'run0406_ID000126_ebl_tbin' + str(i) + '.xml', 'w')
+      os.system('cp ' + model + ' ' + pathout + 'run0406_ID000126_tbin%02d.xml' % i)
+      s = open(pathout + 'run0406_ID000126_tbin%02d.xml' % i).read()
+      s = s.replace('data/spec', 'spec_tbin%02d' % i)
+      f = open(pathout + 'run0406_ID000126_tbin%02d.xml' % i, 'w')
       f.write(s)
       f.close()
 
   # no ebl ---!
   else:
     for i in range(Nt):
-      outfile = pathout + 'spec_tbin' + str(i) + '.out'
+      outfile = pathout + 'spec_tbin%02d.out' %i
       out_file = open(outfile, 'a')
       for j in range(Ne):
         # write spectral data in E [MeV] and I [ph/cm2/s/MeV]
@@ -60,9 +60,9 @@ def extract_spectrum(model, Nt, Ne, tbin_stop, energy, spectra, ebl=None, tau=No
       out_file.close()
 
       os.system('cp ' + model + ' ' + pathout + 'run0406_ID000126_tbin' + str(i))
-      s = open(pathout + 'run0406_ID000126_tbin' + str(i) + '.xml').read()
-      s = s.replace('spec', 'spec_tbin' + str(i))
-      f = open(pathout + 'run0406_ID000126_tbin' + str(i) + '.xml', 'w')
+      s = open(pathout + 'run0406_ID000126_tbin%02d.xml' %i).read()
+      s = s.replace('data/spec', 'spec_tbin%02d' %i)
+      f = open(pathout + 'run0406_ID000126_tbin%02d.xml' %i, 'w')
       f.write(s)
       f.close()
 
