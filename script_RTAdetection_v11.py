@@ -28,7 +28,7 @@ trials = int(sys.argv[2]) # number of trials
 count = int(sys.argv[3]) # starting count  
 
 # work with absolute paths ---!
-workdir = '/mnt/nvme0n1p1/piano_analysis/working-dir/run0406_test/'
+workdir = '/home/ambra/Desktop/cluster-morgana/run0406_test/run0406/'
 runpath = workdir + 'run0406_ID000126/'
 simpath = runpath + 'sim/'
 selectpath = runpath + 'selected_sim/'
@@ -70,12 +70,10 @@ pointRA = trueRa + offmax[0] # (deg)
 pointDEC = trueDec + offmax[1] # (deg)
 
 # others ---!
-checks = False
+checks = True
 if_ebl = True
-if if_ebl is False :
-  fileroot = 'run0406_'
-else :
-  fileroot = 'run0406ebl_'
+fileroot = 'run0406_'
+
 
 # =====================
 # !!! LOAD TEMPLATE !!!
@@ -87,7 +85,10 @@ print('!!! check ---- tbin_stop=', tbin_stop) if checks is True else None
 for k in range(trials) :
   count += 1
   # attach ID to fileroot ---!
-  f = fileroot + 'sim%06d' % (count)
+  if if_ebl is False:
+    f = fileroot + 'sim%06d' % (count)
+  else:
+    f = fileroot + 'ebl%06d' % (count)
   print('!!! check ---- file=', f) if checks is True else None
 
   # ====================
@@ -99,10 +100,10 @@ for k in range(trials) :
   # simulate ---!
   for i in range(tbin_stop):
     if if_ebl is False :
-      model = datapath + 'run0406_ID000126_tbin%d.xml' % i # !!
+      model = datapath + 'run0406_ID000126_tbin%02d.xml' % i # !!
       event = simpath + f + "_tbin%02d.fits" % i
     else :
-      model = datapath + 'run0406_ID000126_ebl_tbin%d.xml' % i # !!
+      model = datapath + 'run0406_ID000126_ebl_tbin%02d.xml' % i # !!
       event = simpath + f + "_ebl_tbin%02d.fits" % i
     event_bins.append(event)
     if not os.path.isfile(event) :
@@ -149,7 +150,7 @@ for k in range(trials) :
   pos = []
   
   for i in range(tint) :
-    det, reg, coord = srcDetection_spcModeling(skymapName[i], sigma=sigma, maxSrc=10, if_cutoff=True)
+    det, reg, coord = srcDetection_spcModeling(skymapName[i], sigma=sigma, maxSrc=10)
     detXml.append(det)
     detReg.append(reg)
     pos.append(coord)
