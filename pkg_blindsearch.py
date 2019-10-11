@@ -422,10 +422,14 @@ class analysis() :
   def maxLikelihood(self):
     like = ctools.ctlike()
     like['inobs'] = self.event_selected
+    # print('SELECTED', self.event_selected)
     like['inmodel'] = self.detectionXml
+    # print('INMODEL', self.detectionXml)
     like['outmodel'] = self.likeXml
     like['caldb'] = self.caldb
     like['irf'] = self.irf
+    like['refit'] = True
+    like['max_iter'] = 500
     like['fix_spat_for_ts'] = False
     like['logfile'] = self.likeXml.replace('.xml', '.log')
     like['debug'] = self.debug
@@ -506,10 +510,10 @@ class analysis() :
       degraded_cal = self.__CTOOLS + '/share/caldb/data/cta/' + caldb_degr
       # permissions ---!
       if os.geteuid() == 0 or os.geteuid() == 1126:
-        print('!!! with permission')
+        # print('!!! with permission')
         subprocess.run(['chmod', '-R', '777', self.__CTOOLS + '/share/caldb/data/cta/'], check=True)
       else:
-        print('!!! as sudo')
+        # print('!!! as sudo')
         subprocess.run(['sudo', 'chmod', '-R', '777', self.__CTOOLS + '/share/caldb/data/cta/'], check=True)
       # create degr caldb if not ---!
       if not os.path.isdir(degraded_cal):
@@ -524,11 +528,11 @@ class analysis() :
         os.system('cp %s %s' %(self.irf_nominal, self.irf_degraded))
       # permissions ---!
       if os.geteuid() == 0 or os.geteuid() == 1126:
-        print('!!! with permission')
+        # print('!!! with permission')
         subprocess.run(['chmod', '-R', '755', self.__CTOOLS + '/share/caldb/data/cta/'], check=True)
         subprocess.run(['chmod', '-R', '777', degraded_cal], check=True)
       else:
-        print('!!! as sudo')
+        # print('!!! as sudo')
         subprocess.run(['sudo', 'chmod', '-R', '755', self.__CTOOLS + '/share/caldb/data/cta/'], check=True)
         subprocess.run(['sudo', 'chmod', '-R', '777', degraded_cal], check=True)
 
@@ -554,17 +558,17 @@ class analysis() :
       with fits.open(self.irf_degraded, mode='update') as hdul:
         for i in range(len(extension)):
           hdul[extension[i]].data.field(field[i])[:] = tmp[i]
-          print('!!! DEGRADING IRF BY FACTOR %d !!!' %self.factor)
+          # print('!!! DEGRADING IRF BY FACTOR %d !!!' %self.factor)
         # save changes ---!
         hdul.flush()
       # update and change permissions back ---!
       self.caldb.replace('prod', 'degr')
       # permissions ---!
       if os.geteuid() == 0 or os.geteuid() == 1126:
-        print('!!! with permission')
+        # print('!!! with permission')
         subprocess.run(['chmod', '-R', '755', degraded_cal], check=True)
       else:
-        print('!!! as sudo')
+        # print('!!! as sudo')
         subprocess.run(['sudo', 'chmod', '-R', '755', degraded_cal], check=True)
     return
 
