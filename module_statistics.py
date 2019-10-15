@@ -149,9 +149,7 @@ def rayleigh_pdf(x, loc=0, scale=1, if_CI=True, probs=(0.6827, 0.9545, 0.9973, 0
 
 
 # 2D HISTOGRAM WITH RAYLEIGH CONFIDENCE INTERVAL ---!
-def hist2d_rayleigh_CI(x, y, nbin=None, width=None, rayleigh_prms={'loc':0, 'scale':1}, xcentre=0, ycentre=0, threshold=1, probs=(0.6827, 0.9545, 0.9973, 0.99994),
-                      colors=('k', 'r', 'orange', 'm'), ax_thresh=0.2, xlabel='x', ylabel='y', title='confidence intervals from theoretical distribution',
-                      fontsize=12, filename='hist2d_CIrayleigh.png') :
+def hist2d_rayleigh_CI(x, y, nbin=None, width=None, rayleigh_prms={'loc':0, 'scale':1}, xcentre=0, ycentre=0, threshold=1, probs=(0.6827, 0.9545, 0.9973, 0.99994), colors=('k', 'r', 'orange', 'm'), ax_thresh=0.2, xlabel='x', ylabel='y', title='confidence intervals from theoretical distribution', fontsize=12, filename='hist2d_CIrayleigh.png') :
 
     xmean = np.mean(x)
     ymean = np.mean(y)
@@ -252,9 +250,9 @@ def hist2d_gauss_CI(x, y, nbin=None, width=None, xcentre=0, ycentre=0, threshold
 
 
 # 2D HISTOGRAM MAP ---!
-def his2d_map(x, y, nbin=None, width=None, xcentre=0, ycentre=0, threshold=1, ax_thresh=0.2, xlabel='x', ylabel='y',
+def hist2d_map(x, y, trials, nbin=None, width=None, xcentre=0, ycentre=0, threshold=1, ax_thresh=0.2, xlabel='x', ylabel='y',
               title='probability map', fontsize=12, filename='hist2d_map.png', if_CI=None, rayleigh={'loc':0, 'scale':1},
-              nstd=(1, 2, 3, 5), colors=('k', 'r', 'orange', 'm'), probs=(0.6827, 0.9545, 0.9973, 0.99994)) :
+              nstd=(1, 2, 3, 5), colors=('k', 'r', 'orange', 'm'), probs=(0.6827, 0.9545, 0.9973, 0.99994), smooth=True) :
 
     if width is None :
         width = threshold/nbin
@@ -269,7 +267,11 @@ def his2d_map(x, y, nbin=None, width=None, xcentre=0, ycentre=0, threshold=1, ax
 
     ax = plt.subplot(111)
     h = ax.hist2d(x, y, bins=nbin, cmap='jet',
-                   range=[[xcentre - threshold, xcentre + threshold], [ycentre - threshold, ycentre + threshold]])
+                  range=[[xcentre - threshold, xcentre + threshold], [ycentre - threshold, ycentre + threshold]])
+    if smooth:
+        plt.clf()
+        plt.close()
+        plt.imshow(h[0], origin="lower", interpolation="gaussian")
     plt.scatter(xcentre, ycentre, c='w', marker='*', s=1e2)
 
     if if_CI is None :
@@ -306,7 +308,7 @@ def his2d_map(x, y, nbin=None, width=None, xcentre=0, ycentre=0, threshold=1, ax
     else :
         print('Error: if_CI parameter value not understood')
 
-    plt.colorbar(h[3], ax=ax)
+    plt.colorbar(h[3]/trials, ax=ax)
     plt.axis([xcentre - ax_thresh, xcentre + ax_thresh, ycentre - ax_thresh, ycentre + ax_thresh], 'equal')
     plt.xlabel(xlabel, fontsize=fontsize)
     plt.ylabel(ylabel, fontsize=fontsize)
