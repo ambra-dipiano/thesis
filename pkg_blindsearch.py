@@ -231,10 +231,8 @@ class analysis() :
     table = self.__pathout + 'time_slices.csv'
     if os.path.isfile(table):
       os.remove(table)
-    if not os.path.isfile(table):
-      os.mknod(table)
-      with open(table, 'a') as tab:
-        tab.write('#bin,tmax_bin')
+    with open(table, 'w+') as tab:
+      tab.write('#bin,tmax_bin')
 
     # spectra and models ---!
     for i in range(self.__Nt):
@@ -245,8 +243,6 @@ class analysis() :
 
       if os.path.isfile(filename):
         os.remove(filename)
-      if not os.path.isfile(filename):
-        os.mknod(filename)
 
       # time slices table ---!
       with open(table, 'a') as tab:
@@ -254,7 +250,7 @@ class analysis() :
 
       # ebl ---!
       if self.if_ebl is True:
-        with open(filename, 'a') as f:
+        with open(filename, 'a+') as f:
           for j in range(self.__Ne):
             # write spectral data in E [MeV] and I [ph/cm2/s/MeV] ---!
             if self.__ebl is not None:
@@ -267,7 +263,7 @@ class analysis() :
           f.write(s)
       # no ebl ---!
       else:
-        with open(filename, 'a') as f:
+        with open(filename, 'a+') as f:
           for j in range(self.__Ne):
             # write spectral data in E [MeV] and I [ph/cm2/s/MeV] ---!
             f.write(str(self.__energy[j][0] * 1000.0) + ' ' + str(self.__spectra[i][j] / 1000.0) + "\n")
@@ -596,6 +592,69 @@ class analysis() :
     sens.execute()
 
     return
+
+  def __reduceFluxSpec(self, factor):
+    spec_files = []
+    # r=root, d=directories, f = files
+    for r, d, f in os.walk(self.__pathout):
+      for file in f:
+        if self.if_ebl:
+          if '.out' in file and 'ebl' in file and 'flux' not in file:
+            spec_files.append(os.path.join(r, file))
+        else:
+          if '.out' in file and 'ebl' not in file and 'flux' not in file:
+            spec_files.append(os.path.join(r, file))
+
+    spec_files.sort()
+    for i in range(len(spec_files)):
+      if self.if_ebl:
+        new_file = spec_files[i].replace('spec_ebl_tbin', 'spec_ebl_flux%d_tbin' %factor)
+      else:
+        new_file = spec_files[i].replace('spec_tbin', 'spec_flux%d_tbin' %factor)
+      if os.path.isfile(new_file):
+        os.remove(new_file)
+      with open(spec_files[i], 'r') as input, open(new_file, 'w+') as output:
+        df = pd.read_csv(input, sep=' ', header=None)
+        df.iloc[:,1] = df.iloc[:,1].apply(lambda x: float(x)/factor)
+        df.to_csv(path_or_buf=output, sep=' ', index=False, header=None)
+    return
+
+  def __replaceSpecFile(self, factor):
+    xml_files = []
+    # r=root, d=directories, f = files
+    for r, d, f in os.walk(self.__pathout):
+      for file in f:
+        if self.if_ebl:
+          if '.xml' in file and 'ebl' in file and 'flux' not in file:
+            xml_files.append(os.path.join(r, file))
+        else:
+          if '.xml' in file and 'ebl' not in file and 'flux' not in file:
+            xml_files.append(os.path.join(r, file))
+
+    xml_files.sort()
+    for i in range(len(xml_files)):
+      if self.if_ebl:
+        new_file = xml_files[i].replace('ID000126_ebl_tbin', 'ID000126_ebl_flux%d_tbin' %factor)
+      else:
+        new_file = xml_files[i].replace('ID000126_tbin', 'ID000126_flux%d_tbin' %factor)
+      if os.path.isfile(new_file):
+        os.remove(new_file)
+      with open(xml_files[i], 'r') as input, open(new_file, 'w+') as output:
+        content = input.read()
+        if self.if_ebl:
+          content = content.replace('spec_ebl_tbin', 'spec_ebl_flux%d_tbin' %factor)
+        else:
+          content = content.replace('spec_tbin', 'spec_flux%d_tbin' %factor)
+        output.write(content)
+
+
+    return
+
+  def makeFainter(self, factor=2):
+    self.__reduceFluxSpec(factor)
+    self.__replaceSpecFile(factor)
+    return
+
 
 # --------------------------------- CLASS xml HANDLING --------------------------------- !!!
 
