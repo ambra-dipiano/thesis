@@ -48,15 +48,19 @@ pointDEC = trueDec + offmax[1]  # (deg)
 
 # conditions control ---!
 checks = True
-if_cut = False
-if_ebl = False
-extract_spec = True
-irf_degrade = False
-src_sort = False
-skip_exist = False
-ebl_fits = False
 debug = False
 if_log = True
+extract_spec = True
+src_sort = False
+skip_exist = False
+irf_degrade = False
+cutoff = False
+ebl_fits = False
+if_ebl = False
+if if_ebl and cutoff:
+  if_cut = True
+else:
+  if_cut = False
 
 # files ---!
 fileroot = 'run0406_'
@@ -93,7 +97,7 @@ if ebl_fits:
   tObj.zfetch = True
   tObj.if_ebl = False
   tObj.fits_ebl(new_template)
-  if_ebl = True
+  if_ebl = if_ebl
 # assign template ---!
 if if_ebl:
   template = p.getWorkingDir() + ebl_template
@@ -107,6 +111,7 @@ tObj.extract_spec = extract_spec
 tbin_stop = tObj.load_template()
 print('!!! check ---- tbin_stop=', tbin_stop) if checks is True else None
 print('!!! check ---- caldb:', tObj.caldb)
+
 # --------------------------------- 1° LOOP :: trials  --------------------------------- !!!
 
 for k in range(trials):
@@ -196,7 +201,7 @@ for k in range(trials):
     detObj.sigma = sigma
     detObj.if_cut = if_cut
     detObj.modXml()
-    print('!!! check ---- detection.............', texp[i], 's done\n\n') if checks is True else None
+    print('!!! check ---- detection.............', texp[i], 's done') if checks is True else None
 
   # --------------------------------- DETECTION RA & DEC --------------------------------- !!!
 
@@ -206,8 +211,8 @@ for k in range(trials):
     raDet[i].append(pos[0][0][0]) if len(pos[0][0]) > 0 else raDet[i].append(np.nan)
     decDet[i].append(pos[0][1][0]) if len(pos[0][0]) > 0 else decDet[i].append(np.nan)
     Ndet[i].append(len(pos[0][0]))
-    print('!!! check ---- number of detections in trial', k + 1, ' ====== ', Ndet) if checks is True else None
-    print('!!! check ---- 1° src DETECTED RA:', raDet, ' and DEC:', decDet) if checks is True else None
+    print('!!! check ---- number of detections in trial', k + 1, ' ====== ', Ndet[i][0]) if checks is True else None
+    print('!!! check ---- 1° src DETECTED RA:', raDet[i][0], ' and DEC:', decDet[i][0]) if checks is True else None
 
   # --------------------------------- CLOSE DET XML --------------------------------- !!!
 
@@ -224,7 +229,7 @@ for k in range(trials):
       likeObj = xmlMng(tObj.likeXml, cfg_file)
       if src_sort:
         likeObj.sortSrcTS()
-    print('!!! check ---- max likelihoods: ', tObj.likeXml) if checks is True else None
+    print('\n\n!!! check ---- max likelihoods: ', tObj.likeXml) if checks is True else None
 
   # --------------------------------- BEST FIT TSV --------------------------------- !!!
 
@@ -237,7 +242,7 @@ for k in range(trials):
 
     # only first elem ---!
     ts[i].append(tsList[0][0])
-    print('!!! check ---- SRC001 TSV for candidate:', ts) if checks is True else None
+    print('!!! check ---- SRC001 TSV for candidate:', ts[i][0]) if checks is True else None
 
   # --------------------------------- Nsrc FOR TSV THRESHOLD --------------------------------- !!!
 
@@ -267,9 +272,9 @@ for k in range(trials):
     decFit[i].append(decList[0][0])
 
     print('!!! check --- RA FIT for all sources: ', raList, '\n!!! check --- RA FIT for candidate:',
-          raFit) if checks is True else None
+          raFit[i][0]) if checks is True else None
     print('!!! check --- DEC FIT for all sources: ', decList, '\n!!! check --- DEC FIT for candidate:',
-          decFit) if checks is True else None
+          decFit[i][0]) if checks is True else None
 
   # --------------------------------- BEST FIT SPECTRAL --------------------------------- !!!
 
@@ -298,11 +303,11 @@ for k in range(trials):
     Pivot[i].append(pivot[0][0])
     if if_cut:
       Cutoff[i].append(cutoff[0][0])
-    print('!!! check ----- index:', Index) if checks is True else None
-    print('!!! check ----- prefactor:', Pref) if checks is True else None
-    print('!!! check ----- pivot:', Pivot) if checks is True else None
+    print('!!! check ----- index:', Index[i][0]) if checks is True else None
+    print('!!! check ----- prefactor:', Pref[i][0]) if checks is True else None
+    print('!!! check ----- pivot:', Pivot[i][0]) if checks is True else None
     if if_cut:
-      print('!!! check ----- cutoff:', Cutoff) if checks is True else None
+      print('!!! check ----- cutoff:', Cutoff[i][0]) if checks is True else None
 
   # --------------------------------- INTEGRATED FLUX --------------------------------- !!!
 
@@ -313,8 +318,8 @@ for k in range(trials):
       flux_ph[i].append(np.nan)
       flux_en[i].append(np.nan)
 
-    print('!!! check ----- my flux [ph/cm2/s]:', flux_ph) if checks is True else None
-    print('!!! check ----- my flux [erg/cm2/s]:', flux_en, '(*)') if checks is True else None
+    print('!!! check ----- my flux [ph/cm2/s]:', flux_ph[i][0]) if checks is True else None
+    # print('!!! check ----- my flux [erg/cm2/s]:', flux_en[i][0], '(*)') if checks is True else None
 
     # MISSING THE CUT-OFF OPTION ---!!!
 
@@ -338,7 +343,7 @@ for k in range(trials):
     print('!!! *** check raFit:', raFit[i][0])
     print('!!! *** check decFit:', decFit[i][0])
     print('!!! *** check flux_ph:', flux_ph[i][0])
-    print('!!! *** check flux_en:', flux_en[i][0])
+    # print('!!! *** check flux_en:', flux_en[i][0])
     print('!!! *** check ts:', ts[i][0])
 
     row.append([ID, texp[i], sigma, Ndet[i][0], Nsrc[i][0], raDet[i][0], decDet[i][0], raFit[i][0], decFit[i][0], flux_ph[i][0], flux_en[i][0], ts[i][0]])
