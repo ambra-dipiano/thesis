@@ -10,6 +10,8 @@ from scipy import stats
 from scipy.stats import rayleigh, norm, chi2
 from matplotlib.lines import Line2D
 from matplotlib.patches import Ellipse, Circle
+from matplotlib.ticker import FormatStrFormatter
+import matplotlib as mpl
 
 extra = Rectangle((0, 0), 1, 1, fc="w", fill=False, edgecolor='none', linewidth=0)
 extra2 = Line2D([0], [0], ls='-.', color='k', lw='1')
@@ -43,6 +45,7 @@ def hist1d_gauss(x, mean, loc=0, threshold=1, nbin=20, width=None, fontsize=12, 
     plt.legend(fontsize=fontsize)
     plt.xlim([loc-ax_thresh, loc+ax_thresh])
 
+    plt.tight_layout()
     fig.savefig(filename)
 
     return fig, ax
@@ -79,6 +82,7 @@ def hist1d_rayleigh(x, mean, rayleigh_prms={'loc':0, 'scale':1}, threshold=1, nb
     plt.legend(fontsize=fontsize)
     plt.xlim([rayleigh_prms['loc'], rayleigh_prms['loc']+ax_thresh]) if rayleigh_prms['loc'] != None else None
 
+    plt.tight_layout()
     fig.savefig(filename)
 
     return fig, ax
@@ -111,6 +115,7 @@ def rayleigh_cdf(x, loc=0, scale=1, if_CI=True, probs=(0.6827, 0.9545, 0.9973, 0
     ax.set_ylim(bottom=0)
     plt.legend(loc=0)
 
+    plt.tight_layout()
     fig.savefig(filename)
 
     return fig, ax
@@ -143,6 +148,7 @@ def rayleigh_pdf(x, loc=0, scale=1, if_CI=True, probs=(0.6827, 0.9545, 0.9973, 0
     ax.set_ylim(bottom=0)
     plt.legend(loc=0)
 
+    plt.tight_layout()
     fig.savefig(filename)
 
     return fig, ax
@@ -188,6 +194,7 @@ def hist2d_rayleigh_CI(x, y, nbin=None, width=None, rayleigh_prms={'loc':0, 'sca
     plt.title(title, fontsize=fontsize)
     plt.legend(ncol=3)
 
+    plt.tight_layout()
     fig.savefig(filename)
 
     return fig, ax
@@ -244,13 +251,14 @@ def hist2d_gauss_CI(x, y, nbin=None, width=None, xcentre=0, ycentre=0, threshold
     plt.title(title, fontsize=fontsize)
     plt.legend(ncol=3)
 
+    plt.tight_layout()
     fig.savefig(filename)
 
     return fig, ax
 
 
 # 2D HISTOGRAM MAP ---!
-def hist2d_map(x, y, nbin=None, width=None, xcentre=0, ycentre=0, threshold=1, ax_thresh=0.2, xlabel='x', ylabel='y',
+def hist2d_map(x, y, trials, nbin=None, width=None, xcentre=0, ycentre=0, threshold=1, ax_thresh=0.2, xlabel='x', ylabel='y',
               title='probability map', fontsize=12, filename='hist2d_map.png', if_CI=None, rayleigh={'loc':0, 'scale':1},
               nstd=(1, 2, 3, 5), colors=('k', 'r', 'orange', 'm'), probs=(0.6827, 0.9545, 0.9973, 0.99994), smooth=True) :
 
@@ -266,12 +274,14 @@ def hist2d_map(x, y, nbin=None, width=None, xcentre=0, ycentre=0, threshold=1, a
     sns.set()
 
     ax = plt.subplot(111)
-    h = ax.hist2d(x, y, bins=nbin, cmap='jet', density=True,
+    h = ax.hist2d(x, y, bins=nbin, cmap='jet',
                   range=[[xcentre - threshold, xcentre + threshold], [ycentre - threshold, ycentre + threshold]])
     if smooth:
         plt.clf()
-        plt.close()
-        plt.imshow(h[0], origin="lower", interpolation="gaussian")
+        # plt.close()
+        plt.imshow(h[3], origin="lower", interpolation="gaussian")
+        ax.set_xlim([xcentre - threshold, xcentre + threshold])
+        ax.set_ylim([ycentre - threshold, ycentre + threshold])
     plt.scatter(xcentre, ycentre, c='w', marker='*', s=1e2)
 
     if if_CI is None :
@@ -308,12 +318,27 @@ def hist2d_map(x, y, nbin=None, width=None, xcentre=0, ycentre=0, threshold=1, a
     else :
         print('Error: if_CI parameter value not understood')
 
-    plt.colorbar(h[3], ax=ax)
+    # m = plt.cm.ScalarMappable(cmap='jet')
+    # m.set_clim(0., trials)
+    # plt.colorbar(m, boundaries=np.linspace(0, trials, 10), label='cts \%')
+
+    cbar = plt.colorbar(h[3], ax=ax, label='cts')
+    # plt.draw()
+    # labels = [float(oldticks.get_text().strip('$')) for oldticks in cbar.ax.get_yticklabels()]
+    # print(labels)
+    # new_labels = []
+    # for tick in labels:
+    #     tick /= trials
+    #     new_labels.append(tick)
+    # print(new_labels)
+    # cbar.ax.set_yticklabels(['{:.2f}'.format(t) for t in new_labels])
+
     plt.axis([xcentre - ax_thresh, xcentre + ax_thresh, ycentre - ax_thresh, ycentre + ax_thresh], 'equal')
     plt.xlabel(xlabel, fontsize=fontsize)
     plt.ylabel(ylabel, fontsize=fontsize)
     plt.title(title, fontsize=fontsize)
 
+    plt.tight_layout()
     fig.savefig(filename)
 
     return fig, ax
@@ -357,6 +382,7 @@ def ts_wilks(x, trials, df=1, nbin=None, width=None, ylim=None, xlim=None, xlabe
     plt.xlim(xlim) if xlim is not None else None
     plt.ylim(ylim) if ylim is not None else None
 
+    plt.tight_layout()
     fig.savefig(filename)
 
     return fig, ax
@@ -403,6 +429,7 @@ def p_values(x, trials, df=1, nbin=None, width=None, ylim=None, xlim=None, xlabe
     plt.xlim(xlim) if xlim is not None else None
     plt.ylim(ylim) if ylim is not None else None
 
+    plt.tight_layout()
     fig.savefig(filename)
 
     return fig, ax
