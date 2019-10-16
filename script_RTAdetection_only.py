@@ -227,7 +227,7 @@ for k in range(trials):
     print('!!! *** check decDet:', decDet[i][0])
 
     row.append([ID, texp[i], sigma, Ndet[i][0], raDet[i][0], decDet[i][0]])
-    print('!!! check row: seed %d --- texp' %i, texp[i], 's =====', row) if checks is True else None
+    print('!!! check row: seed %d --- texp' %i, texp[i], 's =:====', row) if checks is True else None
     if os.path.isfile(csvName):
       with open(csvName, 'a') as f:
         w = csv.writer(f)
