@@ -57,6 +57,7 @@ skip_exist = False
 ebl_fits = False
 debug = False
 if_log = True
+reduce_flux = 2  # flux will be devided by factor reduce_flux, if nominal then set to None
 
 # files ---!
 fileroot = 'run0406_'
@@ -85,6 +86,7 @@ tObj.if_log = if_log
 # degrade IRF if required ---!
 if irf_degrade:
   tObj.degradeIRF()
+  tObj.caldb = caldb_degraded
 # add EBL to template ---!
 if ebl_fits:
   tObj.template = p.getWorkingDir() + nominal_template # nominal ---!
@@ -93,7 +95,6 @@ if ebl_fits:
   tObj.zfetch = True
   tObj.if_ebl = False
   tObj.fits_ebl(new_template)
-  if_ebl = True
 # assign template ---!
 if if_ebl:
   template = p.getWorkingDir() + ebl_template
@@ -107,6 +108,12 @@ tObj.extract_spec = extract_spec
 tbin_stop = tObj.load_template()
 print('!!! check ---- tbin_stop=', tbin_stop) if checks is True else None
 print('!!! check ---- caldb:', tObj.caldb)
+
+# --------------------------------- REDUCE TEMPLATE FLUX  --------------------------------- !!!
+
+if reduce_flux != None:
+  tObj.makeFainter(reduce_flux)
+
 # --------------------------------- 1° LOOP :: trials  --------------------------------- !!!
 
 for k in range(trials):
@@ -137,6 +144,9 @@ for k in range(trials):
       tObj.model = p.getDataDir() + 'run0406_ID000126_tbin%02d.xml' % i
       tObj.event = p.getSimDir() + f + "_tbin%02d.fits" % i
       print('!!! check ---- simulation %d without EBL' %(i+1)) if checks is True else None
+    if reduce_flux != None:
+      tObj.model = tObj.model.replace('_tbin', '_flux%d_tbin' %reduce_flux)
+      tObj.event = tObj.event.replace('_tbin', '_flux%d_tbin' %reduce_flux)
     event_bins.append(tObj.event)
     if not skip_exist:
       if os.path.isfile(tObj.event):
@@ -146,6 +156,8 @@ for k in range(trials):
   # observation list ---!
   tObj.event = event_bins
   tObj.event_list = p.getSimDir() + 'obs_%s.xml' % f
+  if reduce_flux != None:
+    tObj.event_list = tObj.event_list.replace('obs_', 'obs_flux%d_' % reduce_flux)
   if not skip_exist:
     if os.path.isfile(tObj.event_list):
       os.remove(tObj.event_list)
