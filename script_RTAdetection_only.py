@@ -238,7 +238,7 @@ for k in range(trials):
   # --------------------------------- RESULTS TABLE (csv) --------------------------------- !!!
 
   print('!!! ************ WRITING DATA ************ !!!\n\n')
-  header = '#trial,t exp,sigma,Ndet,Nsrc,RA Src001,DEC Src001,RA Fit,DEC Fit,flux ph,flux erg,TSV\n'
+  header = '#trial,t exp,sigma,Ndet,RA Src001,DEC Src001\n'
   ID = 'ID%06d' % count
   for i in range(tint):
     csvName = p.getCsvDir() + fileroot + '%ds_chunk%02d.csv' % (texp[i], chunk)
