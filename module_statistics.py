@@ -8,6 +8,7 @@ import numpy as np
 from matplotlib.patches import Rectangle
 from scipy import stats
 from scipy.stats import rayleigh, norm, chi2
+from matplotlib.colors import LogNorm
 from matplotlib.lines import Line2D
 from matplotlib.patches import Ellipse, Circle
 from matplotlib.ticker import FormatStrFormatter
@@ -274,12 +275,12 @@ def hist2d_map(x, y, trials, nbin=None, width=None, xcentre=0, ycentre=0, thresh
     sns.set()
 
     ax = plt.subplot(111)
-    h = ax.hist2d(x, y, bins=nbin, cmap='jet',
+    h = ax.hist2d(x, y, bins=nbin, cmap='jet', vmin=0.0, vmax=trials,
                   range=[[xcentre - threshold, xcentre + threshold], [ycentre - threshold, ycentre + threshold]])
     if smooth:
         plt.clf()
         # plt.close()
-        plt.imshow(h[3], origin="lower", interpolation="gaussian")
+        plt.imshow(h[0], origin="lower", interpolation="gaussian")
         ax.set_xlim([xcentre - threshold, xcentre + threshold])
         ax.set_ylim([ycentre - threshold, ycentre + threshold])
     plt.scatter(xcentre, ycentre, c='w', marker='*', s=1e2)
@@ -318,11 +319,11 @@ def hist2d_map(x, y, trials, nbin=None, width=None, xcentre=0, ycentre=0, thresh
     else :
         print('Error: if_CI parameter value not understood')
 
-    # m = plt.cm.ScalarMappable(cmap='jet')
-    # m.set_clim(0., trials)
-    # plt.colorbar(m, boundaries=np.linspace(0, trials, 10), label='cts \%')
+    m = plt.cm.ScalarMappable(cmap='jet')
+    m.set_clim(0., trials/100)
+    plt.colorbar(m, boundaries=np.linspace(0, 100, 11), label='cts \%')
 
-    cbar = plt.colorbar(h[3], ax=ax, label='cts')
+    # cbar = plt.colorbar(h[3], ax=ax, label='cts')
     # plt.draw()
     # labels = [float(oldticks.get_text().strip('$')) for oldticks in cbar.ax.get_yticklabels()]
     # print(labels)
@@ -411,6 +412,7 @@ def p_values(x, trials, df=1, nbin=None, width=None, ylim=None, xlim=None, xlabe
     h = h/trials
     cbin = (edges[1:] + edges[:-1]) / 2
     p = (1 - stats.chi2.cdf(cbin, df=df))
+#    yerr = np.sqrt(p) / trials
     xerr = (edges[:-1] - edges[1:]) / 2
 
     x2 = []
