@@ -86,6 +86,7 @@ class analysis() :
     self.seed = 1
     # files ---!
     self.model, self.template, self.table = (str() for i in range(3))
+    self.output, self.input = (str() for i in range(2))
     self.event, self.event_list, self.event_selected, self.skymap = (str() for i in range(4))
     self.detectionXml, self.detectionReg, self.likeXml = (str() for i in range(3))
     self.sensCsv = str()
@@ -315,7 +316,7 @@ class analysis() :
   def eventSim(self) :
     sim = ctools.ctobssim()
     sim["inmodel"] = self.model
-    sim["outevents"] = self.event
+    sim["outevents"] = self.output
     sim["caldb"] = self.caldb
     sim["irf"] = self.irf
     sim["ra"] = self.pointing[0]
@@ -326,7 +327,7 @@ class analysis() :
     sim["emin"] = self.e[0]
     sim["emax"] = self.e[1]
     sim["seed"] = self.seed
-    sim["logfile"] = self.event.replace('.fits', '.log')
+    sim["logfile"] = self.output.replace('.fits', '.log')
     sim["debug"] = self.debug
     if self.if_log:
       sim.logFileOpen()
@@ -335,24 +336,20 @@ class analysis() :
     return
 
   def obsList(self, obsname):
-    # if '.fits' in str(self.event):
-    #   self.event_list = 'obs_' + self.event.replace('.fits', '.xml')
-    # else:
-    #   self.event_list = 'obs_' + self.event
     xml = gammalib.GXml()
     obslist = xml.append('observation_list title="observation library"')
 
-    for i in range(len(self.event)):
+    for i in range(len(self.input)):
       obs = obslist.append('observation name="%s" id="%02d" instrument="CTA"' % (obsname, i))
-      obs.append('parameter name="EventList" file="%s"' % self.event[i])
-    xml.save(self.event_list)
+      obs.append('parameter name="EventList" file="%s"' % self.input[i])
+    xml.save(self.output)
 
     return
 
   def eventSelect(self, prefix):
     selection = ctools.ctselect()
-    selection['inobs'] = self.event_list
-    selection['outobs'] = self.event_selected
+    selection['inobs'] = self.input
+    selection['outobs'] = self.output
     selection['usepnt'] = True
     selection['prefix'] = prefix
     selection['rad'] = self.roi
@@ -360,7 +357,7 @@ class analysis() :
     selection['tmax'] = self.t[1]
     selection['emin'] = self.e[0]
     selection['emax'] = self.e[1]
-    selection['logfile'] = self.event_selected.replace('.xml', '.log')
+    selection['logfile'] = self.output.replace('.xml', '.log')
     selection['debug'] = self.debug
     if self.if_log:
       selection.logFileOpen()
@@ -371,8 +368,8 @@ class analysis() :
   def eventSkymap(self, wbin=0.02):
     nbin = int(self.roi / wbin)
     skymap = ctools.ctskymap()
-    skymap['inobs'] = self.event_selected
-    skymap['outmap'] = self.skymap
+    skymap['inobs'] = self.input
+    skymap['outmap'] = self.output
     skymap['irf'] = self.irf
     skymap['caldb'] = self.caldb
     skymap['emin'] = self.e[0]
@@ -384,7 +381,7 @@ class analysis() :
     skymap['coordsys'] = self.coord_sys.upper()
     skymap['proj'] = 'CAR'
     skymap['bkgsubtract'] = self.sky_subtraction.upper()
-    skymap['logfile'] = self.skymap.replace('.fits', '.log')
+    skymap['logfile'] = self.output.replace('.fits', '.log')
     skymap['debug'] = self.debug
     if self.if_log:
       skymap.logFileOpen()
@@ -397,8 +394,8 @@ class analysis() :
     self.detectionReg = '%s' % self.skymap.replace('_skymap.fits', '_det%ssgm.reg' % self.sigma)
 
     detection = cscripts.cssrcdetect()
-    detection['inmap'] = self.skymap
-    detection['outmodel'] = self.detectionXml
+    detection['inmap'] = self.input
+    detection['outmodel'] = self.output
     detection['outds9file'] = self.detectionReg
     detection['srcmodel'] = self.src_type.upper()
     detection['bkgmodel'] = self.bkgType.upper()
@@ -407,7 +404,7 @@ class analysis() :
     detection['exclrad'] = self.exclrad
     detection['corr_rad'] = self.corr_rad
     detection['corr_kern'] = self.corr_kern.upper()
-    detection['logfile'] = self.detectionXml.replace('.xml', '.log')
+    detection['logfile'] = self.output.replace('.xml', '.log')
     detection['debug'] = self.debug
     if self.if_log:
       detection.logFileOpen()
@@ -417,17 +414,17 @@ class analysis() :
 
   def maxLikelihood(self):
     like = ctools.ctlike()
-    like['inobs'] = self.event_selected
+    like['inobs'] = self.input
     # print('SELECTED', self.event_selected)
-    like['inmodel'] = self.detectionXml
+    like['inmodel'] = self.model
     # print('INMODEL', self.detectionXml)
-    like['outmodel'] = self.likeXml
+    like['outmodel'] = self.output
     like['caldb'] = self.caldb
     like['irf'] = self.irf
     like['refit'] = True
     like['max_iter'] = 500
     like['fix_spat_for_ts'] = False
-    like['logfile'] = self.likeXml.replace('.xml', '.log')
+    like['logfile'] = self.output.replace('.xml', '.log')
     like['debug'] = self.debug
     if self.if_log:
       like.logFileOpen()
@@ -437,30 +434,30 @@ class analysis() :
 
   def confLevels(self, asym_errors):
     self.confidence_level=[0.6827, 0.9545, 0.9973]
-    self.errors_conf = []
+    self.output = []
     for i in range(len(self.confidence_level)):
-      self.errors_conf.append(asym_errors.replace('_errors', '_%2derr' % (self.confidence_level[i] * 100)))
-      if not os.path.isfile(self.errors_conf[i]):
+      self.output.append(asym_errors.replace('_errors', '_%2derr' % (self.confidence_level[i] * 100)))
+      if not os.path.isfile(self.output[i]):
         err = ctools.cterror()
-        err['inobs'] = self.event_selected
-        err['inmodel'] = self.likeXml
+        err['inobs'] = self.input
+        err['inmodel'] = self.model
         err['srcname'] = self.srcName
-        err['outmodel'] = self.errors_conf[i]
+        err['outmodel'] = self.output[i]
         err['caldb'] = self.caldb
         err['irf'] = self.irf
         err['confidence'] = self.confidence_level[i]
-        err['logfile'] = asym_errors.replace('.xml', '.log')
+        err['logfile'] = self.output[i].replace('.xml', '.log')
         err['debug'] = self.debug
         if self.if_log:
           err.logFileOpen()
         err.execute()
 
-    return self.errors_conf
+    return self.output
 
   def integrFlux(self):
     uplim = ctools.ctulimit()
-    uplim['inobs'] = self.event_selected
-    uplim['inmodel'] = self.likeXml
+    uplim['inobs'] = self.input
+    uplim['inmodel'] = self.model
     uplim['srcname'] = self.srcName
     uplim['caldb'] = self.caldb
     uplim['irf'] = self.irf
@@ -470,7 +467,7 @@ class analysis() :
     uplim['eref'] = self.eref  # default reference energy for differential limit (in TeV)
     uplim['emin'] = self.e[0]  # default minimum energy for integral flux limit (in TeV)
     uplim['emax'] = self.e[1]  # default maximum energy for integral flux limit (in TeV)
-    uplim['logfile'] = self.likeXml.replace('results.xml', 'flux.log')
+    uplim['logfile'] = self.model.replace('results.xml', 'flux.log')
     uplim['debug'] = self.debug
     if self.if_log:
       uplim.logFileOpen()
@@ -533,8 +530,8 @@ class analysis() :
         subprocess.run(['sudo', 'chmod', '-R', '777', degraded_cal], check=True)
 
       # degrade ---!
-      extension = ['EFFECTIVE AREA', 'BACKGROUND']
-      field = [4, 6]
+      extension = ['EFFECTIVE AREA', 'BACKGROUND'] # ['EFFECTIVE AREA, 'BACKGROUND'']
+      field = [4, 6] # [4, 6]
       #  field = ['EFFAREA', 'BKG']
       inv = 1 / self.factor
       with fits.open(self.irf_nominal) as hdul:
@@ -546,7 +543,7 @@ class analysis() :
       a = np.where(np.array([i * inv for i in col[0]]) is np.nan, 0., np.array([i * inv for i in col[0]]))
       b = []
       for i in range(len(col[1][0])):
-        b.append(np.where(col[1][0][i] is np.nan, 0., col[1][0][i]) * inv)
+        b.append(np.where(col[1][0][i] is np.nan, 0., col[1][0][i]) / inv)
 
       b = np.array(b)
       tmp = [a, b]
@@ -571,12 +568,12 @@ class analysis() :
   def eventSens(self, bins=20, wbin=0.05):
     sens = cscripts.cssens()
     nbin = int(self.roi / wbin)
-    sens['inobs'] = self.event
-    sens['inmodel'] = self.likeXml
+    sens['inobs'] = self.input
+    sens['inmodel'] = self.model
     sens['srcname'] = self.srcName
     sens['caldb'] = self.caldb
     sens['irf'] = self.irf
-    sens['outfile'] = self.sensCsv
+    sens['outfile'] = self.output
     sens['duration'] = self.t[1] - self.t[0]
     sens['rad'] = self.roi
     sens['emin'] = self.e[0]
@@ -586,7 +583,7 @@ class analysis() :
     sens['type'] = self.sensType.capitalize()
     sens['npix'] = nbin
     sens['binsz'] = wbin
-    sens['logfile'] = self.sensCsv.replace('', '.log')
+    sens['logfile'] = self.output.replace('.csv', '.log')
     if self.if_log:
       sens.logFileOpen()
     sens.execute()
