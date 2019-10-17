@@ -13,6 +13,9 @@ from matplotlib.lines import Line2D
 from matplotlib.patches import Ellipse, Circle
 from matplotlib.ticker import FormatStrFormatter
 import matplotlib as mpl
+import scipy.ndimage as sp
+from matplotlib.image import NonUniformImage
+from scipy.ndimage.filters import gaussian_filter
 
 extra = Rectangle((0, 0), 1, 1, fc="w", fill=False, edgecolor='none', linewidth=0)
 extra2 = Line2D([0], [0], ls='-.', color='k', lw='1')
@@ -279,10 +282,15 @@ def hist2d_map(x, y, trials, nbin=None, width=None, xcentre=0, ycentre=0, thresh
                   range=[[xcentre - threshold, xcentre + threshold], [ycentre - threshold, ycentre + threshold]])
     if smooth:
         plt.clf()
-        # plt.close()
-        plt.imshow(h[0], origin="lower", interpolation="gaussian")
-        ax.set_xlim([xcentre - threshold, xcentre + threshold])
-        ax.set_ylim([ycentre - threshold, ycentre + threshold])
+        # hist2d with numpy (invert axis since imshow stumbles them) ---!
+        # sigma=2
+        # X = gaussian_filter(x, sigma)
+        # Y = gaussian_filter(y, sigma)
+        heatmap, xedges, yedges = np.histogram2d(x, y, bins=nbin,
+                                                 range=[[xcentre - threshold, xcentre + threshold], [ycentre - threshold, ycentre + threshold]])
+        extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
+        ax.imshow(heatmap, extent=extent, cmap='jet', interpolation='gaussian', filterrad=1, filternorm=True, resample=True, origin='lower')
+
     plt.scatter(xcentre, ycentre, c='w', marker='*', s=1e2)
 
     if if_CI is None :
@@ -324,15 +332,6 @@ def hist2d_map(x, y, trials, nbin=None, width=None, xcentre=0, ycentre=0, thresh
     plt.colorbar(m, boundaries=np.linspace(0, 100, 11), label='cts \%')
 
     # cbar = plt.colorbar(h[3], ax=ax, label='cts')
-    # plt.draw()
-    # labels = [float(oldticks.get_text().strip('$')) for oldticks in cbar.ax.get_yticklabels()]
-    # print(labels)
-    # new_labels = []
-    # for tick in labels:
-    #     tick /= trials
-    #     new_labels.append(tick)
-    # print(new_labels)
-    # cbar.ax.set_yticklabels(['{:.2f}'.format(t) for t in new_labels])
 
     plt.axis([xcentre - ax_thresh, xcentre + ax_thresh, ycentre - ax_thresh, ycentre + ax_thresh], 'equal')
     plt.xlabel(xlabel, fontsize=fontsize)

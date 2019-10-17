@@ -113,6 +113,7 @@ print('!!! check ---- caldb:', tObj.caldb)
 
 if reduce_flux != None:
   tObj.makeFainter(reduce_flux)
+  print('!!! check ---- reduce flux by factor %d' %reduce_flux)
 
 # --------------------------------- 1° LOOP :: trials  --------------------------------- !!!
 
@@ -151,6 +152,7 @@ for k in range(trials):
     if not skip_exist:
       if os.path.isfile(tObj.event):
         os.remove(tObj.event)
+      tObj.output = tObj.event
       tObj.eventSim()
   print('!!! check ---- simulation=', tObj.event) if checks is True else None
   # observation list ---!
@@ -161,6 +163,8 @@ for k in range(trials):
   if not skip_exist:
     if os.path.isfile(tObj.event_list):
       os.remove(tObj.event_list)
+    tObj.input = tObj.event
+    tObj.output = tObj.event_list
     tObj.obsList(obsname=f)
   print('!!! check ---- obs list=', tObj.event_list) if checks is True else None
 
@@ -183,6 +187,8 @@ for k in range(trials):
     if not skip_exist:
       if os.path.isfile(tObj.event_selected):
         os.remove(tObj.event_selected)
+      tObj.input = tObj.event_list
+      tObj.output = tObj.event_selected
       tObj.eventSelect(prefix=prefix)
     print('!!! check ---- selection: ', tObj.event_selected) if checks is True else None
 
@@ -192,6 +198,8 @@ for k in range(trials):
     if not skip_exist:
       if os.path.isfile(tObj.skymap):
         os.remove(tObj.skymap)
+      tObj.input = tObj.event_selected
+      tObj.output = tObj.skymap
       tObj.eventSkymap(wbin=wbin)
     print('!!! check ---- skymaps: ', tObj.skymap) if checks is True else None
 
@@ -203,6 +211,8 @@ for k in range(trials):
     if not skip_exist:
       if os.path.isfile(tObj.detectionXml):
         os.remove(tObj.detectionXml)
+      tObj.input = tObj.skymap
+      tObj.output = tObj.detectionXml
       tObj.runDetection()
     detObj = xmlMng(tObj.detectionXml, cfg_file)
     detObj.sigma = sigma
