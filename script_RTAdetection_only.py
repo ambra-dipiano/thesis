@@ -85,7 +85,8 @@ tObj.debug = debug
 tObj.if_log = if_log
 # degrade IRF if required ---!
 if irf_degrade:
-  tObj.degradeIRF()
+  if chunk == 0:
+    tObj.degradeIRF()
   tObj.caldb = caldb_degraded
 # add EBL to template ---!
 if ebl_fits:
