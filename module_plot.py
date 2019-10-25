@@ -681,6 +681,7 @@ def degradedIRF_3d(x, y, z, xlabel='x', ylabel='y', zlabel='z', title=None, c=['
   ax.set_title(title, fontsize=fontsize) if title != None else None
   ax.legend(curve, label, loc=0) if label != None else None
 
+  plt.tight_layout()
   fig.savefig(savefig) if savefig != None else None
   plt.show() if show != False else None
   plt.close()
@@ -703,6 +704,7 @@ def interp_ebl(x, y, savefig, kind='linear', xlabel='x', ylabel='y', title='titl
   ax.set_title(title, fontsize=fontsize)
   ax.legend(loc=0)
 
+  plt.tight_layout()
   fig.savefig(savefig)
   plt.show() if show==True else None
 
@@ -723,6 +725,7 @@ def showSensitivity(x, y, savefig, xlabel='x', ylabel='y', label=['y'], title='n
   ax.set_title(title, fontsize=fontsize) if title!='none' else None
   ax.legend(loc=0)
 
+  plt.tight_layout()
   fig.savefig(savefig)
   plt.show() if show==True else None
 

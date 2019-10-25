@@ -156,7 +156,7 @@ def getSpectral(likeXml) :
   return val, err
 
 # RUN DETECTION AND MODEL SPECTRAL COMPONENTS v09 ---!
-def srcDetection_spcModeling(skymap, sigma=5, instr='CTA', bkgType='Irf', src_attrib='none', bkg_attrib='none', tsv=True, maxSrc=20, exclrad = 0.5, if_cut=True) :
+def srcDetection_spcModeling(skymap, sigma=5, instr='CTA', bkgType='Irf', src_attrib='none', bkg_attrib='none', tsv=True, maxSrc=20, exclrad = 0.5, if_cut=False) :
   ''''
   Runs cssrcdetect tool to detected src candidates in a counts map. The listing file is modeled in its spectral components.
   :param:

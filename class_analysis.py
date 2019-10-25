@@ -13,9 +13,10 @@ from scipy.interpolate import interp1d
 import untangle
 import csv
 import re
+import subprocess
 
 def xmlConfig(cfg_file) :
-  #Load configuration file
+  # load configuration file ---!
   cfgFile = os.path.dirname(__file__)+str(cfg_file)
   with open(cfgFile) as fd:
     cfg = untangle.parse(fd.read())
@@ -76,7 +77,8 @@ class cfgMng_xml() :
 
 class analysis() :
   def __init__(self, cfg_file):
-    global p
+    global p, CTOOLS
+    CTOOLS = os.environ.get('CTOOLS')
     # conf ---!
     self.__cfg = xmlConfig(cfg_file)
     p = cfgMng_xml(self.__cfg)
@@ -89,8 +91,6 @@ class analysis() :
     self.sensCsv = str()
     self.caldb = 'prod2'
     self.irf = 'South_0.5h'
-    self.irf_nominal = '$CTOOLS/share/caldb/data/cta/%s/bcf/%s/irf_file.fits' % (self.caldb, self.irf)
-    self.irf_degraded = self.irf_nominal.replace('prod', 'degr')
     # condition control ---!
     self.if_ebl = True
     self.extract_spec = False
@@ -120,7 +120,7 @@ class analysis() :
     self.confidence = 0.95
     self.eref = 1
     # irf degradation ---!
-    self.factor = 3
+    self.factor = 2
     self.sensType = 'Differential'
 
   def __openFITS(self):
@@ -225,7 +225,7 @@ class analysis() :
     # save to new ---!
     if os.path.isfile(template_ebl):
       os.system('rm ' + template_ebl)
-    hdul.writeto(template_ebl, overwrite=False) # write new template ---!
+    hdul.writeto(template_ebl, overwrite=True) # write new template ---!
     self.__closeFITS(hdul) # close template ---!
     if self.plot is True:
       return x, y, x2, y2
@@ -495,10 +495,38 @@ class analysis() :
 
   def degradeIRF(self):
     caldb_degr = self.caldb.replace('prod', 'degr')
-    # check caldb and change permissions ---!
+    self.irf_nominal =  self.__CTOOLS + '/share/caldb/data/cta/%s/bcf/%s/irf_file.fits' % (self.caldb, self.irf)
+    self.irf_degraded = self.irf_nominal.replace('prod', 'degr')
+    nominal_cal = self.__CTOOLS + '/share/caldb/data/cta/' + self.caldb
+    degraded_cal = self.__CTOOLS + '/share/caldb/data/cta/' + caldb_degr
+    # permissions ---!
+    if os.geteuid() == 0 or os.geteuid() == 1126:
+      print('!!! with permission')
+      subprocess.run(['chmod', '-R', '777', self.__CTOOLS + '/share/caldb/data/cta/'], check=True)
+    else:
+      print('!!! as sudo')
+      subprocess.run(['sudo', 'chmod', '-R', '777', self.__CTOOLS + '/share/caldb/data/cta/'], check=True)
+    # create degr caldb if not ---!
+    if not os.path.isdir(degraded_cal):
+      os.mkdir(degraded_cal)
+    if not os.path.isfile(degraded_cal+'/caldb.indx'):
+      os.system('cp %s/caldb.indx %s/caldb.indx' %(nominal_cal, degraded_cal))
+    if not os.path.isdir(degraded_cal+'/bcf'):
+      os.mkdir(degraded_cal+'/bcf')
+    if not os.path.isdir(degraded_cal+'/bcf/'+self.irf):
+      os.mkdir(degraded_cal+'/bcf/'+self.irf)
     if not os.path.isfile(self.irf_degraded):
-      os.system('cp -r $CTOOLS/share/caldb/data/cta/%s/ $CTOOLS/share/caldb/data/cta/%s/' % (self.caldb, caldb_degr))
-    os.system('chmod 777 $CTOOLS/share/caldb/data/cta/%s/' % caldb_degr)
+      os.system('cp %s %s' %(self.irf_nominal, self.irf_degraded))
+    # permissions ---!
+    if os.geteuid() == 0 or os.geteuid() == 1126:
+      print('!!! with permission')
+      subprocess.run(['chmod', '-R', '755', self.__CTOOLS + '/share/caldb/data/cta/'], check=True)
+      subprocess.run(['chmod', '-R', '777', degraded_cal], check=True)
+    else:
+      print('!!! as sudo')
+      subprocess.run(['sudo', 'chmod', '-R', '755', self.__CTOOLS + '/share/caldb/data/cta/'], check=True)
+      subprocess.run(['sudo', 'chmod', '-R', '777', degraded_cal], check=True)
+
     # degrade ---!
     extension = ['EFFECTIVE AREA', 'BACKGROUND']
     field = [4, 6]
@@ -508,7 +536,7 @@ class analysis() :
       col = []
       for i in range(len(extension)):
         col.append(hdul[extension[i]].data.field(field[i])[:].astype(float))
-      np.array(col)
+      # np.array(col)
 
     a = np.where(np.array([i * inv for i in col[0]]) is np.nan, 0., np.array([i * inv for i in col[0]]))
     b = []
@@ -521,11 +549,18 @@ class analysis() :
     with fits.open(self.irf_degraded, mode='update') as hdul:
       for i in range(len(extension)):
         hdul[extension[i]].data.field(field[i])[:] = tmp[i]
+        print('!!! DEGRADING IRF BY FACTOR %d !!!' %self.factor)
       # save changes ---!
-      hdul.flush
+      hdul.flush()
     # update and change permissions back ---!
     self.caldb.replace('prod', 'degr')
-    os.system('chmod 755 $CTOOLS/share/caldb/data/cta/%s/' % caldb_degr)
+    # permissions ---!
+    if os.geteuid() == 0 or os.geteuid() == 1126:
+      print('!!! with permission')
+      subprocess.run(['chmod', '-R', '755', degraded_cal], check=True)
+    else:
+      print('!!! as sudo')
+      subprocess.run(['sudo', 'chmod', '-R', '755', degraded_cal], check=True)
     return
 
   def eventSens(self, bins=20, wbin=0.05):
