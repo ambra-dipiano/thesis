@@ -42,10 +42,10 @@ def extract_spectrum(model, Nt, Ne, tbin_stop, energy, spectra, ebl=None, tau=No
           out_file.write(str(energy[j][0] * 1000.0) + ' ' + str((spectra[i][j] / 1000.0) * np.exp(-tau[j])) + "\n")
       out_file.close()
 
-      os.system('cp ' + model + ' ' + pathout + 'run0406_ID000126_tbin%02d.xml' % i)
-      s = open(pathout + 'run0406_ID000126_tbin%02d.xml' % i).read()
-      s = s.replace('data/spec', 'spec_tbin%02d' % i)
-      f = open(pathout + 'run0406_ID000126_tbin%02d.xml' % i, 'w')
+      os.system('cp ' + model + ' ' + pathout + 'run0406_ID000126_ebl_tbin%02d.xml' % i)
+      s = open(pathout + 'run0406_ID000126_ebl_tbin%02d.xml' % i).read()
+      s = s.replace('data/spec', 'spec_ebl_tbin%02d' % i)
+      f = open(pathout + 'run0406_ID000126_ebl_tbin%02d.xml' % i, 'w')
       f.write(s)
       f.close()
 
@@ -59,7 +59,7 @@ def extract_spectrum(model, Nt, Ne, tbin_stop, energy, spectra, ebl=None, tau=No
         out_file.write(str(energy[j][0] * 1000.0) + ' ' + str(spectra[i][j] / 1000.0) + "\n")
       out_file.close()
 
-      os.system('cp ' + model + ' ' + pathout + 'run0406_ID000126_tbin' + str(i))
+      os.system('cp ' + model + ' ' + pathout + 'run0406_ID000126_tbin%02d.xml' %i)
       s = open(pathout + 'run0406_ID000126_tbin%02d.xml' %i).read()
       s = s.replace('data/spec', 'spec_tbin%02d' %i)
       f = open(pathout + 'run0406_ID000126_tbin%02d.xml' %i, 'w')
@@ -80,10 +80,7 @@ def load_template(template, tmax, extract_spec=False, if_ebl=False, model=None, 
   spectra = np.array(hdul[3].data)
   # ebl ---!
   if len(hdul) == 5 :
-    ebl = np.array(hdul[4].data) 
-    if_ebl = True
-  else :
-    if_ebl = False 
+    ebl = np.array(hdul[4].data)
 
   hdul.close()
 

@@ -71,15 +71,14 @@ pointDEC = trueDec + offmax[1] # (deg)
 
 # others ---!
 checks = True
-if_ebl = True
+if_ebl = False
 fileroot = 'run0406_'
-
 
 # =====================
 # !!! LOAD TEMPLATE !!!
 # =====================
 
-t, tbin_stop = load_template(template, tmax, extract_spec=False, model=model, pathout=datapath)
+t, tbin_stop = load_template(template, tmax, extract_spec=True, model=model, pathout=datapath, if_ebl=if_ebl)
 print('!!! check ---- tbin_stop=', tbin_stop) if checks is True else None
 
 for k in range(trials) :
