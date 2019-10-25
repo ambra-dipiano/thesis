@@ -37,7 +37,7 @@ csvpath = runpath + 'csv/'
 detpath = runpath + 'detection_all/'
 
 # inputs ---!
-template = workdir + 'run0406_ID000126_ebl.fits' 
+template = workdir + 'run0406_ID000126.fits'
 model = workdir + 'run0406_ID000126.xml'
 
 # ctools/cscripts parameters ---!

@@ -49,10 +49,10 @@ pointDEC = trueDec + offmax[1]  # (deg)
 # conditions control ---!
 checks = True
 if_cut = False
-if_ebl = True
-extract_spec = True
-irf_degrade = True
-src_sort = True
+if_ebl = False
+extract_spec = False
+irf_degrade = False
+src_sort = False
 skip_exist = False
 ebl_fits = False
 debug = False
@@ -106,7 +106,7 @@ tObj.template = template
 print('!!! check ---- template=', tObj.template) if checks is True else None
 # load template ---!
 tObj.extract_spec = extract_spec
-tbin_stop = tObj.load_template()
+time, tbin_stop = tObj.load_template()
 print('!!! check ---- tbin_stop=', tbin_stop) if checks is True else None
 print('!!! check ---- caldb:', tObj.caldb)
 
@@ -133,12 +133,12 @@ for k in range(trials):
   # --------------------------------- SIMULATION --------------------------------- !!!
 
   event_bins = []
-  tObj.table = p.getDataDir() + tcsv
-  time = tObj.getTimeSlices()  # methods which returns time slice edges
+  # tObj.table = p.getDataDir() + tcsv
+  # time = tObj.getTimeSlices()  # methods which returns time slice edges
   # simulate ---!
   for i in range(tbin_stop):
     tObj.t = [time[i], time[i+1]]
-    # tObj.t = [0.0, max(tmax)]
+    print(time[i], time[i+1])
     if if_ebl:
       tObj.model = p.getDataDir() + 'run0406_ID000126_ebl_tbin%02d.xml' % i
       tObj.event = p.getSimDir() + f + "_ebl_tbin%02d.fits" % i
@@ -236,6 +236,8 @@ for k in range(trials):
     likeObj = xmlMng(tObj.likeXml, cfg_file)
     if src_sort:
       srcHighTS = likeObj.sortSrcTS()[0]
+    else:
+      srcHighTS = None
       print('!!! check ---- highest TS: ', srcHighTS) if checks is True else None
     print('\n\n!!! check ---- max likelihoods: ', tObj.likeXml) if checks is True else None
 

@@ -161,7 +161,8 @@ class analysis() :
   def getTimeSlices(self):
     df = self.__openCSV()
     cols = list(df.columns)
-    self.__time = np.append(0, np.array(df[cols[1]]))
+    # self.__time = np.append(0, np.array(df[cols[1]]))
+    self.__time = np.array(df[cols[1]])
     for i in range(len(self.__time)):
       if self.__time[i] > max(self.tmax):
         self.__time[i] = max(self.tmax)
@@ -312,7 +313,7 @@ class analysis() :
     if self.extract_spec is True:
       self.__extractSpc()
 
-    return tbin_stop
+    return t, tbin_stop
 
   def eventSim(self) :
     sim = ctools.ctobssim()
