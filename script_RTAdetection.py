@@ -48,19 +48,16 @@ pointDEC = trueDec + offmax[1]  # (deg)
 
 # conditions control ---!
 checks = True
+if_cut = False
+if_ebl = True
+extract_spec = True
+irf_degrade = True
+src_sort = True
+skip_exist = False
+ebl_fits = False
 debug = False
 if_log = True
-extract_spec = True
-src_sort = False
-skip_exist = False
-irf_degrade = False
-cutoff = False
-ebl_fits = False
-if_ebl = False
-if if_ebl and cutoff:
-  if_cut = True
-else:
-  if_cut = False
+reduce_flux = None  # flux will be devided by factor reduce_flux, if nominal then set to None
 
 # files ---!
 fileroot = 'run0406_'
@@ -88,7 +85,9 @@ tObj.debug = debug
 tObj.if_log = if_log
 # degrade IRF if required ---!
 if irf_degrade:
-  tObj.degradeIRF()
+  if chunk == 0:
+    tObj.degradeIRF()
+  tObj.caldb = caldb_degraded
 # add EBL to template ---!
 if ebl_fits:
   tObj.template = p.getWorkingDir() + nominal_template # nominal ---!
@@ -97,7 +96,6 @@ if ebl_fits:
   tObj.zfetch = True
   tObj.if_ebl = False
   tObj.fits_ebl(new_template)
-  if_ebl = if_ebl
 # assign template ---!
 if if_ebl:
   template = p.getWorkingDir() + ebl_template
@@ -111,6 +109,12 @@ tObj.extract_spec = extract_spec
 tbin_stop = tObj.load_template()
 print('!!! check ---- tbin_stop=', tbin_stop) if checks is True else None
 print('!!! check ---- caldb:', tObj.caldb)
+
+# --------------------------------- REDUCE TEMPLATE FLUX  --------------------------------- !!!
+
+if reduce_flux != None:
+  tObj.makeFainter(reduce_flux)
+  print('!!! check ---- reduce flux by factor %d' %reduce_flux)
 
 # --------------------------------- 1° LOOP :: trials  --------------------------------- !!!
 
@@ -134,6 +138,7 @@ for k in range(trials):
   # simulate ---!
   for i in range(tbin_stop):
     tObj.t = [time[i], time[i+1]]
+    # tObj.t = [0.0, max(tmax)]
     if if_ebl:
       tObj.model = p.getDataDir() + 'run0406_ID000126_ebl_tbin%02d.xml' % i
       tObj.event = p.getSimDir() + f + "_ebl_tbin%02d.fits" % i
@@ -142,18 +147,26 @@ for k in range(trials):
       tObj.model = p.getDataDir() + 'run0406_ID000126_tbin%02d.xml' % i
       tObj.event = p.getSimDir() + f + "_tbin%02d.fits" % i
       print('!!! check ---- simulation %d without EBL' %(i+1)) if checks is True else None
+    if reduce_flux != None:
+      tObj.model = tObj.model.replace('_tbin', '_flux%d_tbin' %reduce_flux)
+      tObj.event = tObj.event.replace('_tbin', '_flux%d_tbin' %reduce_flux)
     event_bins.append(tObj.event)
     if not skip_exist:
       if os.path.isfile(tObj.event):
         os.remove(tObj.event)
+      tObj.output = tObj.event
       tObj.eventSim()
   print('!!! check ---- simulation=', tObj.event) if checks is True else None
   # observation list ---!
   tObj.event = event_bins
   tObj.event_list = p.getSimDir() + 'obs_%s.xml' % f
+  if reduce_flux != None:
+    tObj.event_list = tObj.event_list.replace('obs_', 'obs_flux%d_' % reduce_flux)
   if not skip_exist:
     if os.path.isfile(tObj.event_list):
       os.remove(tObj.event_list)
+    tObj.input = tObj.event
+    tObj.output = tObj.event_list
     tObj.obsList(obsname=f)
   print('!!! check ---- obs list=', tObj.event_list) if checks is True else None
 
@@ -176,6 +189,8 @@ for k in range(trials):
     if not skip_exist:
       if os.path.isfile(tObj.event_selected):
         os.remove(tObj.event_selected)
+      tObj.input = tObj.event_list
+      tObj.output = tObj.event_selected
       tObj.eventSelect(prefix=prefix)
     print('!!! check ---- selection: ', tObj.event_selected) if checks is True else None
 
@@ -185,6 +200,8 @@ for k in range(trials):
     if not skip_exist:
       if os.path.isfile(tObj.skymap):
         os.remove(tObj.skymap)
+      tObj.input = tObj.event_selected
+      tObj.output = tObj.skymap
       tObj.eventSkymap(wbin=wbin)
     print('!!! check ---- skymaps: ', tObj.skymap) if checks is True else None
 
@@ -196,42 +213,48 @@ for k in range(trials):
     if not skip_exist:
       if os.path.isfile(tObj.detectionXml):
         os.remove(tObj.detectionXml)
+      tObj.input = tObj.skymap
+      tObj.output = tObj.detectionXml
       tObj.runDetection()
     detObj = xmlMng(tObj.detectionXml, cfg_file)
     detObj.sigma = sigma
     detObj.if_cut = if_cut
     detObj.modXml()
     print('!!! check ---- detection.............', texp[i], 's done') if checks is True else None
+    print('\n\n!!! check ---- det mod: ', tObj.detectionXml) if checks is True else None
 
-  # --------------------------------- DETECTION RA & DEC --------------------------------- !!!
+  # --------------------------------- MAX LIKELIHOOD --------------------------------- !!!
+
+    tObj.likeXml = tObj.detectionXml.replace('_det%dsgm.xml' % tObj.sigma, '_like%dsgm.xml' % tObj.sigma)
+    if not skip_exist:
+      if os.path.isfile(tObj.likeXml):
+        os.remove(tObj.likeXml)
+      tObj.input = tObj.event_selected
+      tObj.model = tObj.detectionXml
+      tObj.output = tObj.likeXml
+      tObj.maxLikelihood()
+    likeObj = xmlMng(tObj.likeXml, cfg_file)
+    if src_sort:
+      srcHighTS = likeObj.sortSrcTS()[0]
+      print('!!! check ---- highest TS: ', srcHighTS) if checks is True else None
+    print('\n\n!!! check ---- max likelihoods: ', tObj.likeXml) if checks is True else None
+
+    # --------------------------------- DETECTION RA & DEC --------------------------------- !!!
 
     pos = []
-    pos.append(detObj.loadRaDec())
+    pos.append(detObj.loadRaDec(highest=srcHighTS))
     print('!!! check ---- coords:', pos[0]) if checks is True else None
     raDet[i].append(pos[0][0][0]) if len(pos[0][0]) > 0 else raDet[i].append(np.nan)
     decDet[i].append(pos[0][1][0]) if len(pos[0][0]) > 0 else decDet[i].append(np.nan)
     Ndet[i].append(len(pos[0][0]))
     print('!!! check ---- number of detections in trial', k + 1, ' ====== ', Ndet[i][0]) if checks is True else None
-    print('!!! check ---- 1° src DETECTED RA:', raDet[i][0], ' and DEC:', decDet[i][0]) if checks is True else None
+    print('!!! check ---- DETECTED RA:', raDet[i][0], ' and DEC:', decDet[i][0]) if checks is True else None
 
-  # --------------------------------- CLOSE DET XML --------------------------------- !!!
+    # --------------------------------- CLOSE DET XML --------------------------------- !!!
 
     detObj.closeXml()
 
-  # --------------------------------- MAX LIKELIHOOD --------------------------------- !!!
-
-    tObj.likeXml = tObj.detectionXml.replace('_det%dsgm.xml' % tObj.sigma, '_like%dsgm.xml' % tObj.sigma)
-    if Ndet[i][0] > 0:
-      if not skip_exist:
-        if os.path.isfile(tObj.likeXml):
-          os.remove(tObj.likeXml)
-        tObj.maxLikelihood()
-      likeObj = xmlMng(tObj.likeXml, cfg_file)
-      if src_sort:
-        likeObj.sortSrcTS()
-    print('\n\n!!! check ---- max likelihoods: ', tObj.likeXml) if checks is True else None
-
-  # --------------------------------- BEST FIT TSV --------------------------------- !!!
+    # --------------------------------- BEST FIT TSV --------------------------------- !!!
 
     tsList = []
     if Ndet[i][0] > 0:
@@ -242,7 +265,7 @@ for k in range(trials):
 
     # only first elem ---!
     ts[i].append(tsList[0][0])
-    print('!!! check ---- SRC001 TSV for candidate:', ts[i][0]) if checks is True else None
+    print('!!! check ---- TSV for candidate:', ts[i][0]) if checks is True else None
 
   # --------------------------------- Nsrc FOR TSV THRESHOLD --------------------------------- !!!
 
