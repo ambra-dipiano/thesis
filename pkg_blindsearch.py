@@ -299,7 +299,8 @@ class analysis() :
         else :
           continue
     else :
-      tbin_stop = None
+      # tbin_stop = None
+      raise ValueError('Maximum exposure time (tmax) is larger than the template temporal evolution.')
 
     # energy grid ---!
     en = [1.0 for x in range(self.__Ne + 1)]
@@ -415,9 +416,7 @@ class analysis() :
   def maxLikelihood(self):
     like = ctools.ctlike()
     like['inobs'] = self.input
-    # print('SELECTED', self.event_selected)
     like['inmodel'] = self.model
-    # print('INMODEL', self.detectionXml)
     like['outmodel'] = self.output
     like['caldb'] = self.caldb
     like['irf'] = self.irf
@@ -517,6 +516,8 @@ class analysis() :
         os.mkdir(degraded_cal+'/bcf')
       if not os.path.isdir(degraded_cal+'/bcf/'+self.irf):
         os.mkdir(degraded_cal+'/bcf/'+self.irf)
+      if os.path.isfile(self.irf_degraded):
+        os.system('rm %s' %self.irf_degraded)
       if not os.path.isfile(self.irf_degraded):
         os.system('cp %s %s' %(self.irf_nominal, self.irf_degraded))
       # permissions ---!
@@ -680,10 +681,11 @@ class xmlMng():
     src = self.root.findall('source')
     return src
 
-  def __skipNode(self, src, cfg):
+  def __skipNode(self, cfg):
     '''
     :retun true for skip node
     '''
+    src = self.__getSrcObj()
     if src.attrib[cfg.get('idAttribute')] in cfg.get('skip'):
       return True
 
@@ -700,63 +702,91 @@ class xmlMng():
 
     return True
 
-  def loadTSV(self):
+  def loadTSV(self, highest=None):
     for src in self.root.findall('source'):
-      if src.attrib['name'] != 'Background' and src.attrib['name'] != 'CTABackgroundModel':
-      # if self.__skipNode(src, self.__cfg.get('xml').get('tsv')):
-      #   continue
-        tsv = src.attrib['ts']
-        self.tsvList.append(tsv)
+      if highest == None:
+        if src.attrib['name'] != 'Background' and src.attrib['name'] != 'CTABackgroundModel':
+          tsv = src.attrib['ts']
+          self.tsvList.append(tsv)
+      else:
+        if src.attrib['name'] == highest:
+          tsv = src.attrib['ts']
+          self.tsvList.append(tsv)
+
     return self.tsvList
 
-  def loadRaDec(self):
+  def loadRaDec(self, highest=None):
     posRaList, posDecList = ([] for i in range(2))
     for src in self.root.findall('source'):
-      if src.attrib['name'] != 'Background' and src.attrib['name'] != 'CTABackgroundModel':
-      # if self.__skipNode(src, self.__cfg.get('xml').get('RaDec')):
-      #   continue
-        ra = src.find('spatialModel/parameter[@name="RA"]').attrib['value']
-        dec = src.find('spatialModel/parameter[@name="DEC"]').attrib['value']
-        posRaList.append(ra)
-        posDecList.append(dec)
+      if highest == None:
+        if src.attrib['name'] != 'Background' and src.attrib['name'] != 'CTABackgroundModel':
+          ra = src.find('spatialModel/parameter[@name="RA"]').attrib['value']
+          dec = src.find('spatialModel/parameter[@name="DEC"]').attrib['value']
+          posRaList.append(ra)
+          posDecList.append(dec)
+      else:
+        if src.attrib['name'] == highest:
+          ra = src.find('spatialModel/parameter[@name="RA"]').attrib['value']
+          dec = src.find('spatialModel/parameter[@name="DEC"]').attrib['value']
+          posRaList.append(ra)
+          posDecList.append(dec)
     self.pos = [posRaList, posDecList]
     return self.pos
 
-  def loadConfInt(self):
+  def loadConfInt(self, highest=None):
     raList, decList = ([] for i in range(2))
     for src in self.root.findall('source'):
-      if src.attrib['name'] != 'Background' and src.attrib['name'] != 'CTABackgroundModel':
-      # if self.__skipNode(src, self.__cfg.get('xml').get('ConfInt')):
-      #   continue
-        ra = src.find('spatialModel/parameter[@name="RA"]').attrib['value']
-        dec = src.find('spatialModel/parameter[@name="DEC"]').attrib['value']
-        raList.append(ra)
-        decList.append(dec)
+      if highest == None:
+        if src.attrib['name'] != 'Background' and src.attrib['name'] != 'CTABackgroundModel':
+          ra = src.find('spatialModel/parameter[@name="RA"]').attrib['value']
+          dec = src.find('spatialModel/parameter[@name="DEC"]').attrib['value']
+          raList.append(ra)
+          decList.append(dec)
+      else:
+        if src.attrib['name'] == highest:
+          ra = src.find('spatialModel/parameter[@name="RA"]').attrib['value']
+          dec = src.find('spatialModel/parameter[@name="DEC"]').attrib['value']
+          raList.append(ra)
+          decList.append(dec)
     self.err = [raList, decList]
     return self.err
 
-  def loadSpectral(self):
+  def loadSpectral(self, highest=None):
     indexList, prefList, pivotList = ([] for i in range(3))
     if self.if_cut is True :
       cutoffList = []
 
     for src in self.root.findall('source'):
       if src.attrib['name'] != 'Background' and src.attrib['name'] != 'CTABackgroundModel':
-      # if self.__skipNode(src, self.__cfg.get('xml').get('src')):
-      #   continue
-        index = float(src.find('spectrum/parameter[@name="Index"]').attrib['value']) * float(
-            src.find('spectrum/parameter[@name="Index"]').attrib['scale'])
-        pref = float(src.find('spectrum/parameter[@name="Prefactor"]').attrib['value']) * float(
-            src.find('spectrum/parameter[@name="Prefactor"]').attrib['scale'])
-        pivot = float(src.find('spectrum/parameter[@name="PivotEnergy"]').attrib['value']) * float(
-            src.find('spectrum/parameter[@name="PivotEnergy"]').attrib['scale'])
-        indexList.append(index)
-        prefList.append(pref)
-        pivotList.append(pivot)
-        if self.if_cut is True :
-          cutoff = float(src.find('spectrum/parameter[@name="CutoffEnergy"]').attrib['value']) * float(
-              src.find('spectrum/parameter[@name="CutoffEnergy"]').attrib['scale'])
-          cutoffList.append(cutoff)
+        if highest == None:
+          index = float(src.find('spectrum/parameter[@name="Index"]').attrib['value']) * float(
+              src.find('spectrum/parameter[@name="Index"]').attrib['scale'])
+          pref = float(src.find('spectrum/parameter[@name="Prefactor"]').attrib['value']) * float(
+              src.find('spectrum/parameter[@name="Prefactor"]').attrib['scale'])
+          pivot = float(src.find('spectrum/parameter[@name="PivotEnergy"]').attrib['value']) * float(
+              src.find('spectrum/parameter[@name="PivotEnergy"]').attrib['scale'])
+          indexList.append(index)
+          prefList.append(pref)
+          pivotList.append(pivot)
+          if self.if_cut is True :
+            cutoff = float(src.find('spectrum/parameter[@name="CutoffEnergy"]').attrib['value']) * float(
+                src.find('spectrum/parameter[@name="CutoffEnergy"]').attrib['scale'])
+            cutoffList.append(cutoff)
+        else:
+          if src.attrib['name'] == highest:
+            index = float(src.find('spectrum/parameter[@name="Index"]').attrib['value']) * float(
+                src.find('spectrum/parameter[@name="Index"]').attrib['scale'])
+            pref = float(src.find('spectrum/parameter[@name="Prefactor"]').attrib['value']) * float(
+                src.find('spectrum/parameter[@name="Prefactor"]').attrib['scale'])
+            pivot = float(src.find('spectrum/parameter[@name="PivotEnergy"]').attrib['value']) * float(
+                src.find('spectrum/parameter[@name="PivotEnergy"]').attrib['scale'])
+            indexList.append(index)
+            prefList.append(pref)
+            pivotList.append(pivot)
+            if self.if_cut is True:
+              cutoff = float(src.find('spectrum/parameter[@name="CutoffEnergy"]').attrib['value']) * float(
+                  src.find('spectrum/parameter[@name="CutoffEnergy"]').attrib['scale'])
+              cutoffList.append(cutoff)
 
     if self.if_cut is False:
       self.spectral = [indexList, prefList, pivotList]
@@ -863,8 +893,11 @@ class xmlMng():
   def sortSrcTS(self):
     src = self.root.findall("*[@ts]")
     self.root[:-1] = sorted(src, key=lambda el: (el.tag, el.attrib['ts']), reverse=True)
+    highest = []
+    for src in self.root.findall("*[@ts]"):
+      highest.append(src.attrib['name'])
     self.__saveXml()
-    return
+    return highest
 
   def closeXml(self):
     self.file.close()
