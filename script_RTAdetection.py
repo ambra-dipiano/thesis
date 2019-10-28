@@ -40,7 +40,7 @@ maxSrc = 10  # max candidates
 corr_rad = 0.1  # Gaussian
 
 # pointing with off-axis equal to max prob GW ---!
-offmax = (-1.475, -1.371)  # (deg)
+offmax = (-1.475, -1.370)  # (deg)
 trueRa = 33.057  # (deg)
 trueDec = -51.841  # (deg)
 pointRA = trueRa + offmax[0]  # (deg)
@@ -106,7 +106,7 @@ tObj.template = template
 print('!!! check ---- template=', tObj.template) if checks is True else None
 # load template ---!
 tObj.extract_spec = extract_spec
-time, tbin_stop = tObj.load_template()
+tgrid, tbin_stop = tObj.load_template()
 print('!!! check ---- tbin_stop=', tbin_stop) if checks is True else None
 print('!!! check ---- caldb:', tObj.caldb)
 
@@ -137,8 +137,8 @@ for k in range(trials):
   # time = tObj.getTimeSlices()  # methods which returns time slice edges
   # simulate ---!
   for i in range(tbin_stop):
-    tObj.t = [time[i], time[i+1]]
-    print(time[i], time[i+1])
+    tObj.t = [tgrid[i], tgrid[i+1]]
+    print(tgrid[i], tgrid[i+1])
     if if_ebl:
       tObj.model = p.getDataDir() + 'run0406_ID000126_ebl_tbin%02d.xml' % i
       tObj.event = p.getSimDir() + f + "_ebl_tbin%02d.fits" % i

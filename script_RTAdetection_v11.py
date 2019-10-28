@@ -353,7 +353,7 @@ for k in range(trials) :
   ID = 'ID%06d' % count
   
   for i in range(tint):
-    csvName.append(csvpath + fileroot + '%ds_chunk%02d.csv' % (texp[i], chunk))
+    csvName.append(csvpath + fileroot + 'v11_%ds_chunk%02d.csv' % (texp[i], chunk))
 
     row = []
     row.append([ID,texp[i],sigma,Ndet[i],Nsrc[i],raSrc001[i],decSrc001[i],raFit[i],decFit[i],tsv[i],flux[i],flux_ph[i],flux_erg[i],flux_en[i]])
