@@ -47,7 +47,7 @@ pointRA = trueRa + offmax[0]  # (deg)
 pointDEC = trueDec + offmax[1]  # (deg)
 
 # conditions control ---!
-checks = True
+checks = False
 if_cut = False
 if_ebl = False
 extract_spec = False
@@ -138,7 +138,7 @@ for k in range(trials):
   # simulate ---!
   for i in range(tbin_stop):
     tObj.t = [tgrid[i], tgrid[i+1]]
-    print(tgrid[i], tgrid[i+1])
+    print(tgrid[i], tgrid[i+1]) if checks is True else None
     if if_ebl:
       tObj.model = p.getDataDir() + 'run0406_ID000126_ebl_tbin%02d.xml' % i
       tObj.event = p.getSimDir() + f + "_ebl_tbin%02d.fits" % i
@@ -220,6 +220,7 @@ for k in range(trials):
     detObj.sigma = sigma
     detObj.if_cut = if_cut
     detObj.modXml()
+    # detObj.FreeFixPrms()
     print('!!! check ---- detection.............', texp[i], 's done') if checks is True else None
     print('\n\n!!! check ---- det mod: ', tObj.detectionXml) if checks is True else None
 
@@ -361,7 +362,9 @@ for k in range(trials):
     csvName = p.getCsvDir() + fileroot + '%ds_chunk%02d.csv' % (texp[i], chunk)
 
     row = []
-    print('\n\n!!! *** check Ndet:', Ndet[i][0])
+    print('\n\n!!! *** check trial:', count)
+    print('!!! check *** texp:', texp[i])
+    print('!!! *** check Ndet:', Ndet[i][0])
     print('!!! *** check Nsrc:', Nsrc[i][0])
     print('!!! *** check raDet:', raDet[i][0])
     print('!!! *** check decDet:', decDet[i][0])

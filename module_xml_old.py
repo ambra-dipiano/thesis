@@ -287,9 +287,7 @@ def srcDetection_spcModeling(skymap, sigma=5, instr='CTA', bkgType='Irf', src_at
     else:
       # set bkg attributes ---!
       src.set('instrument', '%s' % instr.upper()) if instr.capitalize() != 'None' else None
-      src.set('type', 'CTA%sBackground' % bkgType.capitalize()) if bkgType.capitalize() == 'Aeff' \
-                                                                   or bkgType.capitalize() == 'Irf' else None
-      src.set('type', 'RadialAcceptance') if bkgType.capitalize() == 'Racc' else None
+      src.set('type', 'CTA%sBackground' % bkgType.capitalize())
       # remove spectral component ---!
       rm = src.find('spectrum')
       src.remove(rm)

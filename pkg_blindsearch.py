@@ -829,45 +829,45 @@ class xmlMng():
       # if self.__skipNode(src=src, cfg=self.__cfg.get('xml').get('src')):
       #   continue
         src.set('tscalc', '1') if self.tscalc is True else None
-        # remove spectral component ---!
-        rm = src.find('spectrum')
-        src.remove(rm)
-        # new spectrum ---!
-        if self.if_cut is True:
-          spc = ET.SubElement(src, 'spectrum', attrib={'type': 'ExponentialCutoffPowerLaw'})
-        else:
-          spc = ET.SubElement(src, 'spectrum', attrib={'type': 'PowerLaw'})
-        spc.text = '\n\t\t\t'.replace('\t', ' ' * 2)
-        spc.tail = '\n\t\t'.replace('\t', ' ' * 2)
-        src.insert(0, spc)
-        # new spectral params ---!
-        for j in range(len(self.srcAtt)):
-          prm = ET.SubElement(spc, 'parameter', attrib=self.srcAtt[j])
-          if prm.attrib['name'] == 'Prefactor' and i > 1:
-            prm.set('value', str(float(prm.attrib['value']) / 2 ** (i - 1)))
-          prm.tail = '\n\t\t\t'.replace('\t', ' ' * 2) if j < len(self.srcAtt) else '\n\t\t'.replace('\t', ' ' * 2)
-          spc.insert(j, prm)
-    # background ---!
-      else:
-      # for src in self.root.findall('source[@name]'):
-      #   if self.__skipNode(src=src, cfg=self.__cfg.get('xml').get('src')):
-        # set bkg attributes ---!
-        src.set('instrument', '%s' % self.instr.upper()) if self.instr.capitalize() != 'None' else None
-        if self.bkgType.capitalize() == 'Aeff' or self.bkgType.capitalize() == 'Irf':
-          src.set('type', 'CTA%sBackground' % self.bkgType.capitalize())
-        if self.bkgType.capitalize() == 'Racc':
-          src.set('type', 'RadialAcceptance')
-        # remove spectral component ---!
-        rm = src.find('spectrum')
-        src.remove(rm)
-        # new bkg spectrum ---!
-        spc = ET.SubElement(src, 'spectrum', attrib={'type': 'PowerLaw'})
-        spc.text = '\n\t\t\t'.replace('\t', ' ' * 2)
-        spc.tail = '\n\t'.replace('\t', ' ' * 2)
-        # new bkg params ---!
-        for j in range(len(self.bkgAtt)):
-          prm = ET.SubElement(spc, 'parameter', attrib=self.bkgAtt[j])
-          prm.tail = '\n\t\t\t'.replace('\t', ' ' * 2) if j < len(self.bkgAtt) else '\n\t\t'.replace('\t', ' ' * 2)
+    #     # remove spectral component ---!
+    #     rm = src.find('spectrum')
+    #     src.remove(rm)
+    #     # new spectrum ---!
+    #     if self.if_cut is True:
+    #       spc = ET.SubElement(src, 'spectrum', attrib={'type': 'ExponentialCutoffPowerLaw'})
+    #     else:
+    #       spc = ET.SubElement(src, 'spectrum', attrib={'type': 'PowerLaw'})
+    #     spc.text = '\n\t\t\t'.replace('\t', ' ' * 2)
+    #     spc.tail = '\n\t\t'.replace('\t', ' ' * 2)
+    #     src.insert(0, spc)
+    #     # new spectral params ---!
+    #     for j in range(len(self.srcAtt)):
+    #       prm = ET.SubElement(spc, 'parameter', attrib=self.srcAtt[j])
+    #       if prm.attrib['name'] == 'Prefactor' and i > 1:
+    #         prm.set('value', str(float(prm.attrib['value']) / 2 ** (i - 1)))
+    #       prm.tail = '\n\t\t\t'.replace('\t', ' ' * 2) if j < len(self.srcAtt) else '\n\t\t'.replace('\t', ' ' * 2)
+    #       spc.insert(j, prm)
+    # # background ---!
+    #   else:
+    #   # for src in self.root.findall('source[@name]'):
+    #   #   if self.__skipNode(src=src, cfg=self.__cfg.get('xml').get('src')):
+    #     # set bkg attributes ---!
+    #     src.set('instrument', '%s' % self.instr.upper()) if self.instr.capitalize() != 'None' else None
+    #     if self.bkgType.capitalize() == 'Aeff' or self.bkgType.capitalize() == 'Irf':
+    #       src.set('type', 'CTA%sBackground' % self.bkgType.capitalize())
+    #     if self.bkgType.capitalize() == 'Racc':
+    #       src.set('type', 'RadialAcceptance')
+    #     # remove spectral component ---!
+    #     rm = src.find('spectrum')
+    #     src.remove(rm)
+    #     # new bkg spectrum ---!
+    #     spc = ET.SubElement(src, 'spectrum', attrib={'type': 'PowerLaw'})
+    #     spc.text = '\n\t\t\t'.replace('\t', ' ' * 2)
+    #     spc.tail = '\n\t'.replace('\t', ' ' * 2)
+    #     # new bkg params ---!
+    #     for j in range(len(self.bkgAtt)):
+    #       prm = ET.SubElement(spc, 'parameter', attrib=self.bkgAtt[j])
+    #       prm.tail = '\n\t\t\t'.replace('\t', ' ' * 2) if j < len(self.bkgAtt) else '\n\t\t'.replace('\t', ' ' * 2)
 
     self.__xml = self.__saveXml()
     return
@@ -878,13 +878,13 @@ class xmlMng():
       # if self.__skipNode(src, self.__cfg.xml.src):
       #   continue
         for free in self.__cfg.xml.src.free:
-          src.find('spatialModel/parameter[@name="%s"]' % free.value).set('free', '1')
+          src.find('spatialModel/parameter[@name="%s"]' % free).set('free', '1')
         for fix in self.__cfg.xml.src.fix:
-          src.find('spatialModel/parameter[@name="%s"]' % fix.value).set('free', '0')
+          src.find('spatialModel/parameter[@name="%s"]' % fix).set('free', '0')
       else:
       # if self.__skipNode(src, self.__cfg.xml.src):
         for bkg in self.__cfg.xml.src.bkg:
-          src.find('spatialModel/parameter[@name="%s"]' % bkg.value).set('free', '1')
+          src.find('spatialModel/parameter[@name="%s"]' % bkg).set('free', '1')
         for prm in src not in self.__cfg.xml.src.bkg:
           prm.set('free', '0')
 

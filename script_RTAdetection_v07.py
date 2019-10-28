@@ -132,9 +132,10 @@ for k in range(trials):
     sim["tmin"] = t[i]
     sim["tmax"] = t[i + 1]
     sim["emin"] = 0.03
-    sim["emax"] = 1.0
+    sim["emax"] = 0.5
     sim["seed"] = count
     sim["logfile"] = simpath + f + "_tbin%02d.log" % i
+    sim["debug"] = False
     sim.execute() 
 
   # combine in observatiion list
@@ -172,7 +173,7 @@ for k in range(trials):
     selection['emin'] = emin
     selection['emax'] = emax
     selection['logfile'] = selectedEvents[i].replace('.xml', '.log')
-    selection['debug'] = bool('no')
+    selection['debug'] = False
     selection.execute()
 
   print('!!! check --- selection: ', selectedEvents)
@@ -202,7 +203,7 @@ for k in range(trials):
     skymap['proj'] = 'CAR'
     skymap['bkgsubtract'] = 'IRF'
     skymap['logfile'] = skymapName[i].replace('.fits', '.log')
-    skymap['debug'] = bool('no')
+    skymap['debug'] = False
     skymap.execute() 
 
   print('!!! check --- skymaps: ', skymapName)
@@ -233,6 +234,7 @@ for k in range(trials):
   Ndet = []
 
   for i in range(tint) :
+    fixParams(detXml[i], spt_prms=['RA', 'DEC'])
     raDet.append(pos[i][0][0]) if len(pos[i][0]) > 0 else raDet.append(np.nan)
     decDet.append(pos[i][1][0]) if len(pos[i][1]) > 0 else decDet.append(np.nan)
     Ndet.append(len(pos[i][0]))
@@ -248,7 +250,6 @@ for k in range(trials):
   raSrc001 = raDet
   decSrc001 = decDet
   print('!!! check ------- 1° src DETECTED RA:', raSrc001, ' and DEC:', decSrc001)
-
 
 
   # ==================
@@ -268,9 +269,9 @@ for k in range(trials):
       like['outmodel'] = resultsName[i]
       like['caldb'] = caldb
       like['irf'] = irf
-      like['fix_spat_for_ts'] = True
+      like['fix_spat_for_ts'] = False
       like['logfile'] = resultsName[i].replace('.xml', '.log')
-      like['debug'] = bool('no')  # default
+      like['debug'] = False  # default
       like.execute()
 
 

@@ -34,7 +34,8 @@
 			<filters></filters>
 			<selectors></selectors>
 			<free></free>
-			<fix></fix>
+			<fix>RA</fix>
+			<fix>DEC</fix>
 		</src>
 	</xml>
 </config>
