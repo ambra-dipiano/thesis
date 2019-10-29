@@ -87,8 +87,6 @@ class analysis() :
     # files ---!
     self.model, self.template, self.table = (str() for i in range(3))
     self.output, self.input = (str() for i in range(2))
-    self.event, self.event_list, self.event_selected, self.skymap = (str() for i in range(4))
-    self.detectionXml, self.detectionReg, self.likeXml = (str() for i in range(3))
     self.sensCsv = str()
     self.caldb = 'prod2'
     self.irf = 'South_0.5h'
@@ -161,8 +159,8 @@ class analysis() :
   def getTimeSlices(self):
     df = self.__openCSV()
     cols = list(df.columns)
-    # self.__time = np.append(0, np.array(df[cols[1]]))
-    self.__time = np.array(df[cols[1]])
+    self.__time = np.append(0, np.array(df[cols[1]]))
+    # self.__time = np.array(df[cols[1]])
     for i in range(len(self.__time)):
       if self.__time[i] > max(self.tmax):
         self.__time[i] = max(self.tmax)
@@ -171,7 +169,7 @@ class analysis() :
 
     return self.__time[sliceObj]
 
-  def __add_ebl(self):
+  def __addEbl(self):
     self.__getFitsData()
     tau_gilmore, E = self.__getCsvData()
     # interpolate ---!
@@ -204,14 +202,14 @@ class analysis() :
     self.z_ind = zlist.index(self.z) +1
     return
 
-  def fits_ebl(self, template_ebl):
+  def fitsEbl(self, template_ebl):
     hdul = self.__openFITS() # open template ---!
     if self.zfetch is True:
       self.__zfetch()
     if self.plot:
-      x, y, x2, y2 = self.__add_ebl()
+      x, y, x2, y2 = self.__addEbl()
     else:
-      self.__add_ebl()
+      self.__addEbl()
     # update fits ---!
     hdu = fits.BinTableHDU(name='EBL Gilmore', data=self.__ebl)
     header = hdu.header
@@ -278,7 +276,7 @@ class analysis() :
 
     return
 
-  def load_template(self) :
+  def loadTemplate(self) :
     self.__getFitsData()
 
     self.__Nt = len(self.__time)
@@ -313,7 +311,7 @@ class analysis() :
     if self.extract_spec is True:
       self.__extractSpc()
 
-    return t, tbin_stop
+    return tbin_stop
 
   def eventSim(self) :
     sim = ctools.ctobssim()
@@ -475,7 +473,7 @@ class analysis() :
 
     return
 
-  def photonFlux_pl(self, gamma, k0, e0):
+  def photonFluxPowerLaw(self, gamma, k0, e0):
     e1 = self.e[0]*1e6
     e2 = self.e[1]*1e6
     delta = gamma + 1
@@ -483,7 +481,7 @@ class analysis() :
     flux = factor * (e2**delta - e1**delta)
     return flux
 
-  def energyFlux_pl(self, gamma, k0, e0):
+  def energyFluxPowerLaw(self, gamma, k0, e0):
     k0 *= 1.60218e-6
     e0 *= 1.60218e-6
     e1 = self.e[0]*1e6 * 1.60218e-6
@@ -493,7 +491,7 @@ class analysis() :
     flux = factor * (e2**delta - e1**delta)
     return flux
 
-  def degradeIRF(self):
+  def degradeIrf(self):
     self.irf_nominal =  self.__CTOOLS + '/share/caldb/data/cta/%s/bcf/%s/irf_file.fits' % (self.caldb, self.irf)
     self.irf_degraded = self.irf_nominal.replace('prod', 'degr')
     # only if not existing ---!
@@ -799,16 +797,16 @@ class xmlMng():
   def __saveXml(self):
     self.srcLib.write(self.__xml, encoding="UTF-8", xml_declaration=True,
                       standalone=False, pretty_print=True)
-    return self.__xml
+    return
 
   def __setModel(self):
     if self.default_model is True:
       Att_Prefactor = {'name': 'Prefactor', 'scale': '1e-16', 'value': '5.7', 'min': '1e-07', 'max': '1000.0', 'free': '1'}
       Att_Index = {'name': 'Index', 'scale': '-1', 'value': '2.4', 'min': '0', 'max': '5.0', 'free': '1'}
-      Att_PivotEn = {'name': 'PivotEnergy', 'scale': '1e6', 'value': '1', 'min': '1e-07', 'max': '1000.0', 'free': '0'}
+      Att_PivotEn = {'name': 'PivotEnergy', 'scale': '1e6', 'value': '0.3', 'min': '1e-07', 'max': '1000.0', 'free': '0'}
       Bkg_Prefactor = {'name': 'Prefactor', 'scale': '1', 'value': '1', 'min': '1e-03', 'max': '1e+3', 'free': '1'}
       Bkg_Index = {'name': 'Index', 'scale': '1', 'value': '0.0', 'min': '-5', 'max': '+5.0', 'free': '1'}
-      Bkg_PivotEn = {'name': 'PivotEnergy', 'scale': '1e6', 'value': '1', 'min': '0.01', 'max': '1000.0', 'free': '0'}
+      Bkg_PivotEn = {'name': 'PivotEnergy', 'scale': '1e6', 'value': '0.3', 'min': '0.01', 'max': '1000.0', 'free': '0'}
 
       self.srcAtt = [Att_Prefactor, Att_Index, Att_PivotEn]
       self.bkgAtt = [Bkg_Prefactor, Bkg_Index, Bkg_PivotEn]
@@ -827,63 +825,57 @@ class xmlMng():
     for src in self.root.findall('source'):
       i += 1
       if src.attrib['name'] != 'Background' and src.attrib['name'] != 'CTABackgroundModel':
-      # if self.__skipNode(src=src, cfg=self.__cfg.get('xml').get('src')):
-      #   continue
         src.set('tscalc', '1') if self.tscalc is True else None
-    #     # remove spectral component ---!
-    #     rm = src.find('spectrum')
-    #     src.remove(rm)
-    #     # new spectrum ---!
-    #     if self.if_cut is True:
-    #       spc = ET.SubElement(src, 'spectrum', attrib={'type': 'ExponentialCutoffPowerLaw'})
-    #     else:
-    #       spc = ET.SubElement(src, 'spectrum', attrib={'type': 'PowerLaw'})
-    #     spc.text = '\n\t\t\t'.replace('\t', ' ' * 2)
-    #     spc.tail = '\n\t\t'.replace('\t', ' ' * 2)
-    #     src.insert(0, spc)
-    #     # new spectral params ---!
-    #     for j in range(len(self.srcAtt)):
-    #       prm = ET.SubElement(spc, 'parameter', attrib=self.srcAtt[j])
-    #       if prm.attrib['name'] == 'Prefactor' and i > 1:
-    #         prm.set('value', str(float(prm.attrib['value']) / 2 ** (i - 1)))
-    #       prm.tail = '\n\t\t\t'.replace('\t', ' ' * 2) if j < len(self.srcAtt) else '\n\t\t'.replace('\t', ' ' * 2)
-    #       spc.insert(j, prm)
-    # # background ---!
-    #   else:
-    #   # for src in self.root.findall('source[@name]'):
-    #   #   if self.__skipNode(src=src, cfg=self.__cfg.get('xml').get('src')):
-    #     # set bkg attributes ---!
-    #     src.set('instrument', '%s' % self.instr.upper()) if self.instr.capitalize() != 'None' else None
-    #     if self.bkgType.capitalize() == 'Aeff' or self.bkgType.capitalize() == 'Irf':
-    #       src.set('type', 'CTA%sBackground' % self.bkgType.capitalize())
-    #     if self.bkgType.capitalize() == 'Racc':
-    #       src.set('type', 'RadialAcceptance')
-    #     # remove spectral component ---!
-    #     rm = src.find('spectrum')
-    #     src.remove(rm)
-    #     # new bkg spectrum ---!
-    #     spc = ET.SubElement(src, 'spectrum', attrib={'type': 'PowerLaw'})
-    #     spc.text = '\n\t\t\t'.replace('\t', ' ' * 2)
-    #     spc.tail = '\n\t'.replace('\t', ' ' * 2)
-    #     # new bkg params ---!
-    #     for j in range(len(self.bkgAtt)):
-    #       prm = ET.SubElement(spc, 'parameter', attrib=self.bkgAtt[j])
-    #       prm.tail = '\n\t\t\t'.replace('\t', ' ' * 2) if j < len(self.bkgAtt) else '\n\t\t'.replace('\t', ' ' * 2)
+        # remove spectral component ---!
+        rm = src.find('spectrum')
+        src.remove(rm)
+        # new spectrum ---!
+        if self.if_cut:
+          spc = ET.SubElement(src, 'spectrum', attrib={'type': 'ExponentialCutoffPowerLaw'})
+        else:
+          spc = ET.SubElement(src, 'spectrum', attrib={'type': 'PowerLaw'})
+        spc.text = '\n\t\t\t'.replace('\t', ' ' * 2)
+        spc.tail = '\n\t\t'.replace('\t', ' ' * 2)
+        src.insert(0, spc)
+        # new spectral params ---!
+        for j in range(len(self.srcAtt)):
+          prm = ET.SubElement(spc, 'parameter', attrib=self.srcAtt[j])
+          if prm.attrib['name'] == 'Prefactor' and i > 1:
+            prm.set('value', str(float(prm.attrib['value']) / 2 ** (i - 1)))
+          prm.tail = '\n\t\t\t'.replace('\t', ' ' * 2) if j < len(self.srcAtt) else '\n\t\t'.replace('\t', ' ' * 2)
+          spc.insert(j, prm)
+      # background ---!
+      else:
+        # set bkg attributes ---!
+        src.set('instrument', '%s' % self.instr.upper()) if self.instr.capitalize() != 'None' else None
+        if self.bkgType.capitalize() == 'Aeff' or self.bkgType.capitalize() == 'Irf':
+          src.set('type', 'CTA%sBackground' % self.bkgType.capitalize())
+        if self.bkgType.capitalize() == 'Racc':
+          src.set('type', 'RadialAcceptance')
+        # remove spectral component ---!
+        rm = src.find('spectrum')
+        src.remove(rm)
+        # new bkg spectrum ---!
+        spc = ET.SubElement(src, 'spectrum', attrib={'type': 'PowerLaw'})
+        spc.text = '\n\t\t\t'.replace('\t', ' ' * 2)
+        spc.tail = '\n\t'.replace('\t', ' ' * 2)
+        # new bkg params ---!
+        for j in range(len(self.bkgAtt)):
+          prm = ET.SubElement(spc, 'parameter', attrib=self.bkgAtt[j])
+          prm.tail = '\n\t\t\t'.replace('\t', ' ' * 2) if j < len(self.bkgAtt) else '\n\t\t'.replace('\t', ' ' * 2)
 
-    self.__xml = self.__saveXml()
+    self.__xml = self.__xml.replace('.xml', '_Mod.xml')
+    self.__saveXml()
     return
 
   def FreeFixPrms(self):
     for src in self.root.findall('source'):
       if src.attrib['name'] != 'Background' and src.attrib['name'] != 'CTABackgroundModel':
-      # if self.__skipNode(src, self.__cfg.xml.src):
-      #   continue
         for free in self.__cfg.xml.src.free:
           src.find('spatialModel/parameter[@name="%s"]' % free).set('free', '1')
         for fix in self.__cfg.xml.src.fix:
           src.find('spatialModel/parameter[@name="%s"]' % fix).set('free', '0')
       else:
-      # if self.__skipNode(src, self.__cfg.xml.src):
         for bkg in self.__cfg.xml.src.bkg:
           src.find('spatialModel/parameter[@name="%s"]' % bkg).set('free', '1')
         for prm in src not in self.__cfg.xml.src.bkg:
