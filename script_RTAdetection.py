@@ -49,9 +49,9 @@ pointDEC = trueDec + offmax[1]  # (deg)
 # conditions control ---!
 checks = False
 if_cut = False
-if_ebl = True
+if_ebl = False
 extract_spec = False
-irf_degrade = True
+irf_degrade = False
 src_sort = False
 skip_exist = False
 ebl_fits = False
@@ -86,7 +86,7 @@ tObj.if_log = if_log
 # degrade IRF if required ---!
 if irf_degrade:
   if count == 0:
-    tObj.degradeIRF()
+    tObj.degradeIrf()
   tObj.caldb = caldb_degraded
 # add EBL to template ---!
 if ebl_fits:
@@ -106,7 +106,7 @@ tObj.template = template
 print('!!! check ---- template=', tObj.template) if checks is True else None
 # load template ---!
 tObj.extract_spec = extract_spec
-tgrid, tbin_stop = tObj.load_template()
+tbin_stop = tObj.loadTemplate()
 print('!!! check ---- tbin_stop=', tbin_stop) if checks is True else None
 print('!!! check ---- caldb:', tObj.caldb)
 
@@ -114,7 +114,7 @@ print('!!! check ---- caldb:', tObj.caldb)
 
 if reduce_flux != None:
   tObj.makeFainter(reduce_flux)
-  print('!!! check ---- reduce flux by factor %d' %reduce_flux)
+  print('!!! check ---- reduce flux by factor %s' %str(reduce_flux))
 
 # --------------------------------- 1° LOOP :: trials  --------------------------------- !!!
 
@@ -128,13 +128,15 @@ for k in range(trials):
     f = fileroot + 'ebl%06d' % (count)
   else :
     f = fileroot + 'sim%06d' % (count)
+  if irf_degrade:
+    f += 'irf'
   print('!!! check ---- file=', f) if checks is True else None
 
   # --------------------------------- SIMULATION --------------------------------- !!!
 
   event_bins = []
-  # tObj.table = p.getDataDir() + tcsv
-  # time = tObj.getTimeSlices()  # methods which returns time slice edges
+  tObj.table = p.getDataDir() + tcsv
+  tgrid = tObj.getTimeSlices()  # methods which returns time slice edges
   # simulate ---!
   for i in range(tbin_stop):
     tObj.t = [tgrid[i], tgrid[i+1]]
@@ -231,7 +233,7 @@ for k in range(trials):
       if os.path.isfile(tObj.likeXml):
         os.remove(tObj.likeXml)
       tObj.input = tObj.event_selected
-      tObj.model = tObj.detectionXml
+      tObj.model = tObj.detectionXml.replace('.xml', '_Mod.xml')
       tObj.output = tObj.likeXml
       tObj.maxLikelihood()
     likeObj = xmlMng(tObj.likeXml, cfg_file)
@@ -338,8 +340,8 @@ for k in range(trials):
   # --------------------------------- INTEGRATED FLUX --------------------------------- !!!
 
     if Ndet[i][0] > 0:
-      flux_ph[i].append(tObj.photonFlux_pl(Index[i][0], Pref[i][0], Pivot[i][0]))  # E (MeV)
-      flux_en[i].append(tObj.energyFlux_pl(Index[i][0], Pref[i][0], Pivot[i][0]))  # E (erg)
+      flux_ph[i].append(tObj.photonFluxPowerLaw(Index[i][0], Pref[i][0], Pivot[i][0]))  # E (MeV)
+      flux_en[i].append(tObj.energyFluxPowerLaw(Index[i][0], Pref[i][0], Pivot[i][0]))  # E (erg)
     else:
       flux_ph[i].append(np.nan)
       flux_en[i].append(np.nan)
