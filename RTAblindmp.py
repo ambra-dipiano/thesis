@@ -95,7 +95,7 @@ if ebl_fits:
   tObj.table = ebl_table # fiducial ---!
   tObj.zfetch = True
   tObj.if_ebl = False
-  tObj.fits_ebl(new_template)
+  tObj.fitsEbl(new_template)
 # assign template ---!
 if if_ebl:
   template = p.getWorkingDir() + ebl_template

@@ -19,6 +19,7 @@ from lxml import etree as ET
 def xmlConfig(cfg_file) :
   # load configuration file ---!
   cfgFile = os.path.dirname(__file__)+str(cfg_file)
+  # create configuration dictionary ---!
   with open(cfgFile) as fd:
     cfg = untangle.parse(fd.read())
   return cfg.config
@@ -39,36 +40,43 @@ class cfgMng_xml() :
     self.__detpath = self.__cfg.dir.detpath['path']
     self.__csvpath = self.__cfg.dir.csvpath['path']
 
+  # workinf directory ---!
   def getWorkingDir(self) :
     return self.__workdir
   def setWorkingDir(self, workingDir) :
     self.__workdir = workingDir
 
+  # directory containing runs ---!
   def getRunDir(self) :
     return self.__runpath.replace('${workdir}', self.getWorkingDir())
   def setRunDir(self, runDir) :
     self.__runpath = runDir
 
+  # directory storing runs data ---!
   def getDataDir(self) :
     return self.__datapath.replace('${runpath}', self.getRunDir())
   def setDataDir(self, dataDir) :
     self.__runpath = dataDir
 
+  # target directory for simulations ---!
   def getSimDir(self) :
     return self.__simpath.replace('${runpath}', self.getRunDir())
   def setSimDir(self, simDir) :
     self.__runpath = simDir
 
+  # target directory for selections ---!
   def getSelectDir(self) :
     return self.__selectpath.replace('${runpath}', self.getRunDir())
   def setSelectDir(self, selectDir) :
     self.__runpath = selectDir
 
+  # target directory for pipeline products ---!
   def getDetDir(self) :
     return self.__detpath.replace('${runpath}', self.getRunDir())
   def setDetDir(self, detDir) :
     self.__runpath = detDir
 
+  # target directory for output tables ---!
   def getCsvDir(self) :
     return self.__csvpath.replace('${runpath}', self.getRunDir())
   def setCsvDir(self, csvDir) :
@@ -77,9 +85,18 @@ class cfgMng_xml() :
 # --------------------------------- CLASS ANALYSIS --------------------------------- !!!
 
 class analysis() :
+  '''
+  This class contains a mixture of ctools wrapper and pipeline methods. The former are used to easily access and set
+  ctools while the latter handles all the analysis necessities: from handling the EBL absorption to degrading the IRFs,
+  from extracting spectra to reading the template time bins needed for the simulations. Each public field (self.field)
+  can be set accordingly to the user needs from a python script, while private fields (self.__field) is for internal
+  usage. Equally, public methods (methodName()) can be invoked within a python script once the class is instanced while
+  private methods (__methodName()) should only be used within the class itself.
+  '''
   def __init__(self, cfgFile):
+    # location of ctools ---!
     self.__CTOOLS = os.environ.get('CTOOLS')
-    # conf ---!
+    # initial configuration ---!
     self.__cfg = xmlConfig(cfgFile)
     p = cfgMng_xml(self.__cfg)
     self.__pathout = p.getDataDir()
@@ -97,8 +114,7 @@ class analysis() :
     self.zfetch = False
     self.debug = False
     self.if_log = True
-    # data ---!
-    self.z = 0.1
+    # data fields ---!
     self.t = [0, 2000]
     self.tmax = [1800]
     self.e = [0.03, 150.0]
@@ -106,8 +122,7 @@ class analysis() :
     self.pointing = [83.63, 22.01]
     self.sigma = 5
     self.maxSrc = 10
-    # algorithm miscellaneous ---!
-    self.z_ind = 1
+    # ctools miscellaneous ---!
     self.coord_sys = 'CEL'
     self.sky_subtraction = 'IRF'
     self.bkgType = 'irf'
@@ -119,18 +134,24 @@ class analysis() :
     self.sgmrange = [0, 10]
     self.confidence = 0.95
     self.eref = 1
+    # ebl specifics ---!
+    self.z = 0.1
+    self.z_ind = 1
     # irf degradation ---!
     self.factor = 2
     self.sensType = 'Differential'
-    # fits array ---!
+    # fits extension array ---!
     self.__time, self.__energy, self.__spectra, self.__ebl = (float() for i in range(4))
 
+  # open and close the FITS files ---!
   def __openFITS(self):
     hdul = fits.open(self.template)
     return hdul
   def __closeFITS(self, hdul):
     hdul.close()
+    return
 
+  # retrive FITS data ---!
   def __getFitsData(self):
     hdul = self.__openFITS()
     self.__energy = np.array(hdul[1].data)
@@ -144,11 +165,13 @@ class analysis() :
     self.__closeFITS(hdul)
     return
 
+  # load csv tabl in pandas DataFrame and drop NaN values---!
   def __openCSV(self):
     df = pd.read_csv(self.table)
     df.dropna()
     return df
 
+  # retrive csv data ---!
   def __getCsvData(self):
     df = self.__openCSV()
     cols = list(df.columns)
@@ -156,27 +179,27 @@ class analysis() :
     E = np.array(df[cols[0]]) / 1e3  # MeV --> GeV ---!
     return tau_gilmore, E
 
+  # retrive csv temporal bin grid of the template in use and return the necessary slice ---!
   def getTimeSlices(self):
     df = self.__openCSV()
     cols = list(df.columns)
     self.__time = np.append(0, np.array(df[cols[1]]))
-    # self.__time = np.array(df[cols[1]])
     for i in range(len(self.__time)):
       if self.__time[i] > max(self.tmax):
         self.__time[i] = max(self.tmax)
         sliceObj = slice(0, i+1)
         break
-
     return self.__time[sliceObj]
 
+  # compute the EBL absorption ---!
   def __addEbl(self):
     self.__getFitsData()
     tau_gilmore, E = self.__getCsvData()
-    # interpolate ---!
+    # interpolate linearly ---!
     interp = interp1d(E, tau_gilmore)
     tau = np.array(interp(self.__energy))
     self.__ebl = np.empty_like(self.__spectra)
-    # compute ---!
+    # compute absorption ---!
     for i in range(len(self.__time)):
       for j in range(len(self.__energy)):
         self.__ebl[i][j] = self.__spectra[i][j] * np.exp(-tau[j])
@@ -186,6 +209,7 @@ class analysis() :
     else:
       return
 
+  # retrive the redshift and evaluate which table column is the nearest, then access its index ---!
   def __zfetch(self):
     hdul = self.__openFITS()
     # fetch z and chose the table column with min distance from it ---!
@@ -194,17 +218,20 @@ class analysis() :
       reader = csv.reader(f)
       hdr = next(reader)
     zlist = []
+    # load only the redshift columns ---!
     for el in hdr:
       zlist.append(re.sub('[^0-9,.]', '', el))
     zlist.remove('')
     zlist = [float(i) for i in zlist]
+    # find nearest ---!
     self.z = min(zlist, key=lambda x:abs(x-z))
     self.z_ind = zlist.index(self.z) +1
     return
 
+  # add EBL extension to a FITS template ---!
   def fitsEbl(self, template_ebl):
-    hdul = self.__openFITS() # open template ---!
-    if self.zfetch is True:
+    hdul = self.__openFITS()
+    if self.zfetch:
       self.__zfetch()
     if self.plot:
       x, y, x2, y2 = self.__addEbl()
@@ -219,13 +246,14 @@ class analysis() :
     # save to new ---!
     if os.path.isfile(template_ebl):
       os.remove(template_ebl)
-    hdul.writeto(template_ebl, overwrite=True) # write new template ---!
-    self.__closeFITS(hdul) # close template ---!
+    hdul.writeto(template_ebl, overwrite=True)
+    self.__closeFITS(hdul)
     if self.plot:
       return x, y, x2, y2
     else:
       return
 
+  # extract template spectra, create xml model files and time slices csv file ---!
   def __extractSpc(self):
     # time slices table ---!
     table = self.__pathout + 'time_slices.csv'
@@ -240,7 +268,6 @@ class analysis() :
         filename = self.__pathout + 'spec_ebl_tbin%02d.out' % i
       else:
         filename = self.__pathout + 'spec_tbin%02d.out' % i
-
       if os.path.isfile(filename):
         os.remove(filename)
 
@@ -273,9 +300,9 @@ class analysis() :
         s = s.replace('data/spec', 'spec_tbin%02d' % i)
         with open(self.__pathout + 'run0406_ID000126_tbin%02d.xml' % i, 'w') as f:
           f.write(s)
-
     return
 
+  # read template and return tbin_stop containing necessary exposure time coverage ---!
   def loadTemplate(self) :
     self.__getFitsData()
 
@@ -298,7 +325,6 @@ class analysis() :
         else :
           continue
     else :
-      # tbin_stop = None
       raise ValueError('Maximum exposure time (tmax) is larger than the template temporal evolution.')
 
     # energy grid ---!
@@ -308,11 +334,12 @@ class analysis() :
     # Emax in last bin ---!
     en[self.__Ne] = self.__energy[self.__Ne - 1][0] + (self.__energy[self.__Ne - 1][0] - en[self.__Ne - 1])
 
+    # extract spectrum if required ---!
     if self.extract_spec is True:
       self.__extractSpc()
-
     return tbin_stop
 
+  # ctobssim wrapper ---!
   def eventSim(self) :
     sim = ctools.ctobssim()
     sim["inmodel"] = self.model
@@ -332,9 +359,9 @@ class analysis() :
     if self.if_log:
       sim.logFileOpen()
     sim.execute()
-
     return
 
+  # create observation list with gammalib ---!
   def obsList(self, obsname):
     xml = gammalib.GXml()
     obslist = xml.append('observation_list title="observation library"')
@@ -343,9 +370,9 @@ class analysis() :
       obs = obslist.append('observation name="%s" id="%02d" instrument="CTA"' % (obsname, i))
       obs.append('parameter name="EventList" file="%s"' % self.input[i])
     xml.save(self.output)
-
     return
 
+  # ctselect wrapper ---!
   def eventSelect(self, prefix):
     selection = ctools.ctselect()
     selection['inobs'] = self.input
@@ -362,9 +389,9 @@ class analysis() :
     if self.if_log:
       selection.logFileOpen()
     selection.execute()
-
     return
 
+  # ctskymap wrapper ---!
   def eventSkymap(self, wbin=0.02):
     nbin = int(self.roi / wbin)
     skymap = ctools.ctskymap()
@@ -386,12 +413,12 @@ class analysis() :
     if self.if_log:
       skymap.logFileOpen()
     skymap.execute()
-
     return
 
+  # cssrcdetect wrapper ---!
   def runDetection(self) :
-    self.detectionXml = '%s' % self.skymap.replace('_skymap.fits', '_det%ssgm.xml' % self.sigma)
-    self.detectionReg = '%s' % self.skymap.replace('_skymap.fits', '_det%ssgm.reg' % self.sigma)
+    self.detectionXml = '%s' % self.input.replace('_skymap.fits', '_det%ssgm.xml' % self.sigma)
+    self.detectionReg = '%s' % self.input.replace('_skymap.fits', '_det%ssgm.reg' % self.sigma)
 
     detection = cscripts.cssrcdetect()
     detection['inmap'] = self.input
@@ -409,9 +436,9 @@ class analysis() :
     if self.if_log:
       detection.logFileOpen()
     detection.execute()
-
     return
 
+  # ctlike wrapper ---!
   def maxLikelihood(self):
     like = ctools.ctlike()
     like['inobs'] = self.input
@@ -427,9 +454,9 @@ class analysis() :
     if self.if_log:
       like.logFileOpen()
     like.execute()
-
     return
 
+  # cterror wrapper ---!
   def confLevels(self, asym_errors):
     self.confidence_level=[0.6827, 0.9545, 0.9973]
     self.output = []
@@ -449,9 +476,9 @@ class analysis() :
         if self.if_log:
           err.logFileOpen()
         err.execute()
-
     return self.output
 
+  # ctulimit wrapper ---!
   def integrFlux(self):
     uplim = ctools.ctulimit()
     uplim['inobs'] = self.input
@@ -470,9 +497,9 @@ class analysis() :
     if self.if_log:
       uplim.logFileOpen()
     uplim.execute()
-
     return
 
+  # compute integral photon flux for PL model ---!
   def photonFluxPowerLaw(self, gamma, k0, e0):
     e1 = self.e[0]*1e6
     e2 = self.e[1]*1e6
@@ -481,6 +508,7 @@ class analysis() :
     flux = factor * (e2**delta - e1**delta)
     return flux
 
+  # compute integral energy flux for PL model ---!
   def energyFluxPowerLaw(self, gamma, k0, e0):
     k0 *= 1.60218e-6
     e0 *= 1.60218e-6
@@ -491,6 +519,7 @@ class analysis() :
     flux = factor * (e2**delta - e1**delta)
     return flux
 
+  # degrade IRFs via Effective Area and/or Background ---!
   def degradeIrf(self):
     self.irf_nominal =  self.__CTOOLS + '/share/caldb/data/cta/%s/bcf/%s/irf_file.fits' % (self.caldb, self.irf)
     self.irf_degraded = self.irf_nominal.replace('prod', 'degr')
@@ -499,14 +528,13 @@ class analysis() :
       caldb_degr = self.caldb.replace('prod', 'degr')
       nominal_cal = self.__CTOOLS + '/share/caldb/data/cta/' + self.caldb
       degraded_cal = self.__CTOOLS + '/share/caldb/data/cta/' + caldb_degr
-      # permissions ---!
-      if os.geteuid() == 0 or os.geteuid() == 1126:
-        # print('!!! with permission')
+      # permissions check through allowed id list ---!
+      # open all ---!
+      if os.geteuid() in [0, 1126]:
         subprocess.run(['chmod', '-R', '777', self.__CTOOLS + '/share/caldb/data/cta/'], check=True)
       else:
-        # print('!!! as sudo')
         subprocess.run(['sudo', 'chmod', '-R', '777', self.__CTOOLS + '/share/caldb/data/cta/'], check=True)
-      # create degr caldb if not ---!
+      # create degr caldb path if not ---!
       if not os.path.isdir(degraded_cal):
         os.mkdir(degraded_cal)
       if not os.path.isfile(degraded_cal+'/caldb.indx'):
@@ -519,13 +547,12 @@ class analysis() :
         os.system('rm %s' %self.irf_degraded)
       if not os.path.isfile(self.irf_degraded):
         os.system('cp %s %s' %(self.irf_nominal, self.irf_degraded))
-      # permissions ---!
-      if os.geteuid() == 0 or os.geteuid() == 1126:
-        # print('!!! with permission')
+      # permissions check through allowed id list ---!
+      # close all and open only degraded ---!
+      if os.geteuid() in [0, 1126]:
         subprocess.run(['chmod', '-R', '755', self.__CTOOLS + '/share/caldb/data/cta/'], check=True)
         subprocess.run(['chmod', '-R', '777', degraded_cal], check=True)
       else:
-        # print('!!! as sudo')
         subprocess.run(['sudo', 'chmod', '-R', '755', self.__CTOOLS + '/share/caldb/data/cta/'], check=True)
         subprocess.run(['sudo', 'chmod', '-R', '777', degraded_cal], check=True)
 
@@ -538,34 +565,33 @@ class analysis() :
         col = []
         for i in range(len(extension)):
           col.append(hdul[extension[i]].data.field(field[i])[:].astype(float))
-        # np.array(col)
-      # effective area ---!
-      a = np.where(np.array([i * inv for i in col[0]]) is np.nan, 0., np.array([i * inv for i in col[0]])) # Aeff multiplied by inv of factor ---!
-      # background counts ---!
+      # effective area multiplied by inv of factor ---!
+      a = np.where(np.array([i * inv for i in col[0]]) is np.nan, 0., np.array([i * inv for i in col[0]]))
+      # background counts operate only where values is not NaN nor zero ---!
       b = []
       for i in range(len(col[1][0])):
-        b.append(np.where(col[1][0][i] is np.nan, 0., col[1][0][i])) # Bkg left unchanged ---!
+        b.append(np.where(col[1][0][i] is np.nan, 0., col[1][0][i])) # left unchanged ---!
 
       b = np.array(b)
       tmp = [a, b]
 
+      # save changes to degraded IRF ---!
       with fits.open(self.irf_degraded, mode='update') as hdul:
         for i in range(len(extension)):
           hdul[extension[i]].data.field(field[i])[:] = tmp[i]
-          # print('!!! DEGRADING IRF BY FACTOR %d !!!' %self.factor)
         # save changes ---!
         hdul.flush()
-      # update and change permissions back ---!
+      # update caldb ---!
       self.caldb.replace('prod', 'degr')
-      # permissions ---!
-      if os.geteuid() == 0 or os.geteuid() == 1126:
-        # print('!!! with permission')
+      # permissions check through allowed id list ---!
+      # close degraded caldb ---!
+      if os.geteuid() in [0, 1126]:
         subprocess.run(['chmod', '-R', '755', degraded_cal], check=True)
       else:
-        # print('!!! as sudo')
         subprocess.run(['sudo', 'chmod', '-R', '755', degraded_cal], check=True)
     return
 
+  # cssens wrapper ---!
   def eventSens(self, bins=20, wbin=0.05):
     sens = cscripts.cssens()
     nbin = int(self.roi / wbin)
@@ -588,12 +614,12 @@ class analysis() :
     if self.if_log:
       sens.logFileOpen()
     sens.execute()
-
     return
 
+  # reduce flux of template by given factor ---!
   def __reduceFluxSpec(self, factor):
     spec_files = []
-    # r=root, d=directories, f = files
+    # r: root, d: directories, f: files ---!
     for r, d, f in os.walk(self.__pathout):
       for file in f:
         if self.if_ebl:
@@ -604,6 +630,7 @@ class analysis() :
             spec_files.append(os.path.join(r, file))
 
     spec_files.sort()
+    # new files with relative suffix ---!
     for i in range(len(spec_files)):
       if self.if_ebl:
         new_file = spec_files[i].replace('spec_ebl_tbin', 'spec_ebl_flux%d_tbin' %factor)
@@ -611,15 +638,17 @@ class analysis() :
         new_file = spec_files[i].replace('spec_tbin', 'spec_flux%d_tbin' %factor)
       if os.path.isfile(new_file):
         os.remove(new_file)
+      # modify by a given factor ---!
       with open(spec_files[i], 'r') as input, open(new_file, 'w+') as output:
         df = pd.read_csv(input, sep=' ', header=None)
         df.iloc[:,1] = df.iloc[:,1].apply(lambda x: float(x)/factor)
         df.to_csv(path_or_buf=output, sep=' ', index=False, header=None)
     return
 
+  # replace path/to/model/file.xml in the observation library ---!
   def __replaceSpecFile(self, factor):
     xml_files = []
-    # r=root, d=directories, f = files
+    # r: root, d: directories, f: files ---!
     for r, d, f in os.walk(self.__pathout):
       for file in f:
         if self.if_ebl:
@@ -630,6 +659,7 @@ class analysis() :
             xml_files.append(os.path.join(r, file))
 
     xml_files.sort()
+    # replace ---!
     for i in range(len(xml_files)):
       if self.if_ebl:
         new_file = xml_files[i].replace('ID000126_ebl_tbin', 'ID000126_ebl_flux%d_tbin' %factor)
@@ -644,10 +674,9 @@ class analysis() :
         else:
           content = content.replace('spec_tbin', 'spec_flux%d_tbin' %factor)
         output.write(content)
-
-
     return
 
+  # execute the flux reduction and consequent substitution of files ---!
   def makeFainter(self, factor=2):
     self.__reduceFluxSpec(factor)
     self.__replaceSpecFile(factor)
