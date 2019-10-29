@@ -218,7 +218,7 @@ for k in range(trials):
       tObj.input = tObj.skymap
       tObj.output = tObj.detectionXml
       tObj.runDetection()
-    detObj = xmlMng(tObj.detectionXml, cfg_file)
+    detObj = ManageXml(tObj.detectionXml, cfg_file)
     detObj.sigma = sigma
     detObj.if_cut = if_cut
     detObj.modXml()
@@ -236,7 +236,7 @@ for k in range(trials):
       tObj.model = tObj.detectionXml.replace('.xml', '_Mod.xml')
       tObj.output = tObj.likeXml
       tObj.maxLikelihood()
-    likeObj = xmlMng(tObj.likeXml, cfg_file)
+    likeObj = ManageXml(tObj.likeXml, cfg_file)
     if src_sort:
       srcHighTS = likeObj.sortSrcTS()[0]
     else:

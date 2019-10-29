@@ -656,7 +656,7 @@ class analysis() :
 
 # --------------------------------- CLASS xml HANDLING --------------------------------- !!!
 
-class xmlMng():
+class ManageXml():
   def __init__(self, xml, cfgFile):
     self.__xml = xml
     self.__cfg = xmlConfig(cfgFile)

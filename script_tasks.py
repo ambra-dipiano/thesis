@@ -21,7 +21,7 @@ for i in range(N):
     f.write('\n#SBATCH --ntasks-per-node=1')
     f.write('\n#SBATCH --account=pianoambra@morgana')
     f.write('\n\n')
-    f.write('python /mnt/nvme0n1p1/piano_analysis/working-dir/script_RTAdetection.py %d %d %d' % (start_chunk+i+1, trials, start_count+trials*i))
+    f.write('python /mnt/nvme0n1p1/piano_analysis/working-dir/RTAblindmp.py %d %d %d' % (start_chunk+i+1, trials, start_count+trials*i))
     f.close()
 
 
