@@ -532,8 +532,8 @@ class analysis() :
         subprocess.run(['sudo', 'chmod', '-R', '777', degraded_cal], check=True)
 
       # degrade ---!
-      extension = ['EFFECTIVE AREA', 'BACKGROUND'] # ['EFFECTIVE AREA, 'BACKGROUND'']
-      field = [4, 6] # [4, 6]
+      extension = ['EFFECTIVE AREA', 'BACKGROUND']
+      field = [4, 6]
       #  field = ['EFFAREA', 'BKG']
       inv = 1 / self.factor
       with fits.open(self.irf_nominal) as hdul:
@@ -541,11 +541,12 @@ class analysis() :
         for i in range(len(extension)):
           col.append(hdul[extension[i]].data.field(field[i])[:].astype(float))
         # np.array(col)
-
-      a = np.where(np.array([i * inv for i in col[0]]) is np.nan, 0., np.array([i * inv for i in col[0]]))
+      # effective area ---!
+      a = np.where(np.array([i * inv for i in col[0]]) is np.nan, 0., np.array([i * inv for i in col[0]])) # Aeff multiplied by inv of factor ---!
+      # background counts ---!
       b = []
       for i in range(len(col[1][0])):
-        b.append(np.where(col[1][0][i] is np.nan, 0., col[1][0][i]) / inv)
+        b.append(np.where(col[1][0][i] is np.nan, 0., col[1][0][i])) # Bkg left unchanged ---!
 
       b = np.array(b)
       tmp = [a, b]
