@@ -49,9 +49,9 @@ pointDEC = trueDec + offmax[1]  # (deg)
 # conditions control ---!
 checks = False
 if_cut = False
-if_ebl = False
+if_ebl = True
 extract_spec = False
-irf_degrade = False
+irf_degrade = True
 src_sort = False
 skip_exist = False
 ebl_fits = False
@@ -85,7 +85,7 @@ tObj.debug = debug
 tObj.if_log = if_log
 # degrade IRF if required ---!
 if irf_degrade:
-  if chunk == 0:
+  if count == 0:
     tObj.degradeIRF()
   tObj.caldb = caldb_degraded
 # add EBL to template ---!
@@ -363,7 +363,7 @@ for k in range(trials):
 
     row = []
     print('\n\n!!! *** check trial:', count)
-    print('!!! check *** texp:', texp[i])
+    print('!!! *** check texp:', texp[i])
     print('!!! *** check Ndet:', Ndet[i][0])
     print('!!! *** check Nsrc:', Nsrc[i][0])
     print('!!! *** check raDet:', raDet[i][0])
