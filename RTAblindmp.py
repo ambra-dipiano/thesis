@@ -35,47 +35,48 @@ emin = 0.03  # selection minimum energy (TeV)
 emax = 0.5  # selection maximum energy (TeV)
 roi = 5  # region of interest for simulation and selection (deg)
 wbin = 0.02  # skymap bin width (deg)
-confidence = (0.68, 0.95, 0.9973)  # confidence interval for asymmetrical errors (%)
-maxSrc = 10  # max candidates
 corr_rad = 0.1  # Gaussian
+confidence = (0.68, 0.95, 0.9973)  # confidence interval for asymmetrical errors (%)
+max_src = 10  # max candidates
 ts_threshold = 9  # TS threshold for reliable detection
-
-# pointing with off-axis equal to max prob GW ---!
-offmax = (-1.475, -1.370)  # (deg)
-trueRa = 33.057  # (deg)
-trueDec = -51.841  # (deg)
-pointRA = trueRa + offmax[0]  # (deg)
-pointDEC = trueDec + offmax[1]  # (deg)
+reduce_flux = None  # flux will be devided by factor reduce_flux, if nominal then set to None ---!
 
 # conditions control ---!
-checks = False
-if_cut = False
-if_ebl = False
-extract_spec = False
-irf_degrade = False
-src_sort = False
-skip_exist = False
-ebl_fits = False
-debug = False
-if_log = True
-reduce_flux = None  # flux will be devided by factor reduce_flux, if nominal then set to None
+checks = False  # prints checks info ---!
+if_ebl = False  # uses the EBL absorbed template ---!
+if_cut = False  # adds a cut-off parameter to the source model ---!
+ebl_fits = False  # generate the EBL absorbed template ---!
+extract_spec = False  # generates spectral tables and obs definition models ---!
+irf_degrade = False  # use degraded irf ---!
+src_sort = False  # sorts scandidates from highest TS to lowest ---!
+skip_exist = False  # if an output already exists it skips the step ---!
+debug = False  # prints logfiles on terminal ---!
+if_log = True  # saves logfiles ---!
 
 # files ---!
 fileroot = 'run0406_'
 cfg_file = '/config.xml'
 ebl_table = os.environ.get('MORGANA') + '/gilmore_tau_fiducial.csv'
+merge_map = 'run0406_MergerID000126_skymap.fits'
 nominal_template = 'run0406_ID000126.fits'
 ebl_template = 'run0406_ID000126_ebl.fits'
 model_pl = 'run0406_ID000126.xml'
 tcsv = 'time_slices.csv'
+cfg = xmlConfig(cfg_file)
+p = ConfigureXml(cfg)
 
+# pointing with off-axis equal to max prob GW ---!
+# true_coord = (33.057, -51.841)  # true position of source RA/DEC (deg)
+# offmax = (-1.475, -1.370)  # off-axis RA/DEC (deg)
+# pointing = (true_coord[0] + offmax[0], true_coord[1] + offmax[1])  # pointing direction RA/DEC (deg)
+
+true_coord, pointing, offmax = getPointing(None, p.getWorkingDir()+nominal_template)
+print(true_coord, pointing, offmax)
+breakpoint()
 # --------------------------------- INITIALIZE --------------------------------- !!!
 
-cfg = xmlConfig(cfg_file)
-p = cfgMng_xml(cfg)
 # setup trials obj ---!
 tObj = analysis(cfg_file)
-tObj.pointing = [pointRA, pointDEC]
 tObj.roi = roi
 tObj.e = [elow, ehigh]
 tObj.tmax = tmax
@@ -116,7 +117,7 @@ print('!!! check ---- caldb:', tObj.caldb)
 if reduce_flux != None:
   tObj.factor = reduce_flux
   tObj.makeFainter()
-  print('!!! check ---- reduce flux by factor %s' %str(reduce_flux))
+  print('!!! check ---- reduce flux by factor %s' %str(reduce_flux)) if checks is True else None
 
 # --------------------------------- 1° LOOP :: trials  --------------------------------- !!!
 
@@ -176,11 +177,11 @@ for k in range(trials):
 
   # --------------------------------- 2° LOOP :: texp --------------------------------- !!!
 
-  raDet, decDet, Ndet = ([[] for i in range(4)] for j in range(3))
-  ts, Nsrc, raFit, decFit = ([[] for i in range(4)] for j in range(4))
-  Pref, Index, Pivot = ([[] for i in range(4)] for j in range(3))
+  ra_det, dec_det, Ndet = ([[] for i in range(4)] for j in range(3))
+  ts, Nsrc, ra_fit, dec_fit = ([[] for i in range(4)] for j in range(4))
+  pref, index, pivot = ([[] for i in range(4)] for j in range(3))
   flux_ph, flux_en = ([[] for i in range(4)] for j in range(2))
-  Cutoff = [[] for i in range(4)] if if_cut is True else None
+  cutoff = [[] for i in range(4)] if if_cut is True else None
 
   # --------------------------------- SELECTION --------------------------------- !!!
 
@@ -212,7 +213,7 @@ for k in range(trials):
     # --------------------------------- DETECTION & MODELING --------------------------------- !!!
 
     tObj.corr_rad = corr_rad
-    tObj.maxSrc = maxSrc
+    tObj.max_src = max_src
     detectionXml = skymap.replace('_skymap.fits', '_det%dsgm.xml' %sigma)
     if not skip_exist:
       if os.path.isfile(detectionXml):
@@ -224,18 +225,18 @@ for k in range(trials):
     detObj.sigma = sigma
     detObj.if_cut = if_cut
     detObj.modXml()
-    # detObj.prmsFreeFix()
     print('!!! check ---- detection.............', texp[i], 's done') if checks is True else None
     print('\n\n!!! check ---- det mod: ', detectionXml) if checks is True else None
 
     # --------------------------------- MAX LIKELIHOOD --------------------------------- !!!
 
+    detObj.prmsFreeFix()
     likeXml = detectionXml.replace('_det%dsgm.xml' % tObj.sigma, '_like%dsgm.xml' % tObj.sigma)
     if not skip_exist:
       if os.path.isfile(likeXml):
         os.remove(likeXml)
       tObj.input = event_selected
-      tObj.model = detectionXml.replace('.xml', '_Mod.xml')
+      tObj.model = detectionXml
       tObj.output = likeXml
       tObj.maxLikelihood()
     likeObj = ManageXml(likeXml, cfg_file)
@@ -251,8 +252,8 @@ for k in range(trials):
     pos = []
     pos.append(detObj.loadRaDec(highest=highest_ts_src))
     print('!!! check ---- coords:', pos[0]) if checks is True else None
-    raDet[i].append(pos[0][0][0]) if len(pos[0][0]) > 0 else raDet[i].append(np.nan)
-    decDet[i].append(pos[0][1][0]) if len(pos[0][0]) > 0 else decDet[i].append(np.nan)
+    ra_det[i].append(pos[0][0][0]) if len(pos[0][0]) > 0 else ra_det[i].append(np.nan)
+    dec_det[i].append(pos[0][1][0]) if len(pos[0][0]) > 0 else dec_det[i].append(np.nan)
     Ndet[i].append(len(pos[0][0]))
 
     # --------------------------------- CLOSE DET XML --------------------------------- !!!
@@ -261,61 +262,61 @@ for k in range(trials):
 
     # --------------------------------- BEST FIT TSV --------------------------------- !!!
 
-    tsList = []
-    tsList.append(likeObj.loadTs()) if Ndet[i][0] > 0 else tsList.append([np.nan])
+    ts_list = []
+    ts_list.append(likeObj.loadTs()) if Ndet[i][0] > 0 else ts_list.append([np.nan])
 
     # only first elem ---!
-    ts[i].append(tsList[0][0])
+    ts[i].append(ts_list[0][0])
 
     # --------------------------------- Nsrc FOR TSV THRESHOLD --------------------------------- !!!
 
     # count src with TS >= 9
     n = 0
-    for j in range(len(tsList[0])):
-      if float(tsList[0][j]) >= ts_threshold:
+    for j in range(len(ts_list[0])):
+      if float(ts_list[0][j]) >= ts_threshold:
         n += 1
 
     Nsrc[i].append(n)
 
     # --------------------------------- BEST FIT RA & DEC --------------------------------- !!!
 
-    raList = []
-    decList = []
+    ra_list = []
+    dec_list = []
     coord = likeObj.loadRaDec() if Ndet[i][0] > 0 else None
-    raList.append(coord[0]) if Ndet[i][0] > 0 else raList.append([np.nan])
-    decList.append(coord[1]) if Ndet[i][0] > 0 else decList.append([np.nan])
+    ra_list.append(coord[0]) if Ndet[i][0] > 0 else ra_list.append([np.nan])
+    dec_list.append(coord[1]) if Ndet[i][0] > 0 else dec_list.append([np.nan])
 
     # only first elem ---!
-    raFit[i].append(raList[0][0])
-    decFit[i].append(decList[0][0])
+    ra_fit[i].append(ra_list[0][0])
+    dec_fit[i].append(dec_list[0][0])
 
     # --------------------------------- BEST FIT SPECTRAL --------------------------------- !!!
 
-    pref = []
-    index = []
-    pivot = []
-    cutoff = [] if if_cut is True else None
+    pref_list = []
+    index_list = []
+    pivot_list = []
+    cutoff_list = [] if if_cut is True else None
     if if_cut:
       likeObj.if_cut = if_cut
     spectral = likeObj.loadSpectral()
-    index.append(spectral[0]) if Ndet[i][0] > 0 else pref.append([np.nan])
-    pref.append(spectral[1]) if Ndet[i][0] > 0 else index.append([np.nan])
-    pivot.append(spectral[2]) if Ndet[i][0] > 0 else pivot.append([np.nan])
+    index_list.append(spectral[0]) if Ndet[i][0] > 0 else index_list.append([np.nan])
+    pref_list.append(spectral[1]) if Ndet[i][0] > 0 else pref_list.append([np.nan])
+    pivot_list.append(spectral[2]) if Ndet[i][0] > 0 else pivot_list.append([np.nan])
     if if_cut:
-      cutoff.append(spectral[3]) if Ndet[i][0] > 0 else cutoff.append([np.nan])
+      cutoff_list.append(spectral[3]) if Ndet[i][0] > 0 else cutoff_list.append([np.nan])
 
     # only first elem ---!
-    Index[i].append(index[0][0])
-    Pref[i].append(pref[0][0])
-    Pivot[i].append(pivot[0][0])
+    index[i].append(index_list[0][0])
+    pref[i].append(pref_list[0][0])
+    pivot[i].append(pivot_list[0][0])
     if if_cut:
-      Cutoff[i].append(cutoff[0][0])
+      cutoff[i].append(cutoff_list[0][0])
 
     # --------------------------------- INTEGRATED FLUX --------------------------------- !!!
 
     if Ndet[i][0] > 0:
-      flux_ph[i].append(tObj.photonFluxPowerLaw(Index[i][0], Pref[i][0], Pivot[i][0]))  # E (MeV)
-      flux_en[i].append(tObj.energyFluxPowerLaw(Index[i][0], Pref[i][0], Pivot[i][0]))  # E (erg)
+      flux_ph[i].append(tObj.photonFluxPowerLaw(index[i][0], pref[i][0], pivot[i][0]))  # E (MeV)
+      flux_en[i].append(tObj.energyFluxPowerLaw(index[i][0], pref[i][0], pivot[i][0]))  # E (erg)
     else:
       flux_ph[i].append(np.nan)
       flux_en[i].append(np.nan)
@@ -338,15 +339,15 @@ for k in range(trials):
     print('!!! ----- check texp:', texp[i])
     print('!!! *** check Ndet:', Ndet[i][0])
     print('!!! *** check Nsrc:', Nsrc[i][0])
-    print('!!! *** check raDet:', raDet[i][0])
-    print('!!! *** check decDet:', decDet[i][0])
-    print('!!! *** check raFit:', raFit[i][0])
-    print('!!! *** check decFit:', decFit[i][0])
+    print('!!! *** check ra_det:', ra_det[i][0])
+    print('!!! *** check dec_det:', dec_det[i][0])
+    print('!!! *** check ra_fit:', ra_fit[i][0])
+    print('!!! *** check dec_fit:', dec_fit[i][0])
     print('!!! *** check flux_ph:', flux_ph[i][0])
     # print('!!! *** check flux_en:', flux_en[i][0])
     print('!!! *** check ts:', ts[i][0])
 
-    row.append([ID, texp[i], sigma, Ndet[i][0], Nsrc[i][0], raDet[i][0], decDet[i][0], raFit[i][0], decFit[i][0],
+    row.append([ID, texp[i], sigma, Ndet[i][0], Nsrc[i][0], ra_det[i][0], dec_det[i][0], ra_fit[i][0], dec_fit[i][0],
                 flux_ph[i][0], flux_en[i][0], ts[i][0]])
     print('!!! check row: seed %d --- texp' %i, texp[i], 's =====', row) if checks is True else None
     if os.path.isfile(csvName):
@@ -362,13 +363,13 @@ for k in range(trials):
         f.close()
     print('!!! check ---- data file: ', csvName) if checks is True else None
 
-    # --------------------------------- CLEAR SPACE --------------------------------- !!!
+  # --------------------------------- CLEAR SPACE --------------------------------- !!!
 
-    print('!!! check ---- ', count, ') trial done...') if checks is True else None
-    if count > 1:
-      os.system('rm ' + p.getSimDir() + '*run0406*%06d*' % count)
-      os.system('rm ' + p.getSelectDir() + '*run0406*%06d*' % count)
-      os.system('rm ' + p.getDetDir() + '*run0406*%06d*' % count)
+  print('!!! check ---- ', count, ') trial done...') if checks is True else None
+  if count > 1:
+    os.system('rm ' + p.getSimDir() + '*run0406*%06d*' % count)
+    os.system('rm ' + p.getSelectDir() + '*run0406*%06d*' % count)
+    os.system('rm ' + p.getDetDir() + '*run0406*%06d*' % count)
 
 print('\n\n\n\n\n\n\ndone\n\n\n\n\n\n\n\n')
 
