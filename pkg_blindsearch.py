@@ -15,6 +15,7 @@ import csv
 import re
 import subprocess
 from lxml import etree as ET
+import random
 
 def xmlConfig(cfg_file) :
   # load configuration file ---!
@@ -24,9 +25,26 @@ def xmlConfig(cfg_file) :
     cfg = untangle.parse(fd.read())
   return cfg.config
 
+def getTrueCoords(fits_file):
+  with fits.open(fits_file) as hdul:
+    ra = hdul[0].header['RA']
+    dec = hdul[0].header['DEC']
+  return (ra, dec)
+
+def getPointing(merge_map, fits_file, roi=5):
+  if merge_map==None:
+    offaxis = (roi*random.random(), roi*random.random())
+  else:
+    with fits.open(merge_map) as hdul:
+      # search max prob coords WIP ---!
+      offaxis = (0,0)
+  true_coord = getTrueCoords(fits_file)
+  pointing = (true_coord[0] + offaxis[0], true_coord[1] + offaxis[1])
+  return true_coord, pointing, offaxis
+
 # --------------------------------- CLASS xml CONFIGURATION --------------------------------- !!!
 
-class cfgMng_xml() :
+class ConfigureXml() :
   def __init__(self, cfg) :
     self.__initPath(cfg)
 
@@ -98,7 +116,7 @@ class analysis() :
     self.__CTOOLS = os.environ.get('CTOOLS')
     # path initial configuration ---!
     self.__cfg = xmlConfig(cfgFile)
-    self.__p = cfgMng_xml(self.__cfg)
+    self.__p = ConfigureXml(self.__cfg)
     # files fields ---!
     self.model, self.template, self.table, self.sensCsv = (str() for i in range(4))
     self.output, self.input = (str() for i in range(2))
@@ -118,7 +136,7 @@ class analysis() :
     self.roi = 5  # region of indeterest (deg) ---!
     self.pointing = [83.63, 22.01]  # RA/DEC or GLON/GLAT (deg) ---!
     self.sigma = 5  # Gaussian significance (sigmas) ---!
-    self.maxSrc = 10  # Max number of candidates to list during blind-detection ---!
+    self.max_src = 10  # Max number of candidates to list during blind-detection ---!
     # ctools miscellaneous ---!
     self.seed = 1  # MC seed ---!
     self.coord_sys = 'CEL'  # coordinate system <CEL|GAL> ---!
@@ -426,7 +444,7 @@ class analysis() :
     detection['srcmodel'] = self.src_type.upper()
     detection['bkgmodel'] = self.bkgType.upper()
     detection['threshold'] = int(self.sigma)
-    detection['maxsrcs'] = self.maxSrc
+    detection['maxsrcs'] = self.max_src
     detection['exclrad'] = self.exclrad
     detection['corr_rad'] = self.corr_rad
     detection['corr_kern'] = self.corr_kern.upper()
@@ -681,7 +699,6 @@ class analysis() :
     self.__replaceSpecFile()
     return
 
-
 # --------------------------------- CLASS xml HANDLING --------------------------------- !!!
 
 class ManageXml():
@@ -693,7 +710,7 @@ class ManageXml():
   def __init__(self, xml, cfgFile):
     self.__xml = xml
     self.__cfg = xmlConfig(cfgFile)
-    p = cfgMng_xml(self.__cfg)
+    p = ConfigureXml(self.__cfg)
     self.file = open(self.__xml)
     self.srcLib = ET.parse(self.file)
     self.root = self.srcLib.getroot()
@@ -851,7 +868,7 @@ class ManageXml():
     else:
       pass
 
-  def modXml(self):
+  def modXml(self, overwrite=True):
     self.__setModel()
     # source ---!
     i = 0
@@ -897,22 +914,26 @@ class ManageXml():
           prm = ET.SubElement(spc, 'parameter', attrib=self.bkgAtt[j])
           prm.tail = '\n\t\t\t'.replace('\t', ' ' * 2) if j < len(self.bkgAtt) else '\n\t\t'.replace('\t', ' ' * 2)
 
-    self.__xml = self.__xml.replace('.xml', '_Mod.xml')
+    # instead of override original xml, save to a new one with suffix "_mod" ---!
+    if not overwrite:
+      self.__xml = self.__xml.replace('.xml', '_mod.xml')
     self.__saveXml()
     return
 
   def prmsFreeFix(self):
     for src in self.root.findall('source'):
       if src.attrib['name'] != 'Background' and src.attrib['name'] != 'CTABackgroundModel':
+        for prm in src.findall('*/parameter'):
+          if prm.attrib['name'] not in self.__cfg.xml.bkg.free:
+            prm.set('free', '0')
         for free in self.__cfg.xml.src.free:
-          src.find('spatialModel/parameter[@name="%s"]' % free).set('free', '1')
-        for fix in self.__cfg.xml.src.fix:
-          src.find('spatialModel/parameter[@name="%s"]' % fix).set('free', '0')
+          src.find('*/parameter[@name="%s"]' % free['prm']).set('free', '1') if free['prm'] != None else None
       else:
-        for bkg in self.__cfg.xml.src.bkg:
-          src.find('spatialModel/parameter[@name="%s"]' % bkg).set('free', '1')
-        for prm in src not in self.__cfg.xml.src.bkg:
-          prm.set('free', '0')
+        for prm in src.findall('*/parameter'):
+          if prm.attrib['name'] not in self.__cfg.xml.bkg.free:
+            prm.set('free', '0')
+        for free in self.__cfg.xml.bkg.free:
+          src.find('*/parameter[@name="%s"]' % free['prm']).set('free', '1') if free['prm'] != None else None
 
     self.__saveXml()
     return
@@ -920,11 +941,11 @@ class ManageXml():
   def sortSrcTs(self):
     src = self.root.findall("*[@ts]")
     self.root[:-1] = sorted(src, key=lambda el: (el.tag, el.attrib['ts']), reverse=True)
-    highest = []
+    from_highest = []
     for src in self.root.findall("*[@ts]"):
-      highest.append(src.attrib['name'])
+      from_highest.append(src.attrib['name'])
     self.__saveXml()
-    return highest
+    return from_highest
 
   def closeXml(self):
     self.file.close()
