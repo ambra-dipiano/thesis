@@ -15,9 +15,15 @@ import csv
 import re
 import subprocess
 from lxml import etree as ET
-import random
 
-def xmlConfig(cfg_file) :
+def xmlConfig(cfg_file='/config.xml') :
+  '''
+  This function loads a configuration xml file from the same directory where the code itself is stored.
+  :param cfg_file: str
+            relative path of the configuration xml file wrt the directory of this file, default = "/config.xml"
+  :return: cfg.config: dict
+            dictionary containing the paths information
+  '''
   # load configuration file ---!
   cfgFile = os.path.dirname(__file__)+str(cfg_file)
   # create configuration dictionary ---!
@@ -26,25 +32,53 @@ def xmlConfig(cfg_file) :
   return cfg.config
 
 def getTrueCoords(fits_file):
+  '''
+  This function extract source position information from a fits table file.
+  :param fits_file: str
+            absolute path of the fits table file
+  :return: (ra, dec): tuple
+            source coordinates RA/DEC
+  '''
   with fits.open(fits_file) as hdul:
     ra = hdul[0].header['RA']
     dec = hdul[0].header['DEC']
   return (ra, dec)
 
 def getPointing(merge_map, fits_file, roi=5):
+  '''
+  This function extract source position information from a fits table file, max probability coordinates from a
+  probability fits map and compute the corresponding off axis. If None prob map is given the offaxis is randomly
+  computed and the pointing coordinates accordingly derived.
+  :param merge_map: str
+            absolute path of the probability map fits file
+  :param fits_file: str
+            absolute path of the fits table file
+  :param roi: scalar
+            region of interest
+  :return: true_coord: tuple
+            source coordinates RA/DEC
+  :return: pointing: tuple
+            pointing coordinates RA/DEC
+  :return: offaxis: tuple
+            offaxis angle between pointing and position RA/DEC
+  '''
+  true_coord = getTrueCoords(fits_file)
   if merge_map==None:
-    offaxis = (roi*random.random(), roi*random.random())
+    offaxis = (np.random.uniform(0,5,1), np.random.uniform(0,5,1))
+    pointing = (true_coord[0] + offaxis[0], true_coord[1] + offaxis[1])
   else:
     with fits.open(merge_map) as hdul:
       # search max prob coords WIP ---!
       offaxis = (0,0)
-  true_coord = getTrueCoords(fits_file)
-  pointing = (true_coord[0] + offaxis[0], true_coord[1] + offaxis[1])
+      pointing = (true_coord[0] + offaxis[0], true_coord[1] + offaxis[1])
   return true_coord, pointing, offaxis
 
 # --------------------------------- CLASS xml CONFIGURATION --------------------------------- !!!
 
 class ConfigureXml() :
+  '''
+  This class handles the configuration of paths for the analysis.
+  '''
   def __init__(self, cfg) :
     self.__initPath(cfg)
 
@@ -102,7 +136,7 @@ class ConfigureXml() :
 
 # --------------------------------- CLASS ANALYSIS --------------------------------- !!!
 
-class analysis() :
+class Analysis() :
   '''
   This class contains a mixture of ctools wrapper and pipeline methods. The former are used to easily access and set
   ctools while the latter handles all the analysis necessities: from handling the EBL absorption to degrading the IRFs,
@@ -143,7 +177,7 @@ class analysis() :
     self.sky_subtraction = 'IRF'  # skymap subtraction type <NONE|IRF|RING> ---!
     self.bkgType = 'irf'  # background model <Irf|Aeff|Racc> ---!
     self.src_type = 'POINT'  # source model type ---!
-    self.srcName = 'Src001'  # name of source of interest ---!
+    self.src_name = 'Src001'  # name of source of interest ---!
     self.exclrad = 0.5  # radius around candidate to exclude from further search ---!
     self.corr_kern = 'GAUSSIAN'  # smoothing type ---!
     self.corr_rad = 0.1  # radius for skymap smoothing ---!
@@ -483,7 +517,7 @@ class analysis() :
         err = ctools.cterror()
         err['inobs'] = self.input
         err['inmodel'] = self.model
-        err['srcname'] = self.srcName
+        err['srcname'] = self.src_name
         err['outmodel'] = self.output[i]
         err['caldb'] = self.caldb
         err['irf'] = self.irf
@@ -500,7 +534,7 @@ class analysis() :
     uplim = ctools.ctulimit()
     uplim['inobs'] = self.input
     uplim['inmodel'] = self.model
-    uplim['srcname'] = self.srcName
+    uplim['srcname'] = self.src_name
     uplim['caldb'] = self.caldb
     uplim['irf'] = self.irf
     uplim['confidence'] = self.confidence
@@ -536,76 +570,96 @@ class analysis() :
     flux = factor * (e2**delta - e1**delta)
     return flux
 
+  # updates the degraded caldb index by replacing all "prod" references with "degr" ---!
+  def __updateCaldbIndex(self, index):
+    # read content ---!
+    with open(index, 'r', encoding="ISO-8859-1") as f:
+      filedata = f.read()
+    # Replace the target keyword ---!
+    filedata = filedata.replace('prod', 'degr').replace('PROD', 'DEGR')
+    # Write the file out again ---!
+    with open(index, 'w', encoding="ISO-8859-1") as f:
+      f.write(filedata)
+    return
+
   # degrade IRFs via Effective Area and/or Background ---!
-  def degradeIrf(self, exts=1):
+  def degradeIrf(self, aeff=True, bkg=False):
     self.irf_nominal =  self.__CTOOLS + '/share/caldb/data/cta/%s/bcf/%s/irf_file.fits' % (self.caldb, self.irf)
     self.irf_degraded = self.irf_nominal.replace('prod', 'degr')
-    # only if not existing ---!
+    caldb_degr = self.caldb.replace('prod', 'degr')
+    nominal_cal = self.__CTOOLS + '/share/caldb/data/cta/' + self.caldb
+    degraded_cal = self.__CTOOLS + '/share/caldb/data/cta/' + caldb_degr
+    # permissions check through allowed id list ---!
+    # open all ---!
+    if os.geteuid() in [0, 1126]:
+      subprocess.run(['chmod', '-R', '777', self.__CTOOLS + '/share/caldb/data/cta/'], check=True)
+    else:
+      subprocess.run(['sudo', 'chmod', '-R', '777', self.__CTOOLS + '/share/caldb/data/cta/'], check=True)
+    # create degr caldb path if not existing ---!
+    if not os.path.isdir(degraded_cal):
+      os.mkdir(degraded_cal)
+    if not os.path.isfile(degraded_cal+'/caldb.indx'):
+      os.system('cp %s/caldb.indx %s/caldb.indx' %(nominal_cal, degraded_cal))
+      self.__updateCaldbIndex(degraded_cal+'/caldb.indx')
+    if not os.path.isdir(degraded_cal+'/bcf'):
+      os.mkdir(degraded_cal+'/bcf')
+    if not os.path.isdir(degraded_cal+'/bcf/'+self.irf):
+      os.mkdir(degraded_cal+'/bcf/'+self.irf)
+    if os.path.isfile(self.irf_degraded):
+      os.system('rm %s' %self.irf_degraded)
     if not os.path.isfile(self.irf_degraded):
-      caldb_degr = self.caldb.replace('prod', 'degr')
-      nominal_cal = self.__CTOOLS + '/share/caldb/data/cta/' + self.caldb
-      degraded_cal = self.__CTOOLS + '/share/caldb/data/cta/' + caldb_degr
-      # permissions check through allowed id list ---!
-      # open all ---!
-      if os.geteuid() in [0, 1126]:
-        subprocess.run(['chmod', '-R', '777', self.__CTOOLS + '/share/caldb/data/cta/'], check=True)
-      else:
-        subprocess.run(['sudo', 'chmod', '-R', '777', self.__CTOOLS + '/share/caldb/data/cta/'], check=True)
-      # create degr caldb path if not existing ---!
-      if not os.path.isdir(degraded_cal):
-        os.mkdir(degraded_cal)
-      if not os.path.isfile(degraded_cal+'/caldb.indx'):
-        os.system('cp %s/caldb.indx %s/caldb.indx' %(nominal_cal, degraded_cal))
-      if not os.path.isdir(degraded_cal+'/bcf'):
-        os.mkdir(degraded_cal+'/bcf')
-      if not os.path.isdir(degraded_cal+'/bcf/'+self.irf):
-        os.mkdir(degraded_cal+'/bcf/'+self.irf)
-      if os.path.isfile(self.irf_degraded):
-        os.system('rm %s' %self.irf_degraded)
-      if not os.path.isfile(self.irf_degraded):
-        os.system('cp %s %s' %(self.irf_nominal, self.irf_degraded))
-      # permissions check through allowed id list ---!
-      # close all and open only degraded caldb ---!
-      if os.geteuid() in [0, 1126]:
-        subprocess.run(['chmod', '-R', '755', self.__CTOOLS + '/share/caldb/data/cta/'], check=True)
-        subprocess.run(['chmod', '-R', '777', degraded_cal], check=True)
-      else:
-        subprocess.run(['sudo', 'chmod', '-R', '755', self.__CTOOLS + '/share/caldb/data/cta/'], check=True)
-        subprocess.run(['sudo', 'chmod', '-R', '777', degraded_cal], check=True)
+      os.system('cp %s %s' %(self.irf_nominal, self.irf_degraded))
+    # permissions check through allowed id list ---!
+    # close all and open only degraded caldb ---!
+    if os.geteuid() in [0, 1126]:
+      subprocess.run(['chmod', '-R', '755', self.__CTOOLS + '/share/caldb/data/cta/'], check=True)
+      subprocess.run(['chmod', '-R', '777', degraded_cal], check=True)
+    else:
+      subprocess.run(['sudo', 'chmod', '-R', '755', self.__CTOOLS + '/share/caldb/data/cta/'], check=True)
+      subprocess.run(['sudo', 'chmod', '-R', '777', degraded_cal], check=True)
 
-      # degrade ---!
-      extension = ['EFFECTIVE AREA', 'BACKGROUND']
-      field = [4, 6]
-      #  field = ['EFFAREA', 'BKG']
-      inv = 1 / self.factor
-      with fits.open(self.irf_nominal) as hdul:
-        col = []
-        for i in range(exts):
-          col.append(hdul[extension[i]].data.field(field[i])[:].astype(float))
+    # degradation factor ---!
+    inv = 1 / self.factor
+    # prepare extensions ---!
+    extension = []
+    field = []
+    tmp = []
+    if aeff:
+      extension.append('EFFECTIVE AREA')
+      field.append(4)
+    if bkg:
+      extension.append('BACKGROUND')
+      field.append(6)
+    # load nominal data ---!
+    with fits.open(self.irf_nominal) as hdul:
+      col = []
+      for i in range(len(extension)):
+        col.append(hdul[extension[i]].data.field(field[i])[:].astype(float))
+    if 'EFFECTIVE AREA' in extension:
       # effective area multiplied by inv of factor ---!
       a = np.where(np.array([i * inv for i in col[0]]) is np.nan, 0., np.array([i * inv for i in col[0]]))
+      tmp.append([a])
+    if 'BACKGROUND' in extension:
       # background counts operate only where values is not NaN nor zero ---!
       b = []
       for i in range(len(col[1][0])):
-        b.append(np.where(col[1][0][i] is np.nan, 0., col[1][0][i]) * inv) # left unchanged ---!
-
+          b.append(np.where(col[1][0][i] is np.nan, 0., col[1][0][i])) # wrong see what valentina said ---!
       b = np.array(b)
-      tmp = [a, b]
-
-      # save changes to degraded IRF ---!
-      with fits.open(self.irf_degraded, mode='update') as hdul:
-        for i in range(len(extension)):
-          hdul[extension[i]].data.field(field[i])[:] = tmp[i]
-        # save changes ---!
-        hdul.flush()
-      # update caldb ---!
-      self.caldb.replace('prod', 'degr')
-      # permissions check through allowed id list ---!
-      # close degraded caldb ---!
-      if os.geteuid() in [0, 1126]:
-        subprocess.run(['chmod', '-R', '755', degraded_cal], check=True)
-      else:
-        subprocess.run(['sudo', 'chmod', '-R', '755', degraded_cal], check=True)
+      tmp.append([b])
+    # save changes to degraded IRF ---!
+    with fits.open(self.irf_degraded, mode='update') as hdul:
+      for i in range(len(extension)):
+        hdul[extension[i]].data.field(field[i])[:] = tmp[i]
+      # save changes ---!
+      hdul.flush()
+    # permissions check through allowed id list ---!
+    # close degraded caldb ---!
+    if os.geteuid() in [0, 1126]:
+      subprocess.run(['chmod', '-R', '755', degraded_cal], check=True)
+    else:
+      subprocess.run(['sudo', 'chmod', '-R', '755', degraded_cal], check=True)
+    # update caldb ---!
+    self.caldb = self.caldb.replace('prod', 'degr')
     return
 
   # cssens wrapper ---!
@@ -614,7 +668,7 @@ class analysis() :
     nbin = int(self.roi / wbin)
     sens['inobs'] = self.input
     sens['inmodel'] = self.model
-    sens['srcname'] = self.srcName
+    sens['srcname'] = self.src_name
     sens['caldb'] = self.caldb
     sens['irf'] = self.irf
     sens['outfile'] = self.output
@@ -705,7 +759,10 @@ class ManageXml():
   '''
   This class contains all the methods which read, generate and modify xml files, as needed for the analysis.
   They are not comprehensive of all the parameters one could want to access though more could be added according
-  to necessity. In the future this class will also handle the pipeline configuration files. 
+  to necessity. In the future this class will also handle the pipeline configuration files. Each public field (self.field)
+  can be set accordingly to the user needs from a python script, while private fields (self.__field) is for internal
+  usage. Equally, public methods (methodName()) can be invoked within a python script once the class is instanced while
+  private methods (__methodName()) should only be used within the class itself.
   '''
   def __init__(self, xml, cfgFile):
     self.__xml = xml
@@ -868,8 +925,16 @@ class ManageXml():
     else:
       pass
 
+  def setTsTrue(self):
+    for src in self.root.findall('source'):
+      if src.attrib['name'] != 'Background' and src.attrib['name'] != 'CTABackgroundModel':
+        src.set('tscalc', '1')
+    self.__saveXml()
+    return
+
   def modXml(self, overwrite=True):
     self.__setModel()
+    #self.setTsTrue() if self.tscalc is True else None
     # source ---!
     i = 0
     for src in self.root.findall('source'):
