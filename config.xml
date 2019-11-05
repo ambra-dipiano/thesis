@@ -12,13 +12,9 @@
 	<xml>
 		<src idAttribute="name">
 			<free prm="Prefactor" />
-			<free prm="Index" />
-			<free prm="RA" />
-			<free prm="DEC" />
 		</src>
 		<bkg idAttribute="name">
-			<free prm="Prefactor" />
-			<free prm="Index" />
+			<free />
 		</bkg>
 	</xml>
 </config>

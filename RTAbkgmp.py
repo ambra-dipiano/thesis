@@ -43,7 +43,6 @@ if_log = True  # saves logfiles ---!
 cfg_file = '/config.xml'
 model_pl = '/grb.xml'
 model_bkg = '/CTAIrfBackground.xml'
-model = os.environ.get('MORGANA') + model_bkg
 tcsv = 'time_slices.csv'
 cfg = xmlConfig(cfg_file)
 p = ConfigureXml(cfg)
@@ -90,6 +89,7 @@ for k in range(trials):
     if irf_degrade:
       f += 'irf'
     # simulate ---!
+    model = os.environ.get('MORGANA') + model_bkg
     tObj.model = model
     event = p.getSimDir() + f + ".fits"
     if not skip_exist:
