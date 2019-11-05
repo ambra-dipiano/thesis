@@ -134,7 +134,7 @@ for k in range(trials):
 
     header = '#trial,texp,TS\n'
     ID = 'ID%06d' % count
-    csvName = p.getCsvDir() + fileroot + '%ds_chunk%02d.csv' % (texp[i], chunk)
+    csvName = p.getCsvDir() + 'bkg_%ds_chunk%02d.csv' % (texp[i], chunk)
 
     row = []
     print('\n\n!!! ---------- check trial:', count) if checks is True else None
