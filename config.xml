@@ -10,32 +10,17 @@
 		<csvpath path="${runpath}csv/" />
 	</dir>
 	<xml>
-		<tsv idAttribute="name">
-			<skip>Background</skip>
-			<skip>CTABackgroundModel</skip>
-			<filters></filters>
-			<selectors attribute="tscalc" value="1" />
-		</tsv>
-		<RaDec idAttribute="name">
-			<skip>Background</skip>
-			<skip>CTABackgroundModel</skip>
-			<filters></filters>
-			<selectors></selectors>
-		</RaDec>
-		<ConfInt idAttribute="name">
-			<skip>Background</skip>
-			<skip>CTABackgroundModel</skip>
-			<filters></filters>
-			<selectors></selectors>
-		</ConfInt>
 		<src idAttribute="name">
-			<skip>Background</skip>
-			<skip>CTABackgroundModel</skip>
-			<filters></filters>
-			<selectors></selectors>
-			<free></free>
-			<fix>RA</fix>
-			<fix>DEC</fix>
+			<skip name="Background" />
+			<skip name="CTABackgroundModel" />
+			<free prm="Prefactor" />
+			<free prm="RA" />
+			<free prm="DEC" />
 		</src>
+		<bkg idAttribute="name">
+			<skip name="Background" />
+			<skip name="CTABackgroundModel" />
+			<free />
+		</bkg>
 	</xml>
 </config>
