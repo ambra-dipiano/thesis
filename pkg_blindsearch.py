@@ -925,8 +925,16 @@ class ManageXml():
     else:
       pass
 
+  def setTsTrue(self):
+    for src in self.root.findall('source'):
+      if src.attrib['name'] != 'Background' and src.attrib['name'] != 'CTABackgroundModel':
+        src.set('tscalc', '1')
+    self.__saveXml()
+    return
+
   def modXml(self, overwrite=True):
     self.__setModel()
+    #self.setTsTrue() if self.tscalc is True else None
     # source ---!
     i = 0
     for src in self.root.findall('source'):
