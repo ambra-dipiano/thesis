@@ -24,12 +24,12 @@ results_nom = outpath+'prod%db_results.xml' %prod_n
 results_deg = outpath+'degr%db_results.xml' %prod_n
 
 # INITIALIZE ---!
-nObj = analysis('/config_irf.xml')
+nObj = Analysis('/config_irf.xml')
 nObj.e = [0.03, 150.0]
 nObj.t = [0, 100]
 nObj.caldb = caldb_nom
 nObj.irf = irf
-nObj.model = bkg
+nObj.model = model
 # NOMINAL SIM ---!
 nObj.output = event_nom
 nObj.pointing = [83.63, 22.01]  # (deg)
@@ -41,33 +41,36 @@ nObj.maxLikelihood()
 # NOMINAL SENS ---!
 nObj.model = results_nom
 nObj.output = output_nom
-nObj.srcName = 'CTABackgroundModel'
+nObj.src_name = 'Crab'
 nObj.eventSens()
 print('crab nominal done')
 
 # INITIALIZE ---!
-dObj = analysis('/config_irf.xml')
+dObj = Analysis('/config_irf.xml')
 dObj.e = [0.03, 150.0]
 dObj.t = [0, 100]
 dObj.caldb = caldb_nom
 dObj.irf = irf
-dObj.model = bkg
+dObj.model = model
 # DEGRADE IRF ---!
-dObj.degradeIRF()
-dObj.irf = 'North_z20_average_100s'
+dObj.degradeIrf()
+print(dObj.caldb)
 # DEGRADE SIM ---!
 dObj.output = event_deg
 dObj.pointing = [83.63, 22.01]  # (deg)
-dObj.eventSim()
+if not os.path.isfile(dObj.output):
+  dObj.eventSim()
 # NOMINAL MAX LIKELIHOOD ---!
 dObj.input = event_deg
 dObj.output = results_deg
-dObj.maxLikelihood()
+if not os.path.isfile(dObj.output):
+  dObj.maxLikelihood()
 # DEGRADE SENS ---!
 dObj.model = results_deg
 dObj.output = output_deg
-dObj.srcName = 'CTABackgroundModel'
-dObj.eventSens()
+dObj.src_name = 'Crab'
+if not os.path.isfile(dObj.output):
+  dObj.eventSens()
 print('Crab degraded done')
 
 # PLOT ---!
