@@ -253,9 +253,9 @@ for k in range(trials):
     pos = []
     pos.append(detObj.loadRaDec(highest=highest_ts_src))
     print('!!! check ---- coords:', pos[0]) if checks is True else None
-    ra_det[i].append(pos[0][0][0]) if len(pos[0][0]) > 0 else ra_det[i].append(np.nan)
-    dec_det[i].append(pos[0][1][0]) if len(pos[0][0]) > 0 else dec_det[i].append(np.nan)
-    Ndet[i].append(len(pos[0][0]))
+    ra_det.append(pos[0][0][0]) if len(pos[0][0]) > 0 else ra_det.append(np.nan)
+    dec_det.append(pos[0][1][0]) if len(pos[0][0]) > 0 else dec_det.append(np.nan)
+    Ndet.append(len(pos[0][0]))
 
     # --------------------------------- CLOSE DET XML --------------------------------- !!!
 
@@ -264,32 +264,31 @@ for k in range(trials):
     # --------------------------------- BEST FIT TSV --------------------------------- !!!
 
     ts_list = []
-    ts_list.append(likeObj.loadTs()) if Ndet[i][0] > 0 else ts_list.append([np.nan])
-
+    ts_list.append(likeObj.loadTs()) if Ndet > 0 else ts_list.append([np.nan])
     # only first elem ---!
-    ts[i].append(ts_list[0][0])
+    ts.append(ts_list[0])
 
     # --------------------------------- Nsrc FOR TSV THRESHOLD --------------------------------- !!!
 
     # count src with TS >= 9
     n = 0
-    for j in range(len(ts_list[0])):
-      if float(ts_list[0][j]) >= ts_threshold:
+    for j in range(len(ts_list)):
+      if float(ts_list[j]) >= ts_threshold:
         n += 1
 
-    Nsrc[i].append(n)
+    Nsrc.append(n)
 
     # --------------------------------- BEST FIT RA & DEC --------------------------------- !!!
 
     ra_list = []
     dec_list = []
-    coord = likeObj.loadRaDec() if Ndet[i][0] > 0 else None
-    ra_list.append(coord[0]) if Ndet[i][0] > 0 else ra_list.append([np.nan])
-    dec_list.append(coord[1]) if Ndet[i][0] > 0 else dec_list.append([np.nan])
+    coord = likeObj.loadRaDec() if Ndet > 0 else None
+    ra_list.append(coord[0]) if Ndet > 0 else ra_list.append([np.nan])
+    dec_list.append(coord[1]) if Ndet > 0 else dec_list.append([np.nan])
 
     # only first elem ---!
-    ra_fit[i].append(ra_list[0][0])
-    dec_fit[i].append(dec_list[0][0])
+    ra_fit.append(ra_list[0])
+    dec_fit.append(dec_list[0])
 
     # --------------------------------- BEST FIT SPECTRAL --------------------------------- !!!
 
@@ -300,27 +299,27 @@ for k in range(trials):
     if if_cut:
       likeObj.if_cut = if_cut
     spectral = likeObj.loadSpectral()
-    index_list.append(spectral[0]) if Ndet[i][0] > 0 else index_list.append([np.nan])
-    pref_list.append(spectral[1]) if Ndet[i][0] > 0 else pref_list.append([np.nan])
-    pivot_list.append(spectral[2]) if Ndet[i][0] > 0 else pivot_list.append([np.nan])
+    index_list.append(spectral[0]) if Ndet > 0 else index_list.append([np.nan])
+    pref_list.append(spectral[1]) if Ndet > 0 else pref_list.append([np.nan])
+    pivot_list.append(spectral[2]) if Ndet > 0 else pivot_list.append([np.nan])
     if if_cut:
-      cutoff_list.append(spectral[3]) if Ndet[i][0] > 0 else cutoff_list.append([np.nan])
+      cutoff_list.append(spectral[3]) if Ndet > 0 else cutoff_list.append([np.nan])
 
     # only first elem ---!
-    index[i].append(index_list[0][0])
-    pref[i].append(pref_list[0][0])
-    pivot[i].append(pivot_list[0][0])
+    index.append(index_list[0])
+    pref.append(pref_list[0])
+    pivot.append(pivot_list[0])
     if if_cut:
-      cutoff[i].append(cutoff_list[0][0])
+      cutoff.append(cutoff_list[0])
 
     # --------------------------------- INTEGRATED FLUX --------------------------------- !!!
 
-    if Ndet[i][0] > 0:
-      flux_ph[i].append(tObj.photonFluxPowerLaw(index[i][0], pref[i][0], pivot[i][0]))  # E (MeV)
-      flux_en[i].append(tObj.energyFluxPowerLaw(index[i][0], pref[i][0], pivot[i][0]))  # E (erg)
+    if Ndet > 0:
+      flux_ph.append(tObj.photonFluxPowerLaw(index[i][0], pref[i][0], pivot[i][0]))  # E (MeV)
+      flux_en.append(tObj.energyFluxPowerLaw(index[i][0], pref[i][0], pivot[i][0]))  # E (erg)
     else:
-      flux_ph[i].append(np.nan)
-      flux_en[i].append(np.nan)
+      flux_ph.append(np.nan)
+      flux_en.append(np.nan)
 
     # MISSING THE CUT-OFF OPTION ---!!!
 
@@ -338,18 +337,18 @@ for k in range(trials):
     row = []
     print('\n\n!!! ---------- check trial:', count)
     print('!!! ----- check texp:', texp[i])
-    print('!!! *** check Ndet:', Ndet[i][0])
-    print('!!! *** check Nsrc:', Nsrc[i][0])
-    print('!!! *** check ra_det:', ra_det[i][0])
-    print('!!! *** check dec_det:', dec_det[i][0])
-    print('!!! *** check ra_fit:', ra_fit[i][0])
-    print('!!! *** check dec_fit:', dec_fit[i][0])
-    print('!!! *** check flux_ph:', flux_ph[i][0])
+    print('!!! *** check Ndet:', Ndet[0])
+    print('!!! *** check Nsrc:', Nsrc[0])
+    print('!!! *** check ra_det:', ra_det[0])
+    print('!!! *** check dec_det:', dec_det[0])
+    print('!!! *** check ra_fit:', ra_fit[0])
+    print('!!! *** check dec_fit:', dec_fit[0])
+    print('!!! *** check flux_ph:', flux_ph[0])
     # print('!!! *** check flux_en:', flux_en[i][0])
     print('!!! *** check ts:', ts[i][0])
 
-    row.append([ID, texp[i], sigma, Ndet[i][0], Nsrc[i][0], ra_det[i][0], dec_det[i][0], ra_fit[i][0], dec_fit[i][0],
-                flux_ph[i][0], flux_en[i][0], ts[i][0]])
+    row.append([ID, texp[i], sigma, Ndet[0], Nsrc[0], ra_det[0], dec_det[0], ra_fit[0], dec_fit[0],
+                flux_ph[0], flux_en[0], ts[0]])
     print('!!! check row: seed %d --- texp' %i, texp[i], 's =====', row) if checks is True else None
     if os.path.isfile(csvName):
       with open(csvName, 'a') as f:
@@ -368,9 +367,9 @@ for k in range(trials):
 
   print('!!! check ---- ', count, ') trial done...') if checks is True else None
   if count > 1:
-    os.system('rm ' + p.getSimDir() + '*%06d*' % count)
-    os.system('rm ' + p.getSelectDir() + '*%06d*' % count)
-    os.system('rm ' + p.getDetDir() + '*%06d*' % count)
+    os.system('rm ' + p.getSimDir() + '*run*%06d*' % count)
+    os.system('rm ' + p.getSelectDir() + '*run*%06d*' % count)
+    os.system('rm ' + p.getDetDir() + '*run*%06d*' % count)
 
 print('\n\n\n\n\n\n\ndone\n\n\n\n\n\n\n\n')
 

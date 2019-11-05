@@ -76,12 +76,13 @@ print('!!! check ---- caldb:', tObj.caldb) if checks is True else None
 for k in range(trials):
   count += 1
   tObj.seed = count
-  print('\n\n!!! ************ STARTING TRIAL %d ************ !!!\n\n' %count) if checks is True else None
+  print('\n\n!!! ************ STARTING TRIAL %d ************ !!!' %count) if checks is True else None
   print('!!! check ---- seed=', tObj.seed) if checks is True else None
 
   # --------------------------------- SIMULATION --------------------------------- !!!
 
   for i in range(tint):
+    print('\n\n!!! ************ STARTING TEXP %d ************ !!!' % texp[i])  if checks is True else None
     # attach ID to fileroot ---!
     fileroot = 'texp%d_' %texp[i]
     f = fileroot + 'bkg%06d' % (count)
@@ -137,7 +138,7 @@ for k in range(trials):
     row = []
     print('\n\n!!! ---------- check trial:', count) if checks is True else None
     print('!!! ----- check texp:', texp[i]) if checks is True else None
-    print('!!! *** check ts:', ts[0]) if checks is True else None
+    print('!!! *** check ts:', ts[0][0]) if checks is True else None
 
     row.append([ID, texp[i], ts[0][0]])
     print('!!! check row: seed %d --- texp' %i, texp[i], 's =====', row) if checks is True else None
@@ -158,9 +159,9 @@ for k in range(trials):
 
   print('!!! check ---- ', count, ') trial done...') if checks is True else None
   if count > 1:
-    os.system('rm ' + p.getSimDir() + '*%06d*' % count)
-    os.system('rm ' + p.getSelectDir() + '*%06d*' % count)
-    os.system('rm ' + p.getDetDir() + '*%06d*' % count)
+    os.system('rm ' + p.getSimDir() + '*bkg%06d*' % count)
+    os.system('rm ' + p.getSelectDir() + '*bkg%06d*' % count)
+    os.system('rm ' + p.getDetDir() + '*bkg%06d*' % count)
 
 print('\n\n\n\n\n\n\ndone\n\n\n\n\n\n\n\n')
 
