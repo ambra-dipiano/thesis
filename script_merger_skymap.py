@@ -25,12 +25,12 @@ ipix_max = np.argmax(hpx)
 theta, phi = hp.pix2ang(nside, ipix_max)
 ra_max = np.rad2deg(phi)
 dec_max = np.rad2deg(0.5 * np.pi - theta)
-print 'ra_max =',ra_max
-print 'dec_max =',dec_max
+print('ra_max =',ra_max)
+print('dec_max =',dec_max)
 
 
 # compute area that encloses probability defined
 area_probability90=area_pixel * index90
 area_probability50=area_pixel * index50
-print 'area_probability90', area_probability90
-print 'area_probability50', area_probability50
+print('area_probability90', area_probability90)
+print('area_probability50', area_probability50)

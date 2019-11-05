@@ -18,7 +18,7 @@ count = int(sys.argv[3])  # starting count
 
 # ctools/cscripts parameters ---!
 caldb = 'prod3b'
-caldb_degraded = caldb.replace('prod', 'degr')
+# caldb_degraded = caldb.replace('prod', 'degr')
 irf = 'South_z40_average_100s'
 
 sigma = 5  # detection acceptance (Gaussian)
@@ -42,11 +42,11 @@ ts_threshold = 9  # TS threshold for reliable detection
 reduce_flux = None  # flux will be devided by factor reduce_flux, if nominal then set to None ---!
 
 # conditions control ---!
-checks = False  # prints checks info ---!
+checks = True  # prints checks info ---!
 if_ebl = False  # uses the EBL absorbed template ---!
 if_cut = False  # adds a cut-off parameter to the source model ---!
 ebl_fits = False  # generate the EBL absorbed template ---!
-extract_spec = False  # generates spectral tables and obs definition models ---!
+extract_spec = True  # generates spectral tables and obs definition models ---!
 irf_degrade = False  # use degraded irf ---!
 src_sort = False  # sorts scandidates from highest TS to lowest ---!
 skip_exist = False  # if an output already exists it skips the step ---!
@@ -56,7 +56,7 @@ if_log = True  # saves logfiles ---!
 # files ---!
 fileroot = 'run0406_'
 cfg_file = '/config.xml'
-ebl_table = os.environ.get('MORGANA') + '/gilmore_tau_fiducial.csv'
+ebl_table = os.environ.get('MORGANA') + '/ebl_tables/gilmore_tau_fiducial.csv'
 merge_map = 'run0406_MergerID000126_skymap.fits'
 nominal_template = 'run0406_ID000126.fits'
 ebl_template = 'run0406_ID000126_ebl.fits'
@@ -69,14 +69,15 @@ p = ConfigureXml(cfg)
 true_coord = (33.057, -51.841)  # true position of source RA/DEC (deg)
 offmax = (-1.475, -1.370)  # off-axis RA/DEC (deg)
 pointing = (true_coord[0] + offmax[0], true_coord[1] + offmax[1])  # pointing direction RA/DEC (deg)
-
-#true_coord, pointing, offmax = getPointing(None, p.getWorkingDir()+nominal_template)
-#print(true_coord, pointing, offmax)
+# true_coord, pointing, offmax = getPointing(None, p.getWorkingDir()+nominal_template)
+# pointing with off-axis equal to max prob GW ---!
+print(true_coord, pointing, offmax) if checks is True else None
 
 # --------------------------------- INITIALIZE --------------------------------- !!!
 
 # setup trials obj ---!
-tObj = analysis(cfg_file)
+tObj = Analysis(cfg_file)
+tObj.pointing = pointing
 tObj.roi = roi
 tObj.e = [elow, ehigh]
 tObj.tmax = tmax
@@ -89,7 +90,7 @@ tObj.if_log = if_log
 if irf_degrade:
   if count == 0:
     tObj.degradeIrf() # exts=1, factor=2 by default => halve only Aeff ---!
-  tObj.caldb = caldb_degraded
+  # tObj.caldb = caldb_degraded
 # add EBL to template ---!
 if ebl_fits:
   tObj.template = p.getWorkingDir() + nominal_template # nominal ---!
@@ -161,7 +162,6 @@ for k in range(trials):
         os.remove(event)
       tObj.output = event
       tObj.eventSim()
-      print('!!! check ---- simulation=', event) if checks is True else None
   # observation list ---!
   event = event_bins
   event_list = p.getSimDir() + 'obs_%s.xml' % f
@@ -230,8 +230,8 @@ for k in range(trials):
 
     # --------------------------------- MAX LIKELIHOOD --------------------------------- !!!
 
-    detObj.prmsFreeFix()
-    likeXml = detectionXml.replace('_det%dsgm.xml' % tObj.sigma, '_like%dsgm.xml' % tObj.sigma)
+    #detObj.prmsFreeFix()
+    likeXml = detectionXml.replace('_det%dsgm' % tObj.sigma, '_like%dsgm' % tObj.sigma)
     if not skip_exist:
       if os.path.isfile(likeXml):
         os.remove(likeXml)
@@ -330,7 +330,7 @@ for k in range(trials):
 
     # --------------------------------- RESULTS TABLE (csv) --------------------------------- !!!
 
-    header = '#trial,t exp,sigma,Ndet,Nsrc,RA Src001,DEC Src001,RA Fit,DEC Fit,flux ph,flux erg,TSV\n'
+    header = '#trial,texp,sigma,Ndet,Nsrc,RA_det,DEC_det,RA_fit,DEC_fit,flux_ph,flux_erg,TS\n'
     ID = 'ID%06d' % count
     csvName = p.getCsvDir() + fileroot + '%ds_chunk%02d.csv' % (texp[i], chunk)
 
@@ -367,9 +367,9 @@ for k in range(trials):
 
   print('!!! check ---- ', count, ') trial done...') if checks is True else None
   if count > 1:
-    os.system('rm ' + p.getSimDir() + '*run0406*%06d*' % count)
-    os.system('rm ' + p.getSelectDir() + '*run0406*%06d*' % count)
-    os.system('rm ' + p.getDetDir() + '*run0406*%06d*' % count)
+    os.system('rm ' + p.getSimDir() + '*run*%06d*' % count)
+    os.system('rm ' + p.getSelectDir() + '*run*%06d*' % count)
+    os.system('rm ' + p.getDetDir() + '*run*%06d*' % count)
 
 print('\n\n\n\n\n\n\ndone\n\n\n\n\n\n\n\n')
 

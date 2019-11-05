@@ -11,15 +11,9 @@
 	</dir>
 	<xml>
 		<src idAttribute="name">
-			<skip name="Background" />
-			<skip name="CTABackgroundModel" />
 			<free prm="Prefactor" />
-			<free prm="RA" />
-			<free prm="DEC" />
 		</src>
 		<bkg idAttribute="name">
-			<skip name="Background" />
-			<skip name="CTABackgroundModel" />
 			<free />
 		</bkg>
 	</xml>
