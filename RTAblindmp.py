@@ -70,12 +70,14 @@ true_coord = (33.057, -51.841)  # true position of source RA/DEC (deg)
 offmax = (-1.475, -1.370)  # off-axis RA/DEC (deg)
 pointing = (true_coord[0] + offmax[0], true_coord[1] + offmax[1])  # pointing direction RA/DEC (deg)
 # true_coord, pointing, offmax = getPointing(None, p.getWorkingDir()+nominal_template)
-# print(true_coord, pointing, offmax)
+# pointing with off-axis equal to max prob GW ---!
+print(true_coord, pointing, offmax) if checks is True else None
 
 # --------------------------------- INITIALIZE --------------------------------- !!!
 
 # setup trials obj ---!
 tObj = Analysis(cfg_file)
+tObj.pointing = pointing
 tObj.roi = roi
 tObj.e = [elow, ehigh]
 tObj.tmax = tmax
@@ -313,8 +315,8 @@ for k in range(trials):
     # --------------------------------- INTEGRATED FLUX --------------------------------- !!!
 
     if Ndet[i][0] > 0:
-      flux_ph.append(tObj.photonFluxPowerLaw(index[i][0], pref[i][0], pivot[i][0]))  # E (MeV)
-      flux_en.append(tObj.energyFluxPowerLaw(index[i][0], pref[i][0], pivot[i][0]))  # E (erg)
+      flux_ph[i].append(tObj.photonFluxPowerLaw(index[i][0], pref[i][0], pivot[i][0]))  # E (MeV)
+      flux_en[i].append(tObj.energyFluxPowerLaw(index[i][0], pref[i][0], pivot[i][0]))  # E (erg)
     else:
       flux_ph[i].append(np.nan)
       flux_en[i].append(np.nan)
@@ -365,9 +367,9 @@ for k in range(trials):
 
   print('!!! check ---- ', count, ') trial done...') if checks is True else None
   if count > 1:
-    os.remove(p.getSimDir() + '*run*%06d*' % count)
-    os.remove(p.getSelectDir() + '*run*%06d*' % count)
-    os.remove(p.getDetDir() + '*run*%06d*' % count)
+    os.system('rm ' + p.getSimDir() + '*run*%06d*' % count)
+    os.system('rm ' + p.getSelectDir() + '*run*%06d*' % count)
+    os.system('rm ' + p.getDetDir() + '*run*%06d*' % count)
 
 print('\n\n\n\n\n\n\ndone\n\n\n\n\n\n\n\n')
 
