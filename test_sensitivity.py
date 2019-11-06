@@ -2,9 +2,10 @@
 # !!! DEGRADE IRF SENSITIVITY !!!
 # ===============================
 
-from pkg_blindsearch import *
-from module_plot import *
 import pandas as pd
+
+from module_plot import *
+from pkg_blindsearch import *
 
 path = '/home/ambra/Desktop/cluster-morgana/irf_degraded/'
 outpath = path + 'South_z20_average_100s/'
