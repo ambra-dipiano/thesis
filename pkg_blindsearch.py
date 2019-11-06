@@ -238,16 +238,18 @@ class Analysis() :
     for i in range(len(self.__time)):
       if self.__time[i] > max(self.tmax):
         self.__time[i] = max(self.tmax)
-        sliceObj = slice(0, i+1)
+        bin = i+1
         break
+    sliceObj = slice(0, bin)
     return self.__time[sliceObj]
 
   # compute the EBL absorption ---!
   def __addEbl(self):
     self.__getFitsData()
     tau_gilmore, E = self.__getCsvData()
-    # interpolate linearly ---!
-    interp = interp1d(E, tau_gilmore)
+    # interpolate linearly handling NaNs/inf/zeroes ---!
+    with np.errstate(invalid='raise'):
+      interp = interp1d(E, tau_gilmore, bounds_error=False)
     tau = np.array(interp(self.__energy))
     self.__ebl = np.empty_like(self.__spectra)
     # compute absorption ---!
@@ -649,6 +651,8 @@ class Analysis() :
     with fits.open(nominal_irf) as hdul:
       col = np.array(hdul[extension].data.field(field)[:].astype(float))
     # here all degradation complexity ---!
+    print(nominal_aeff.shape, degraded_aeff.shape)
+    print(col.shape)
     b = col
     # degrade and save new ---!
     with fits.open(degraded_irf, mode='update') as hdul:
