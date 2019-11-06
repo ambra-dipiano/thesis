@@ -649,7 +649,6 @@ class Analysis() :
     with fits.open(nominal_irf) as hdul:
       col = np.array(hdul[extension].data.field(field)[:].astype(float))
     # here all degradation complexity ---!
-    print(nominal_aeff.shape, degraded_aeff.shape)
     b = col
     # degrade and save new ---!
     with fits.open(degraded_irf, mode='update') as hdul:
