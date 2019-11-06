@@ -551,24 +551,34 @@ class Analysis() :
     return
 
   # compute integral photon flux for PL model ---!
-  def photonFluxPowerLaw(self, gamma, k0, e0):
+  def photonFluxPowerLaw(self, gamma, k0, e0, t):
     e1 = self.e[0]*1e6
     e2 = self.e[1]*1e6
     delta = gamma + 1
     factor = k0 / (e0**gamma * delta)
-    flux = factor * (e2**delta - e1**delta)
+    flux = factor * (e2**delta - e1**delta) /t
     return flux
 
   # compute integral energy flux for PL model ---!
-  def energyFluxPowerLaw(self, gamma, k0, e0):
+  def energyFluxPowerLaw(self, gamma, k0, e0, t):
     k0 *= 1.60218e-6
     e0 *= 1.60218e-6
     e1 = self.e[0]*1e6 * 1.60218e-6
     e2 = self.e[1]*1e6 * 1.60218e-6
     delta = gamma+1
     factor = k0 / (e0**gamma * delta)
-    flux = factor * (e2**delta - e1**delta)
+    flux = factor * (e2**delta - e1**delta) /t
     return flux
+
+  # initialize paths for caldb degradation: directories and files ---!
+  def __initCaldbIrf(self):
+    nominal_irf =  self.__CTOOLS + '/share/caldb/data/cta/%s/bcf/%s/irf_file.fits' % (self.caldb, self.irf)
+    degraded_irf = nominal_irf.replace('prod', 'degr')
+    caldb_degr = self.caldb.replace('prod', 'degr')
+    folder = self.__CTOOLS + '/share/caldb/data/cta/'
+    nominal_cal =  folder + self.caldb
+    degraded_cal = folder + caldb_degr
+    return folder, nominal_cal, nominal_irf, degraded_cal, degraded_irf
 
   # updates the degraded caldb index by replacing all "prod" references with "degr" ---!
   def __updateCaldbIndex(self, index):
@@ -581,16 +591,6 @@ class Analysis() :
     with open(index, 'w', encoding="ISO-8859-1") as f:
       f.write(filedata)
     return
-
-  # initialize paths for caldb degradation: directories and files ---!
-  def __initCaldbIrf(self):
-    nominal_irf =  self.__CTOOLS + '/share/caldb/data/cta/%s/bcf/%s/irf_file.fits' % (self.caldb, self.irf)
-    degraded_irf = nominal_irf.replace('prod', 'degr')
-    caldb_degr = self.caldb.replace('prod', 'degr')
-    folder = self.__CTOOLS + '/share/caldb/data/cta/'
-    nominal_cal =  folder + self.caldb
-    degraded_cal = folder + caldb_degr
-    return folder, nominal_cal, nominal_irf, degraded_cal, degraded_irf
 
   # create copy of caldb and corresponding caldb.inx file ---!
   def __mockNominalCaldb(self, nominal_cal, nominal_irf, degraded_cal, degraded_irf):
@@ -626,8 +626,40 @@ class Analysis() :
       subprocess.run(['sudo', 'chmod', '-R', '755', path], check=True)
     return
 
+  def __degrAeff(self, nominal_irf, degraded_irf):
+    # initialise ---!
+    inv = 1 / self.factor
+    extension = 'EFFECTIVE AREA'
+    field = 4
+    with fits.open(nominal_irf) as hdul:
+      col = np.array(hdul[extension].data.field(field)[:].astype(float))
+    # effective area multiplied by inv of factor ---!
+    a = np.where(np.array([i * inv for i in col]) is np.nan, 0., np.array([i * inv for i in col]))
+    # degrade and save new ---!
+    with fits.open(degraded_irf, mode='update') as hdul:
+      hdul[extension].data.field(field)[:] = a
+      # save changes ---!
+      hdul.flush()
+    return col, a
+
+  def __degrBkg(self, nominal_irf, degraded_irf, nominal_aeff, degraded_aeff):
+    # initialise ---!
+    extension = 'BACKGROUND'
+    field = 6
+    with fits.open(nominal_irf) as hdul:
+      col = np.array(hdul[extension].data.field(field)[:].astype(float))
+    # here all degradation complexity ---!
+    print(nominal_aeff.shape, degraded_aeff.shape)
+    b = col
+    # degrade and save new ---!
+    with fits.open(degraded_irf, mode='update') as hdul:
+      hdul[extension].data.field(field)[:] = b
+      # save changes ---!
+      hdul.flush()
+    return
+
   # degrade IRFs via Effective Area and/or Background ---!
-  def degradeIrf(self, aeff=True, bkg=False):
+  def degradeIrf(self, bkg=False):
     # initialize ---!
     folder, nominal_cal, nominal_irf, degraded_cal, degraded_irf = self.__initCaldbIrf()
     # open all folder permission ---!
@@ -638,41 +670,13 @@ class Analysis() :
     # close all folder permission and open only degraded caldb permission ---!
     self.__closePermission(path=folder)
     self.__openPermission(path=degraded_cal)
-
-    # degradation factor ---!
-    inv = 1 / self.factor
-    # prepare extensions ---!
-    extension = []
-    field = []
-    tmp = []
-    if aeff:
-      extension.append('EFFECTIVE AREA')
-      field.append(4)
+    # degradation aeff ---!
+    nominal_aeff, degraded_aeff = self.__degrAeff(nominal_irf=nominal_irf, degraded_irf=degraded_irf)
+    # degradation bkg counts ---!
     if bkg:
-      extension.append('BACKGROUND')
-      field.append(6)
-    # load nominal data ---!
-    with fits.open(nominal_irf) as hdul:
-      col = []
-      for i in range(len(extension)):
-        col.append(hdul[extension[i]].data.field(field[i])[:].astype(float))
-    if 'EFFECTIVE AREA' in extension:
-      # effective area multiplied by inv of factor ---!
-      a = np.where(np.array([i * inv for i in col[0]]) is np.nan, 0., np.array([i * inv for i in col[0]]))
-      tmp.append([a])
-    if 'BACKGROUND' in extension:
-      # background counts operate only where values is not NaN nor zero ---!
-      b = []
-      for i in range(len(col[1][0])):
-          b.append(np.where(col[1][0][i] is np.nan, 0., col[1][0][i])) # wrong see what valentina said ---!
-      b = np.array(b)
-      tmp.append([b])
-    # save changes to degraded IRF ---!
-    with fits.open(degraded_irf, mode='update') as hdul:
-      for i in range(len(extension)):
-        hdul[extension[i]].data.field(field[i])[:] = tmp[i]
-      # save changes ---!
-      hdul.flush()
+      self.__degrBkg(nominal_irf=nominal_irf, degraded_irf=degraded_irf,
+                     nominal_aeff=nominal_aeff, degraded_aeff=degraded_aeff)
+
     # close degraded caldb permission ---!
     self.__closePermission(degraded_cal)
     # update caldb ---!
