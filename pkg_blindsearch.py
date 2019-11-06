@@ -582,41 +582,62 @@ class Analysis() :
       f.write(filedata)
     return
 
-  # degrade IRFs via Effective Area and/or Background ---!
-  def degradeIrf(self, aeff=True, bkg=False):
-    self.irf_nominal =  self.__CTOOLS + '/share/caldb/data/cta/%s/bcf/%s/irf_file.fits' % (self.caldb, self.irf)
-    self.irf_degraded = self.irf_nominal.replace('prod', 'degr')
+  # initialize paths for caldb degradation: directories and files ---!
+  def __initCaldbIrf(self):
+    nominal_irf =  self.__CTOOLS + '/share/caldb/data/cta/%s/bcf/%s/irf_file.fits' % (self.caldb, self.irf)
+    degraded_irf = nominal_irf.replace('prod', 'degr')
     caldb_degr = self.caldb.replace('prod', 'degr')
-    nominal_cal = self.__CTOOLS + '/share/caldb/data/cta/' + self.caldb
-    degraded_cal = self.__CTOOLS + '/share/caldb/data/cta/' + caldb_degr
-    # permissions check through allowed id list ---!
-    # open all ---!
-    if os.geteuid() in [0, 1126]:
-      subprocess.run(['chmod', '-R', '777', self.__CTOOLS + '/share/caldb/data/cta/'], check=True)
-    else:
-      subprocess.run(['sudo', 'chmod', '-R', '777', self.__CTOOLS + '/share/caldb/data/cta/'], check=True)
-    # create degr caldb path if not existing ---!
+    folder = self.__CTOOLS + '/share/caldb/data/cta/'
+    nominal_cal =  folder + self.caldb
+    degraded_cal = folder + caldb_degr
+    return folder, nominal_cal, nominal_irf, degraded_cal, degraded_irf
+
+  # create copy of caldb and corresponding caldb.inx file ---!
+  def __mockNominalCaldb(self, nominal_cal, nominal_irf, degraded_cal, degraded_irf):
     if not os.path.isdir(degraded_cal):
       os.mkdir(degraded_cal)
     if not os.path.isfile(degraded_cal+'/caldb.indx'):
       os.system('cp %s/caldb.indx %s/caldb.indx' %(nominal_cal, degraded_cal))
+      # update caldb.indx file ---!
       self.__updateCaldbIndex(degraded_cal+'/caldb.indx')
     if not os.path.isdir(degraded_cal+'/bcf'):
       os.mkdir(degraded_cal+'/bcf')
     if not os.path.isdir(degraded_cal+'/bcf/'+self.irf):
       os.mkdir(degraded_cal+'/bcf/'+self.irf)
-    if os.path.isfile(self.irf_degraded):
-      os.system('rm %s' %self.irf_degraded)
-    if not os.path.isfile(self.irf_degraded):
-      os.system('cp %s %s' %(self.irf_nominal, self.irf_degraded))
-    # permissions check through allowed id list ---!
-    # close all and open only degraded caldb ---!
-    if os.geteuid() in [0, 1126]:
-      subprocess.run(['chmod', '-R', '755', self.__CTOOLS + '/share/caldb/data/cta/'], check=True)
-      subprocess.run(['chmod', '-R', '777', degraded_cal], check=True)
+    if os.path.isfile(degraded_irf):
+      os.system('rm %s' %degraded_irf)
+    if not os.path.isfile(degraded_irf):
+      os.system('cp %s %s' %(nominal_irf, degraded_irf))
+    return
+
+  # change permission to 777 and ask for password if user id not in idlist param ---!
+  def __openPermission(self, path, idlist=(0,1126)):
+    if os.geteuid() in idlist:
+      subprocess.run(['chmod', '-R', '777', path], check=True)
     else:
-      subprocess.run(['sudo', 'chmod', '-R', '755', self.__CTOOLS + '/share/caldb/data/cta/'], check=True)
-      subprocess.run(['sudo', 'chmod', '-R', '777', degraded_cal], check=True)
+      subprocess.run(['sudo', 'chmod', '-R', '777', path], check=True)
+    return
+
+  # change permission to 755 and ask for password if user id not in idlist param ---!
+  def __closePermission(self, path, idlist=(0,1126)):
+    if os.geteuid() in idlist:
+      subprocess.run(['chmod', '-R', '755', path], check=True)
+    else:
+      subprocess.run(['sudo', 'chmod', '-R', '755', path], check=True)
+    return
+
+  # degrade IRFs via Effective Area and/or Background ---!
+  def degradeIrf(self, aeff=True, bkg=False):
+    # initialize ---!
+    folder, nominal_cal, nominal_irf, degraded_cal, degraded_irf = self.__initCaldbIrf()
+    # open all folder permission ---!
+    self.__openPermission(path=folder)
+    # create degr caldb path if not existing ---!
+    self.__mockNominalCaldb(nominal_cal=nominal_cal, nominal_irf=nominal_irf,
+                            degraded_cal=degraded_cal, degraded_irf=degraded_irf)
+    # close all folder permission and open only degraded caldb permission ---!
+    self.__closePermission(path=folder)
+    self.__openPermission(path=degraded_cal)
 
     # degradation factor ---!
     inv = 1 / self.factor
@@ -631,7 +652,7 @@ class Analysis() :
       extension.append('BACKGROUND')
       field.append(6)
     # load nominal data ---!
-    with fits.open(self.irf_nominal) as hdul:
+    with fits.open(nominal_irf) as hdul:
       col = []
       for i in range(len(extension)):
         col.append(hdul[extension[i]].data.field(field[i])[:].astype(float))
@@ -647,17 +668,13 @@ class Analysis() :
       b = np.array(b)
       tmp.append([b])
     # save changes to degraded IRF ---!
-    with fits.open(self.irf_degraded, mode='update') as hdul:
+    with fits.open(degraded_irf, mode='update') as hdul:
       for i in range(len(extension)):
         hdul[extension[i]].data.field(field[i])[:] = tmp[i]
       # save changes ---!
       hdul.flush()
-    # permissions check through allowed id list ---!
-    # close degraded caldb ---!
-    if os.geteuid() in [0, 1126]:
-      subprocess.run(['chmod', '-R', '755', degraded_cal], check=True)
-    else:
-      subprocess.run(['sudo', 'chmod', '-R', '755', degraded_cal], check=True)
+    # close degraded caldb permission ---!
+    self.__closePermission(degraded_cal)
     # update caldb ---!
     self.caldb = self.caldb.replace('prod', 'degr')
     return
