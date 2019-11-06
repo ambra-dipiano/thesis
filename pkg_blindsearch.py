@@ -628,32 +628,65 @@ class Analysis() :
       subprocess.run(['sudo', 'chmod', '-R', '755', path], check=True)
     return
 
-  def __degrAeff(self, nominal_irf, degraded_irf):
+  def __degrAeff(self, nominal_irf, degraded_irf, r=False):
     # initialise ---!
     inv = 1 / self.factor
     extension = 'EFFECTIVE AREA'
     field = 4
     with fits.open(nominal_irf) as hdul:
-      col = np.array(hdul[extension].data.field(field)[:].astype(float))
+      elo = np.array(hdul[extension].data.field(0)[:].astype(float)[0])
+      ehi = np.array(hdul[extension].data.field(1)[:].astype(float)[0])
+      e = elo + 0.5*(ehi - elo)
+      tlo = np.array(hdul[extension].data.field(2)[:].astype(float)[0])
+      thi = np.array(hdul[extension].data.field(3)[:].astype(float)[0])
+      theta = tlo + 0.5*(thi - tlo)
+      aeff = np.array(hdul[extension].data.field(field)[:].astype(float)[0])
     # effective area multiplied by inv of factor ---!
-    a = np.where(np.array([i * inv for i in col]) is np.nan, 0., np.array([i * inv for i in col]))
+    a = np.where(np.array([i * inv for i in aeff]) is np.nan, 0., np.array([i * inv for i in aeff]))
     # degrade and save new ---!
     with fits.open(degraded_irf, mode='update') as hdul:
       hdul[extension].data.field(field)[:] = a
       # save changes ---!
       hdul.flush()
-    return col, a
+    if not r:
+      return
+    else:
+      return aeff, a, theta, e
 
-  def __degrBkg(self, nominal_irf, degraded_irf, nominal_aeff, degraded_aeff):
+  def __degrBkg(self, nominal_irf, degraded_irf):
+    # degrade Aeff ---!
+    aeff_nom, aeff_deg, theta, e_aeff = self.__degrAeff(nominal_irf=nominal_irf, degraded_irf=degraded_irf, r=True)
     # initialise ---!
     extension = 'BACKGROUND'
     field = 6
     with fits.open(nominal_irf) as hdul:
-      col = np.array(hdul[extension].data.field(field)[:].astype(float))
+      xlo = np.array(hdul[extension].data.field(0)[:].astype(float)[0])
+      xhi = np.array(hdul[extension].data.field(1)[:].astype(float)[0])
+      x = xlo + 0.5*(xhi - xlo)
+      ylo = np.array(hdul[extension].data.field(2)[:].astype(float)[0])
+      yhi = np.array(hdul[extension].data.field(3)[:].astype(float)[0])
+      y = ylo + 0.5*(yhi - ylo)
+      elo = np.array(hdul[extension].data.field(4)[:].astype(float)[0])
+      ehi = np.array(hdul[extension].data.field(5)[:].astype(float)[0])
+      e_bkg = elo + 0.5*(ehi - elo)
+      bkg = np.array(hdul[extension].data.field(field)[:].astype(float)[0])
     # here all degradation complexity ---!
-    print(nominal_aeff.shape, degraded_aeff.shape)
-    print(col.shape)
-    b = col
+    print(aeff_nom.shape, aeff_deg.shape)
+    print(bkg.shape)
+    # interpolated Aeff via energy grid ---!
+    print(e_aeff.shape, e_bkg.shape)
+    en_interp = [[]*i for i in range(len(theta))]
+    print(theta, en_interp)
+    for i in range(len(theta)):
+      f = interp1d(e_aeff[:], aeff_nom[i,:])
+      en_interp[i].append(f(e_bkg[:]))
+
+    # flatten list of theta interpolations (theta array of energy frames) ---!
+    en_interp = [item for sublist in en_interp for item in sublist]
+    print(en_interp)
+    b = np.empty_like(bkg)
+    b = bkg
+
     # degrade and save new ---!
     with fits.open(degraded_irf, mode='update') as hdul:
       hdul[extension].data.field(field)[:] = b
@@ -674,11 +707,11 @@ class Analysis() :
     self.__closePermission(path=folder)
     self.__openPermission(path=degraded_cal)
     # degradation aeff ---!
-    nominal_aeff, degraded_aeff = self.__degrAeff(nominal_irf=nominal_irf, degraded_irf=degraded_irf)
+    if not bkg:
+      self.__degrAeff(nominal_irf=nominal_irf, degraded_irf=degraded_irf)
     # degradation bkg counts ---!
-    if bkg:
-      self.__degrBkg(nominal_irf=nominal_irf, degraded_irf=degraded_irf,
-                     nominal_aeff=nominal_aeff, degraded_aeff=degraded_aeff)
+    else:
+      self.__degrBkg(nominal_irf=nominal_irf, degraded_irf=degraded_irf)
 
     # close degraded caldb permission ---!
     self.__closePermission(degraded_cal)
