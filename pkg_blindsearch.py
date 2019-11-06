@@ -16,18 +16,18 @@ import re
 import subprocess
 from lxml import etree as ET
 
-def xmlConfig(cfg_file='/config.xml') :
+def xmlConfig(cfgfile='/config.xml') :
   '''
   This function loads a configuration xml file from the same directory where the code itself is stored.
-  :param cfg_file: str
+  :param cfgfile: str
             relative path of the configuration xml file wrt the directory of this file, default = "/config.xml"
   :return: cfg.config: dict
             dictionary containing the paths information
   '''
   # load configuration file ---!
-  cfgFile = os.path.dirname(__file__)+str(cfg_file)
+  cfgfile = os.path.dirname(__file__)+str(cfgfile)
   # create configuration dictionary ---!
-  with open(cfgFile) as fd:
+  with open(cfgfile) as fd:
     cfg = untangle.parse(fd.read())
   return cfg.config
 
@@ -145,11 +145,11 @@ class Analysis() :
   usage. Equally, public methods (methodName()) can be invoked within a python script once the class is instanced while
   private methods (__methodName()) should only be used within the class itself.
   '''
-  def __init__(self, cfgFile):
+  def __init__(self, cfgfile='/config.xml'):
     # location of ctools ---!
     self.__CTOOLS = os.environ.get('CTOOLS')
     # path initial configuration ---!
-    self.__cfg = xmlConfig(cfgFile)
+    self.__cfg = xmlConfig(cfgfile)
     self.__p = ConfigureXml(self.__cfg)
     # files fields ---!
     self.model, self.template, self.table, self.sensCsv = (str() for i in range(4))
@@ -764,9 +764,9 @@ class ManageXml():
   usage. Equally, public methods (methodName()) can be invoked within a python script once the class is instanced while
   private methods (__methodName()) should only be used within the class itself.
   '''
-  def __init__(self, xml, cfgFile):
+  def __init__(self, xml, cfgfile='/config.xml'):
     self.__xml = xml
-    self.__cfg = xmlConfig(cfgFile)
+    self.__cfg = xmlConfig(cfgfile)
     p = ConfigureXml(self.__cfg)
     self.file = open(self.__xml)
     self.srcLib = ET.parse(self.file)
