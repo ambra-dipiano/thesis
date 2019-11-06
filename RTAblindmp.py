@@ -55,14 +55,15 @@ if_log = True  # saves logfiles ---!
 
 # files ---!
 fileroot = 'run0406_'
-cfg_file = '/config.xml'
 ebl_table = os.environ.get('MORGANA') + '/ebl_tables/gilmore_tau_fiducial.csv'
 merge_map = 'run0406_MergerID000126_skymap.fits'
 nominal_template = 'run0406_ID000126.fits'
 ebl_template = 'run0406_ID000126_ebl.fits'
 model_pl = 'run0406_ID000126.xml'
 tcsv = 'time_slices.csv'
-cfg = xmlConfig(cfg_file)
+
+# path configuration ---!
+cfg = xmlConfig()
 p = ConfigureXml(cfg)
 
 # pointing with off-axis equal to max prob GW ---!
@@ -76,7 +77,7 @@ print(true_coord, pointing, offmax) if checks is True else None
 # --------------------------------- INITIALIZE --------------------------------- !!!
 
 # setup trials obj ---!
-tObj = Analysis(cfg_file)
+tObj = Analysis()
 tObj.pointing = pointing
 tObj.roi = roi
 tObj.e = [elow, ehigh]
@@ -221,7 +222,7 @@ for k in range(trials):
       tObj.input = skymap
       tObj.output = detectionXml
       tObj.runDetection()
-    detObj = ManageXml(detectionXml, cfg_file)
+    detObj = ManageXml(detectionXml)
     detObj.sigma = sigma
     detObj.if_cut = if_cut
     detObj.modXml()
@@ -239,7 +240,7 @@ for k in range(trials):
       tObj.model = detectionXml
       tObj.output = likeXml
       tObj.maxLikelihood()
-    likeObj = ManageXml(likeXml, cfg_file)
+    likeObj = ManageXml(likeXml)
     if src_sort:
       highest_ts_src = likeObj.sortSrcTs()[0]
     else:
