@@ -628,6 +628,7 @@ class Analysis() :
       subprocess.run(['sudo', 'chmod', '-R', '755', path], check=True)
     return
 
+  # degrade Aff by self.factor (either scalar or array of energy-bins dimension) ---!
   def __degrAeff(self, nominal_irf, degraded_irf, r=False):
     # initialise ---!
     inv = 1 / self.factor
@@ -654,6 +655,7 @@ class Analysis() :
     else:
       return aeff, a, theta, e
 
+  # degrade bkg counts by normalise for aeff nominal and multiply times aeff degraded ---!
   def __degrBkg(self, nominal_irf, degraded_irf):
     # degrade Aeff and get its returns ---!
     aeff_nom, aeff_deg, theta, e_aeff = self.__degrAeff(nominal_irf=nominal_irf, degraded_irf=degraded_irf, r=True)
