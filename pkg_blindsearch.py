@@ -698,7 +698,10 @@ class Analysis() :
           angle = min(theta, key=lambda x:abs(x-rdegree))
           idtheta = np.where(np.isin(theta[:], angle))
           # degrade the background count for frame/x/y point ---!
-          b[idf,idx,idy] = bkg[idf,idx,idy] / nominal_interp[idtheta,idf] * degraded_interp[idtheta,idf]
+          if nominal_interp[idtheta,idf] == 0.:
+            b[idf, idx, idy] = 0.
+          else:
+            b[idf,idx,idy] = bkg[idf,idx,idy] / nominal_interp[idtheta,idf] * degraded_interp[idtheta,idf]
 
     # save to new ---!
     with fits.open(degraded_irf, mode='update') as hdul:
