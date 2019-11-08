@@ -648,13 +648,14 @@ class Analysis() :
       hdul[extension].data.field(field)[:] = a
       # save changes ---!
       hdul.flush()
+    # return only if bkg counts must be degraded ---!
     if not r:
       return
     else:
       return aeff, a, theta, e
 
   def __degrBkg(self, nominal_irf, degraded_irf):
-    # degrade Aeff ---!
+    # degrade Aeff and get its returns ---!
     aeff_nom, aeff_deg, theta, e_aeff = self.__degrAeff(nominal_irf=nominal_irf, degraded_irf=degraded_irf, r=True)
     # initialise ---!
     extension = 'BACKGROUND'
@@ -670,24 +671,34 @@ class Analysis() :
       ehi = np.array(hdul[extension].data.field(5)[:].astype(float)[0])
       e_bkg = elo + 0.5*(ehi - elo)
       bkg = np.array(hdul[extension].data.field(field)[:].astype(float)[0])
-    # here all degradation complexity ---!
-    print(aeff_nom.shape, aeff_deg.shape)
-    print(bkg.shape)
+    # spatial pixel/deg conversion factor ---!
+    conv_factor = (xhi.max() - xlo.min()) / theta.max()
     # interpolated Aeff via energy grid ---!
-    print(e_aeff.shape, e_bkg.shape)
-    en_interp = [[]*i for i in range(len(theta))]
-    print(theta, en_interp)
+    nominal_interp, degraded_interp = ([[]*i for i in range(len(theta))] for i in range(2))
     for i in range(len(theta)):
-      f = interp1d(e_aeff[:], aeff_nom[i,:])
-      en_interp[i].append(f(e_bkg[:]))
+      fnom = interp1d(e_aeff[:], aeff_nom[i,:])
+      nominal_interp[i].append(fnom(e_bkg[:]))
+      fdeg = interp1d(e_aeff[:], aeff_deg[i,:])
+      degraded_interp[i].append(fdeg(e_bkg[:]))
 
     # flatten list of theta interpolations (theta array of energy frames) ---!
-    en_interp = [item for sublist in en_interp for item in sublist]
-    print(en_interp)
+    nominal_interp = np.array([item for sublist in nominal_interp for item in sublist])
+    degraded_interp = np.array([item for sublist in degraded_interp for item in sublist])
+    # empty copy of bkg tensor ---!
     b = np.empty_like(bkg)
-    b = bkg
+    for idf, frame in enumerate(bkg[:,0,0]):
+      for idx, xpix in enumerate(bkg[idf,:,0]):
+        for idy, ypix in enumerate(bkg[idf,idx,:]):
+          # find radius in degrees ---!
+          r = np.sqrt((0 - xpix)**2 + (0 - ypix)**2)
+          rdegree = r * conv_factor
+          # find corresponding theta index ---!
+          angle = min(theta, key=lambda x:abs(x-rdegree))
+          idtheta = np.where(np.isin(theta[:], angle))
+          # degrade the background count for frame/x/y point ---!
+          b[idf,idx,idy] = bkg[idf,idx,idy] / nominal_interp[idtheta,idf] * degraded_interp[idtheta,idf]
 
-    # degrade and save new ---!
+    # save to new ---!
     with fits.open(degraded_irf, mode='update') as hdul:
       hdul[extension].data.field(field)[:] = b
       # save changes ---!
