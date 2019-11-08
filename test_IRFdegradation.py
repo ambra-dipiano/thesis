@@ -2,7 +2,7 @@ from pkg_blindsearch import *
 
 # files ---!
 caldb = 'prod3b'
-irf = 'South_z40_average_100s'
+irf = 'South_z20_average_100s'
 
 # path configuration ---!
 cfg = xmlConfig()
@@ -12,4 +12,4 @@ p = ConfigureXml(cfg)
 irfObj = Analysis()
 irfObj.irf = irf
 irfObj.caldb = caldb
-irfObj.degradeIrf(bkg=True)
+irfObj.degradeIrf(bkg=False)
