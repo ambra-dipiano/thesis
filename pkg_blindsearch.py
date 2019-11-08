@@ -823,6 +823,13 @@ class Analysis() :
     self.__replaceSpecFile()
     return
 
+  # returns a random total delay time (slew time + gw latency) within given ranges ---!
+  def totalDelay(self, slew=(0,50), gw_latency=(0,36000)):
+    tslew = np.random.uniform(slew[0], slew[1], 1)
+    tgw = np.random.uniform(gw_latency[0], gw_latency[1])
+    delay = tslew + tgw
+    return delay
+
 # --------------------------------- CLASS xml HANDLING --------------------------------- !!!
 
 class ManageXml():
