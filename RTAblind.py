@@ -2,7 +2,7 @@
 # TESTING cssrcdetect FOR CTA-RTA PERFORMANCE EVALUATIONS #
 # ======================================================= #
 
-# IMpORTS ---!
+# IMPORTS ---!
 from pkg_blindsearch import *
 import numpy as np
 import csv
