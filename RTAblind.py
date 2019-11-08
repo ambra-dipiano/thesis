@@ -308,8 +308,8 @@ for k in range(trials):
 
     flux_ph, flux_en = ([] for j in range(2))
     if Ndet > 0:
-      flux_ph.append(tObj.photonFluxPowerLaw(index[0], pref[0], pivot[0], t=texp[i]))  # E (MeV)
-      flux_en.append(tObj.energyFluxPowerLaw(index[0], pref[0], pivot[0], t=texp[i]))  # E (erg)
+      flux_ph.append(tObj.photonFluxPowerLaw(index[0], pref[0], pivot[0]))  # E (MeV)
+      flux_en.append(tObj.energyFluxPowerLaw(index[0], pref[0], pivot[0]))  # E (erg)
     else:
       flux_ph.append(np.nan)
       flux_en.append(np.nan)

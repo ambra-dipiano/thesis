@@ -553,23 +553,23 @@ class Analysis() :
     return
 
   # compute integral photon flux for PL model ---!
-  def photonFluxPowerLaw(self, gamma, k0, e0, t):
+  def photonFluxPowerLaw(self, gamma, k0, e0):
     e1 = self.e[0]*1e6
     e2 = self.e[1]*1e6
     delta = gamma + 1
     factor = k0 / (e0**gamma * delta)
-    flux = factor * (e2**delta - e1**delta) /t
+    flux = factor * (e2**delta - e1**delta)
     return flux
 
   # compute integral energy flux for PL model ---!
-  def energyFluxPowerLaw(self, gamma, k0, e0, t):
+  def energyFluxPowerLaw(self, gamma, k0, e0):
     k0 *= 1.60218e-6
     e0 *= 1.60218e-6
     e1 = self.e[0]*1e6 * 1.60218e-6
     e2 = self.e[1]*1e6 * 1.60218e-6
     delta = gamma+1
     factor = k0 / (e0**gamma * delta)
-    flux = factor * (e2**delta - e1**delta) /t
+    flux = factor * (e2**delta - e1**delta)
     return flux
 
   # initialize paths for caldb degradation: directories and files ---!
