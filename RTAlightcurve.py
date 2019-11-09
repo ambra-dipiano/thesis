@@ -2,7 +2,7 @@
 # TESTING cssrcdetect FOR CTA-RTA PERFORMANCE EVALUATIONS #
 # ======================================================= #
 
-# IMpORTS ---!
+# IMPORTS ---!
 from pkg_blindsearch import *
 import numpy as np
 import csv
@@ -55,14 +55,15 @@ if_log = True  # saves logfiles ---!
 
 # files ---!
 fileroot = 'run0406_'
-cfg_file = '/config.xml'
 ebl_table = os.environ.get('MORGANA') + '/ebl_tables/gilmore_tau_fiducial.csv'
 merge_map = 'run0406_MergerID000126_skymap.fits'
 nominal_template = 'run0406_ID000126.fits'
 ebl_template = 'run0406_ID000126_ebl.fits'
 model_pl = 'run0406_ID000126.xml'
 tcsv = 'time_slices.csv'
-cfg = xmlConfig(cfg_file)
+
+# path configuration ---!
+cfg = xmlConfig()
 p = ConfigureXml(cfg)
 
 # pointing with off-axis equal to max prob GW ---!
@@ -76,7 +77,7 @@ print(true_coord, pointing, offmax) if checks is True else None
 # --------------------------------- INITIALIZE --------------------------------- !!!
 
 # setup trials obj ---!
-tObj = Analysis(cfg_file)
+tObj = Analysis()
 tObj.pointing = pointing
 tObj.roi = roi
 tObj.e = [elow, ehigh]
@@ -177,12 +178,6 @@ for k in range(trials):
 
   # --------------------------------- 2° LOOP :: texp --------------------------------- !!!
 
-  ra_det, dec_det, Ndet = ([[] for i in range(4)] for j in range(3))
-  ts, Nsrc, ra_fit, dec_fit = ([[] for i in range(4)] for j in range(4))
-  pref, index, pivot = ([[] for i in range(4)] for j in range(3))
-  flux_ph, flux_en = ([[] for i in range(4)] for j in range(2))
-  cutoff = [[] for i in range(4)] if if_cut is True else None
-
   # --------------------------------- SELECTION --------------------------------- !!!
 
   tObj.e = [emin, emax]
@@ -221,7 +216,7 @@ for k in range(trials):
       tObj.input = skymap
       tObj.output = detectionXml
       tObj.runDetection()
-    detObj = ManageXml(detectionXml, cfg_file)
+    detObj = ManageXml(detectionXml)
     detObj.sigma = sigma
     detObj.if_cut = if_cut
     detObj.modXml()
@@ -230,7 +225,7 @@ for k in range(trials):
 
     # --------------------------------- MAX LIKELIHOOD --------------------------------- !!!
 
-    #detObj.prmsFreeFix()
+    detObj.prmsFreeFix()
     likeXml = detectionXml.replace('_det%dsgm' % tObj.sigma, '_like%dsgm' % tObj.sigma)
     if not skip_exist:
       if os.path.isfile(likeXml):
@@ -239,7 +234,7 @@ for k in range(trials):
       tObj.model = detectionXml
       tObj.output = likeXml
       tObj.maxLikelihood()
-    likeObj = ManageXml(likeXml, cfg_file)
+    likeObj = ManageXml(likeXml)
     if src_sort:
       highest_ts_src = likeObj.sortSrcTs()[0]
     else:
@@ -249,12 +244,12 @@ for k in range(trials):
 
     # --------------------------------- DETECTION RA & DEC --------------------------------- !!!
 
-    pos = []
+    pos, ra_det, dec_det = ([] for j in range(3))
     pos.append(detObj.loadRaDec(highest=highest_ts_src))
     print('!!! check ---- coords:', pos[0]) if checks is True else None
-    ra_det[i].append(pos[0][0][0]) if len(pos[0][0]) > 0 else ra_det[i].append(np.nan)
-    dec_det[i].append(pos[0][1][0]) if len(pos[0][0]) > 0 else dec_det[i].append(np.nan)
-    Ndet[i].append(len(pos[0][0]))
+    ra_det.append(pos[0][0][0]) if len(pos[0][0]) > 0 else ra_det.append(np.nan)
+    dec_det.append(pos[0][1][0]) if len(pos[0][0]) > 0 else dec_det.append(np.nan)
+    Ndet = len(pos[0][0])
 
     # --------------------------------- CLOSE DET XML --------------------------------- !!!
 
@@ -262,11 +257,11 @@ for k in range(trials):
 
     # --------------------------------- BEST FIT TSV --------------------------------- !!!
 
-    ts_list = []
-    ts_list.append(likeObj.loadTs()) if Ndet[i][0] > 0 else ts_list.append([np.nan])
+    ts_list, ts = ([] for j in range(2))
+    ts_list.append(likeObj.loadTs()) if Ndet > 0 else ts_list.append([np.nan])
 
     # only first elem ---!
-    ts[i].append(ts_list[0][0])
+    ts.append(ts_list[0][0])
 
     # --------------------------------- Nsrc FOR TSV THRESHOLD --------------------------------- !!!
 
@@ -276,57 +271,54 @@ for k in range(trials):
       if float(ts_list[0][j]) >= ts_threshold:
         n += 1
 
-    Nsrc[i].append(n)
+    Nsrc = n
 
     # --------------------------------- BEST FIT RA & DEC --------------------------------- !!!
 
-    ra_list = []
-    dec_list = []
-    coord = likeObj.loadRaDec() if Ndet[i][0] > 0 else None
-    ra_list.append(coord[0]) if Ndet[i][0] > 0 else ra_list.append([np.nan])
-    dec_list.append(coord[1]) if Ndet[i][0] > 0 else dec_list.append([np.nan])
+    ra_list, ra_fit, dec_list, dec_fit = ([] for j in range(4))
+    coord = likeObj.loadRaDec() if Ndet > 0 else None
+    ra_list.append(coord[0]) if Ndet > 0 else ra_list.append([np.nan])
+    dec_list.append(coord[1]) if Ndet > 0 else dec_list.append([np.nan])
 
     # only first elem ---!
-    ra_fit[i].append(ra_list[0][0])
-    dec_fit[i].append(dec_list[0][0])
+    ra_fit.append(ra_list[0][0])
+    dec_fit.append(dec_list[0][0])
 
     # --------------------------------- BEST FIT SPECTRAL --------------------------------- !!!
 
-    pref_list = []
-    index_list = []
-    pivot_list = []
-    cutoff_list = [] if if_cut is True else None
-    if if_cut:
-      likeObj.if_cut = if_cut
+    pref_list, pref, index_list, index, pivot_list, pivot = ([] for j in range(6))
+    likeObj.if_cut = if_cut
     spectral = likeObj.loadSpectral()
-    index_list.append(spectral[0]) if Ndet[i][0] > 0 else index_list.append([np.nan])
-    pref_list.append(spectral[1]) if Ndet[i][0] > 0 else pref_list.append([np.nan])
-    pivot_list.append(spectral[2]) if Ndet[i][0] > 0 else pivot_list.append([np.nan])
-    if if_cut:
-      cutoff_list.append(spectral[3]) if Ndet[i][0] > 0 else cutoff_list.append([np.nan])
+    index_list.append(spectral[0]) if Ndet > 0 else index_list.append([np.nan])
+    pref_list.append(spectral[1]) if Ndet > 0 else pref_list.append([np.nan])
+    pivot_list.append(spectral[2]) if Ndet > 0 else pivot_list.append([np.nan])
 
     # only first elem ---!
-    index[i].append(index_list[0][0])
-    pref[i].append(pref_list[0][0])
-    pivot[i].append(pivot_list[0][0])
+    index.append(index_list[0][0])
+    pref.append(pref_list[0][0])
+    pivot.append(pivot_list[0][0])
+
+    # eventually cutoff ---!
     if if_cut:
-      cutoff[i].append(cutoff_list[0][0])
+      cutoff_list, cutoff = ([] for j in range(2))
+      cutoff_list.append(spectral[3]) if Ndet > 0 else cutoff_list.append([np.nan])
+      cutoff.append(cutoff_list[0][0])
 
     # --------------------------------- INTEGRATED FLUX --------------------------------- !!!
 
-    if Ndet[i][0] > 0:
-      flux_ph[i].append(tObj.photonFluxPowerLaw(index[i][0], pref[i][0], pivot[i][0]))  # E (MeV)
-      flux_en[i].append(tObj.energyFluxPowerLaw(index[i][0], pref[i][0], pivot[i][0]))  # E (erg)
+    flux_ph, flux_en = ([] for j in range(2))
+    if Ndet > 0:
+      flux_ph.append(tObj.photonFluxPowerLaw(index[0], pref[0], pivot[0], t=texp[i]))  # E (MeV)
+      flux_en.append(tObj.energyFluxPowerLaw(index[0], pref[0], pivot[0], t=texp[i]))  # E (erg)
     else:
-      flux_ph[i].append(np.nan)
-      flux_en[i].append(np.nan)
+      flux_ph.append(np.nan)
+      flux_en.append(np.nan)
 
     # MISSING THE CUT-OFF OPTION ---!!!
 
     # --------------------------------- CLOSE LIKE XML --------------------------------- !!!
 
-    if Ndet[i][0] > 0:
-      likeObj.closeXml()
+    likeObj.closeXml()
 
     # --------------------------------- RESULTS TABLE (csv) --------------------------------- !!!
 
@@ -335,20 +327,21 @@ for k in range(trials):
     csvName = p.getCsvDir() + fileroot + '%ds_chunk%02d.csv' % (texp[i], chunk)
 
     row = []
-    print('\n\n!!! ---------- check trial:', count)
-    print('!!! ----- check texp:', texp[i])
-    print('!!! *** check Ndet:', Ndet[i][0])
-    print('!!! *** check Nsrc:', Nsrc[i][0])
-    print('!!! *** check ra_det:', ra_det[i][0])
-    print('!!! *** check dec_det:', dec_det[i][0])
-    print('!!! *** check ra_fit:', ra_fit[i][0])
-    print('!!! *** check dec_fit:', dec_fit[i][0])
-    print('!!! *** check flux_ph:', flux_ph[i][0])
-    # print('!!! *** check flux_en:', flux_en[i][0])
-    print('!!! *** check ts:', ts[i][0])
+    if checks:
+      print('\n\n!!! ---------- check trial:', count)
+      print('!!! ----- check texp:', texp[i])
+      print('!!! *** check Ndet:', Ndet)
+      print('!!! *** check Nsrc:', Nsrc)
+      print('!!! *** check ra_det:', ra_det[0])
+      print('!!! *** check dec_det:', dec_det[0])
+      print('!!! *** check ra_fit:', ra_fit[0])
+      print('!!! *** check dec_fit:', dec_fit[0])
+      print('!!! *** check flux_ph:', flux_ph[0])
+      # print('!!! *** check flux_en:', flux_en[i][0])
+      print('!!! *** check ts:', ts[0])
 
-    row.append([ID, texp[i], sigma, Ndet[i][0], Nsrc[i][0], ra_det[i][0], dec_det[i][0], ra_fit[i][0], dec_fit[i][0],
-                flux_ph[i][0], flux_en[i][0], ts[i][0]])
+    row.append([ID, texp[i], sigma, Ndet, Nsrc, ra_det[0], dec_det[0], ra_fit[0], dec_fit[0],
+                flux_ph[0], flux_en[0], ts[0]])
     print('!!! check row: seed %d --- texp' %i, texp[i], 's =====', row) if checks is True else None
     if os.path.isfile(csvName):
       with open(csvName, 'a') as f:
