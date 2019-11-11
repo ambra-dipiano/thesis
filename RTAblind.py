@@ -55,7 +55,7 @@ if_log = True  # saves logfiles ---!
 
 # files ---!
 fileroot = 'run0406_'
-ebl_table = os.environ.get('MORGANA') + '/ebl_tables/gilmore_tau_fiducial.csv'
+ebl_table = os.path.dirname(__file__) + '/ebl_tables/gilmore_tau_fiducial.csv'
 merge_map = 'run0406_MergerID000126_skymap.fits'
 nominal_template = 'run0406_ID000126.fits'
 ebl_template = 'run0406_ID000126_ebl.fits'

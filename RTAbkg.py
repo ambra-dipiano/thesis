@@ -89,7 +89,7 @@ for k in range(trials):
     if irf_degrade:
       f += 'irf'
     # simulate ---!
-    model = os.environ.get('MORGANA') + model_bkg
+    model = os.path.dirname(__file__) + model_bkg
     tObj.model = model
     event = p.getSimDir() + f + ".fits"
     if not skip_exist:
@@ -105,7 +105,7 @@ for k in range(trials):
 
     # --------------------------------- MAX LIKELIHOOD --------------------------------- !!!
 
-    model = os.environ.get('MORGANA') + model_pl
+    model = os.path.dirname(__file__) + model_pl
     mObj = ManageXml(model, cfg_file)
     mObj.prmsFreeFix()
     mObj.closeXml()
