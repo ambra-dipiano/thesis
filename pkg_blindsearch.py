@@ -165,7 +165,7 @@ class Analysis() :
     self.if_log = True  # set/unset logfiles for ctools ---!
     # data fields ---!
     self.t = [0, 2000]  # time range (s/MJD) ---!
-    self.tmax = [1800]  # maximum exposure time needed (s) ---!
+    self.tmax = 1800  # maximum exposure time needed (s) ---!
     self.e = [0.03, 150.0]  # energy range (TeV) ---!
     self.roi = 5  # region of indeterest (deg) ---!
     self.pointing = [83.63, 22.01]  # RA/DEC or GLON/GLAT (deg) ---!
@@ -371,7 +371,7 @@ class Analysis() :
 
     # stop the second after higher tmax ---!
     if self.tmax != None :
-      tbin_stop = 1
+      tbin_stop = 0
       for bin in range(len(t)) :
         if t[bin] <= self.tmax :
           tbin_stop += 1
