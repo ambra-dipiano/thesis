@@ -165,7 +165,7 @@ class Analysis() :
     self.if_log = True  # set/unset logfiles for ctools ---!
     # data fields ---!
     self.t = [0, 2000]  # time range (s/MJD) ---!
-    self.tmax = [1800]  # maximum exposure time needed (s) ---!
+    self.tmax = 1800  # maximum exposure time needed (s) ---!
     self.e = [0.03, 150.0]  # energy range (TeV) ---!
     self.roi = 5  # region of indeterest (deg) ---!
     self.pointing = [83.63, 22.01]  # RA/DEC or GLON/GLAT (deg) ---!
@@ -236,8 +236,8 @@ class Analysis() :
     cols = list(df.columns)
     self.__time = np.append(0, np.array(df[cols[1]]))
     for i in range(len(self.__time)):
-      if self.__time[i] > max(self.tmax):
-        self.__time[i] = max(self.tmax)
+      if self.__time[i] > self.tmax:
+        self.__time[i] = self.tmax
         bin = i+1
         break
     sliceObj = slice(0, bin)
@@ -371,9 +371,9 @@ class Analysis() :
 
     # stop the second after higher tmax ---!
     if self.tmax != None :
-      tbin_stop = 1
+      tbin_stop = 0
       for bin in range(len(t)) :
-        if t[bin] <= max(self.tmax) :
+        if t[bin] <= self.tmax :
           tbin_stop += 1
         else :
           continue
@@ -736,7 +736,7 @@ class Analysis() :
     return
 
   # cssens wrapper ---!
-  def eventSens(self, bins=20, wbin=0.05):
+  def eventSens(self, bins=0, wbin=0.05):
     sens = cscripts.cssens()
     nbin = int(self.roi / wbin)
     sens['inobs'] = self.input
@@ -750,10 +750,11 @@ class Analysis() :
     sens['emin'] = self.e[0]
     sens['emax'] = self.e[1]
     sens['bins'] = bins
+    if bins != 0:
+      sens['npix'] = nbin
+      sens['binsz'] = wbin
     sens['sigma'] = self.sigma
     sens['type'] = self.sensType.capitalize()
-    sens['npix'] = nbin
-    sens['binsz'] = wbin
     sens['logfile'] = self.output.replace('.csv', '.log')
     if self.if_log:
       sens.logFileOpen()
