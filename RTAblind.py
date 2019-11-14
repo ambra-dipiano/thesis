@@ -52,6 +52,7 @@ skip_exist = False  # if an output already exists it skips the step ---!
 debug = False  # prints logfiles on terminal ---!
 if_log = True  # saves logfiles ---!
 
+print('!!! *** !!! dof = 3 - 2 = 1')
 print('!!! *** !!! EBL ABSORPTION:', if_ebl)
 print('!!! *** !!! MODEL CUTOFF:', if_cut)
 print('!!! *** !!! IRF DEGRADATION:', irf_degrade)
