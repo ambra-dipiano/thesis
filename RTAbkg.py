@@ -40,6 +40,7 @@ skip_exist = False  # if an output already exists it skips the step ---!
 debug = False  # prints logfiles on terminal ---!
 if_log = True  # saves logfiles ---!
 
+print('!!! *** !!! dof = 3 - 2 = 1')
 print('!!! *** !!! IRF DEGRADATION:', irf_degrade)
 print('!!! *** !!! sim energy range: [', elow, ', ', ehigh, '] (TeV)')
 print('!!! *** !!! selection energy range: [', emin, ', ', emax, '] (TeV)')
