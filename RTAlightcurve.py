@@ -53,9 +53,17 @@ skip_exist = False  # if an output already exists it skips the step ---!
 debug = False  # prints logfiles on terminal ---!
 if_log = True  # saves logfiles ---!
 
+print('!!! *** !!! EBL ABSORPTION:', if_ebl)
+print('!!! *** !!! MODEL CUTOFF:', if_cut)
+print('!!! *** !!! IRF DEGRADATION:', irf_degrade)
+print('!!! *** !!! TS SORT:', src_sort)
+print('!!! *** !!! sim energy range: [', elow, ', ', ehigh, '] (TeV)')
+print('!!! *** !!! selection energy range: [', emin, ', ', emax, '] (TeV)')
+print('!!! *** !!! roi: ', roi, ' (deg)')
+
 # files ---!
 fileroot = 'run0406_'
-ebl_table = os.environ.get('MORGANA') + '/ebl_tables/gilmore_tau_fiducial.csv'
+ebl_table = os.path.dirname(__file__) + '/ebl_tables/gilmore_tau_fiducial.csv'
 merge_map = 'run0406_MergerID000126_skymap.fits'
 nominal_template = 'run0406_ID000126.fits'
 ebl_template = 'run0406_ID000126_ebl.fits'

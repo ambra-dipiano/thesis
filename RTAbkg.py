@@ -30,6 +30,8 @@ for i in range(tint):
   tmax.append(tmin + texp[i])
 elow = 0.03  # simulation minimum energy (TeV)
 ehigh = 0.5  # simulation maximum energy (TeV)
+emin = 0.03  # selection minimum energy (TeV)
+emax = 0.5  # selection maximum energy (TeV)
 roi = 5  # region of interest (deg)
 
 # conditions control ---!
@@ -39,12 +41,16 @@ skip_exist = False  # if an output already exists it skips the step ---!
 debug = False  # prints logfiles on terminal ---!
 if_log = True  # saves logfiles ---!
 
+print('!!! *** !!! IRF DEGRADATION:', irf_degrade)
+print('!!! *** !!! sim energy range: [', elow, ', ', ehigh, '] (TeV)')
+print('!!! *** !!! selection energy range: [', emin, ', ', emax, '] (TeV)')
+print('!!! *** !!! roi: ', roi, ' (deg)')
+
 # files ---!
-cfg_file = '/config.xml'
 model_pl = 'grb.xml'
 model_bkg = 'CTAIrfBackground.xml'
 tcsv = 'time_slices.csv'
-cfg = xmlConfig(cfg_file)
+cfg = xmlConfig()
 p = ConfigureXml(cfg)
 
 # pointing with off-axis equal to max prob GW ---!
@@ -55,7 +61,7 @@ pointing = (true_coord[0] + offmax[0], true_coord[1] + offmax[1])  # pointing di
 # --------------------------------- INITIALIZE --------------------------------- !!!
 
 # setup trials obj ---!
-tObj = Analysis(cfg_file)
+tObj = Analysis()
 tObj.pointing = pointing
 tObj.roi = roi
 tObj.e = [elow, ehigh]
@@ -81,35 +87,46 @@ for k in range(trials):
 
   # --------------------------------- SIMULATION --------------------------------- !!!
 
+  # attach ID to fileroot ---!
+  f = 'bkg%06d' % (count)
+  if irf_degrade:
+    f += 'irf'
+  # simulate ---!
+  model = os.path.dirname(__file__) + model_bkg
+  tObj.model = model
+  event = p.getSimDir() + f + ".fits"
+  if not skip_exist:
+    if os.path.isfile(event):
+      os.remove(event)
+    tObj.output = event
+    tObj.eventSim()
+    print('!!! check ---- simulation=', event) if checks is True else None
+
+  # --------------------------------- 2° LOOP :: texp --------------------------------- !!!
+
+  # --------------------------------- SELECTION --------------------------------- !!!
+
+  tObj.e = [emin, emax]
   for i in range(tint):
-    print('\n\n!!! ************ STARTING TEXP %d ************ !!!' % texp[i])  if checks is True else None
-    # attach ID to fileroot ---!
-    fileroot = 'texp%d_' %texp[i]
-    f = fileroot + 'bkg%06d' % (count)
-    if irf_degrade:
-      f += 'irf'
-    # simulate ---!
-    model = os.path.dirname(__file__) + model_bkg
-    tObj.model = model
-    event = p.getSimDir() + f + ".fits"
+    print('\n\n!!! ************ STARTING TEXP %d ************ !!!\n\n' % texp[i]) if checks is True else None
+    tObj.t = [tmin, tmax[i]]
+    event_selected = event.replace(p.getSimDir(), p.getSelectDir()).replace('bkg', 'texp%ds_bkg' %texp[i])
+    prefix = p.getSelectDir() + 'texp%ds_' % texp[i]
     if not skip_exist:
-      if os.path.isfile(event):
-        os.remove(event)
-      tObj.output = event
-      tObj.eventSim()
-      print('!!! check ---- simulation=', event) if checks is True else None
-
-    # --------------------------------- 2° LOOP :: texp --------------------------------- !!!
-
-    ts = []
+      if os.path.isfile(event_selected):
+        os.remove(event_selected)
+      tObj.input = event
+      tObj.output = event_selected
+      tObj.eventSelect(prefix=prefix)
+      print('!!! check ---- selection: ', event_selected) if checks is True else None
 
     # --------------------------------- MAX LIKELIHOOD --------------------------------- !!!
 
     model = os.path.dirname(__file__) + model_pl
-    mObj = ManageXml(model, cfg_file)
+    mObj = ManageXml(model)
     mObj.prmsFreeFix()
     mObj.closeXml()
-    likeXml = event.replace(p.getSimDir(), p.getDetDir()).replace('.fits', '.xml')
+    likeXml = event_selected.replace(p.getSimDir(), p.getDetDir()).replace('.fits', '.xml')
     if not skip_exist:
       if os.path.isfile(likeXml):
         os.remove(likeXml)
@@ -117,12 +134,14 @@ for k in range(trials):
       tObj.model = model
       tObj.output = likeXml
       tObj.maxLikelihood()
-    likeObj = ManageXml(likeXml, cfg_file)
+    likeObj = ManageXml(likeXml)
+    print('!!! check ---- max likelihood: ', likeXml) if checks is True else None
 
     # --------------------------------- BEST FIT TSV --------------------------------- !!!
 
-    ts_list = []
+    ts_list, ts = ([] for j in range(2))
     ts_list.append(likeObj.loadTs())
+
     # only first elem ---!
     ts.append(ts_list[0])
 
@@ -159,7 +178,7 @@ for k in range(trials):
   # --------------------------------- CLEAR SPACE --------------------------------- !!!
 
   print('!!! check ---- ', count, ') trial done...') if checks is True else None
-  if count > 1:
+  if count > 4:
     os.system('rm ' + p.getSimDir() + '*bkg%06d*' % count)
     os.system('rm ' + p.getSelectDir() + '*bkg%06d*' % count)
     os.system('rm ' + p.getDetDir() + '*bkg%06d*' % count)
