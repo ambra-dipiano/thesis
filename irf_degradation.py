@@ -2,7 +2,7 @@ from pkg_blindsearch import Analysis
 import os
 
 # files ---!
-caldb = 'prod3b'
+caldb = 'prod3b-v2'
 irf = os.listdir(os.environ.get('CTOOLS') + '/share/caldb/data/cta/' + caldb + '/bcf/')
 #print(irf)
 

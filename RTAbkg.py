@@ -17,7 +17,7 @@ trials = int(sys.argv[2])  # number of trials
 count = int(sys.argv[3])  # starting count
 
 # ctools/cscripts parameters ---!
-caldb = 'prod2'
+caldb = 'prod3b-v2'
 irf = 'South_z40_0.5h'
 
 texp = [1, 5, 10, 100]  # exposure times (s)
@@ -28,7 +28,7 @@ tmax = []
 for i in range(tint):
   tmax.append(tmin + texp[i])
 elow = 0.03  # simulation minimum energy (TeV)
-ehigh = 0.5  # simulation maximum energy (TeV)
+ehigh = 1.0  # simulation maximum energy (TeV)
 emin = 0.03  # selection minimum energy (TeV)
 emax = 0.5  # selection maximum energy (TeV)
 roi = 5  # region of interest (deg)
