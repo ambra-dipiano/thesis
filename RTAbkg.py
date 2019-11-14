@@ -41,8 +41,8 @@ if_log = True  # saves logfiles ---!
 
 # files ---!
 cfg_file = '/config.xml'
-model_pl = '/grb.xml'
-model_bkg = '/CTAIrfBackground.xml'
+model_pl = 'grb.xml'
+model_bkg = 'CTAIrfBackground.xml'
 tcsv = 'time_slices.csv'
 cfg = xmlConfig(cfg_file)
 p = ConfigureXml(cfg)
