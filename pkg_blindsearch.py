@@ -5,16 +5,20 @@
 import gammalib
 import ctools
 import cscripts
+import pyregion
 from astropy.io import fits
 import numpy as np
 import os.path
 import pandas as pd
+from matplotlib.colors import SymLogNorm
 from scipy.interpolate import interp1d
 import untangle
 import csv
 import re
 import subprocess
 from lxml import etree as ET
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 def xmlConfig(cfgfile='/config.xml') :
   '''
@@ -91,6 +95,14 @@ class ConfigureXml() :
     self.__selectpath = self.__cfg.dir.selectpath['path']
     self.__detpath = self.__cfg.dir.detpath['path']
     self.__csvpath = self.__cfg.dir.csvpath['path']
+    self.__pngpath = self.__cfg.dir.pngpath['path']
+
+  def __checkDir(self, dir):
+    isdir = os.path.isdir(dir)
+    return isdir
+  def __makeDir(self, dir):
+    if not self.__checkDir(dir=dir):
+      os.mkdir(dir)
 
   # working directory ---!
   def getWorkingDir(self) :
@@ -106,33 +118,50 @@ class ConfigureXml() :
 
   # directory storing runs data ---!
   def getDataDir(self) :
+    self.__makeDir(self.__datapath.replace('${runpath}', self.getRunDir()))
     return self.__datapath.replace('${runpath}', self.getRunDir())
   def setDataDir(self, dataDir) :
     self.__runpath = dataDir
+    self.__makeDir(self.__datapath.replace('${runpath}', self.getRunDir()))
 
   # target directory for simulations ---!
   def getSimDir(self) :
+    self.__makeDir(self.__simpath.replace('${runpath}', self.getRunDir()))
     return self.__simpath.replace('${runpath}', self.getRunDir())
   def setSimDir(self, simDir) :
     self.__runpath = simDir
+    self.__makeDir(self.__simpath.replace('${runpath}', self.getRunDir()))
 
   # target directory for selections ---!
   def getSelectDir(self) :
+    self.__makeDir(self.__selectpath.replace('${runpath}', self.getRunDir()))
     return self.__selectpath.replace('${runpath}', self.getRunDir())
   def setSelectDir(self, selectDir) :
     self.__runpath = selectDir
+    self.__makeDir(self.__selectpath.replace('${runpath}', self.getRunDir()))
 
   # target directory for pipeline products ---!
   def getDetDir(self) :
+    self.__makeDir(self.__detpath.replace('${runpath}', self.getRunDir()))
     return self.__detpath.replace('${runpath}', self.getRunDir())
   def setDetDir(self, detDir) :
     self.__runpath = detDir
+    self.__makeDir(self.__detpath.replace('${runpath}', self.getRunDir()))
 
   # target directory for output tables ---!
   def getCsvDir(self) :
+    self.__makeDir(self.__csvpath.replace('${runpath}', self.getRunDir()))
     return self.__csvpath.replace('${runpath}', self.getRunDir())
   def setCsvDir(self, csvDir) :
     self.__runpath = csvDir
+    self.__makeDir(self.__csvpath.replace('${runpath}', self.getRunDir()))
+
+  def getPngDir(self):
+    self.__makeDir(self.__pngpath.replace('${workdir}', self.getWorkingDir()))
+    return self.__pngpath.replace('${workdir}', self.getWorkingDir())
+  def setPngDir(self, pngDir):
+    self.__pngpath = pngDir
+    self.__makeDir(self.__pngpath.replace('${workdir}', self.getWorkingDir()))
 
 # --------------------------------- CLASS ANALYSIS --------------------------------- !!!
 
@@ -164,7 +193,7 @@ class Analysis() :
     self.debug = False  # set/unset debug mode for ctools ---!
     self.if_log = True  # set/unset logfiles for ctools ---!
     # data fields ---!
-    self.t = [0, 2000]  # time range (s/MJD) ---!
+    self.t = [0, 1800]  # time range (s/MJD) ---!
     self.tmax = 1800  # maximum exposure time needed (s) ---!
     self.e = [0.03, 150.0]  # energy range (TeV) ---!
     self.roi = 5  # region of indeterest (deg) ---!
@@ -711,7 +740,7 @@ class Analysis() :
     return
 
   # degrade IRFs via Effective Area and/or Background ---!
-  def degradeIrf(self, bkg=False):
+  def degradeIrf(self, bkg=True):
     # initialize ---!
     folder, nominal_cal, nominal_irf, degraded_cal, degraded_irf = self.__initCaldbIrf()
     # open all folder permission ---!
@@ -848,7 +877,7 @@ class ManageXml():
   def __init__(self, xml, cfgfile='/config.xml'):
     self.__xml = xml
     self.__cfg = xmlConfig(cfgfile)
-    p = ConfigureXml(self.__cfg)
+    self.__p = ConfigureXml(self.__cfg)
     self.file = open(self.__xml)
     self.srcLib = ET.parse(self.file)
     self.root = self.srcLib.getroot()
@@ -1095,4 +1124,94 @@ class ManageXml():
 
   def closeXml(self):
     self.file.close()
+    return
+
+# --------------------------------- CLASS xml HANDLING --------------------------------- !!!
+
+class Graphics():
+  '''
+  This class handles all the graphic methods connected to the analysis pipeline. Each public field (self.field)
+  can be set accordingly to the user needs from a python script, while private fields (self.__field) is for internal
+  usage. Equally, public methods (methodName()) can be invoked within a python script once the class is instanced while
+  private methods (__methodName()) should only be used within the class itself.
+  '''
+
+  def __init__(self, cfgfile='/config.xml'):
+    # init paths ---!
+    self.__cfg = xmlConfig(cfgfile)
+    self.__p = ConfigureXml(self.__cfg)
+    # plotting fields ---!
+    self.title = ['title']
+    self.xlabel = ['x']
+    self.ylabel = ['y']
+    self.grphlabel = ['data']
+    self.cbarlabel = ['counts']
+    self.colors = ['b']
+    self.markers = ['+']
+    self.fontsize = 12
+    self.cmap = 'jet'
+    # axis and images fields ---!
+    self.subplots = (1, 1)  # (rows, cols)
+    # conditional control ---!
+    self.show = False
+    self.usetex = True
+    self.sharex = 'col'
+    self.sharey = 'row'
+    # files ---!
+    self.imgname = 'image.png'
+
+  # handles SD9 regions WIP ---!
+  def __handleReg(self, file):
+    with pyregion.open(file) as r:
+      r[0].attr[1]['color'] = self.colors
+    # NEED TO SAVE CHANGES ---!
+    return r
+
+  # plots skymaps ---!
+  def showSkymap(self, skyfile, rfile=None, rcolor='k'):
+    # add path ---!
+    self.imgname = self.__p.getPngDir() + self.imgname
+    for id, file in enumerate(skyfile):
+      skyfile[id] = self.__p.getDetDir() + file
+    for id, file in enumerate(rfile):
+      rfile[id] = self.__p.getDetDir() + file
+    # set graph ---!
+    self.colors = rcolor
+    print('before')
+    fig, axs = plt.subplots(self.subplots[0], self.subplots[1], sharex=self.sharex, sharey=self.sharey)
+    plt.rc('text', usetex=self.usetex)
+    print(fig, axs)
+    # grid of plots ---!
+    num = 0
+    for cols in range(self.subplots[0]):
+      for rows in range(self.subplots[1]):
+        num += 1
+        print(num)
+        # data ---!
+        with fits.open(skyfile[num-1]) as hdulist:
+          data = hdulist[0].data
+          # plot skymap ---!
+          ax[cols, rows].imshow(data[num-1], cmap=self.cmap, norm=SymLogNorm(1), interpolation='gaussian',
+                     label=self.grphlabel[num-1])
+          # plot regions ---!
+          if rfile != None:
+            r = pyregion.open(rfile[num-1]).as_imagecoord(hdulist[0].header)
+            for i in range(len(r)):
+              r[i].attr[1]['color'] = self.colors
+              patch_list, text_list = r.get_mpl_patches_texts()
+              for p in patch_list:
+                ax[cols, rows].add_patch(p)
+              for t in text_list:
+                ax[cols, rows].add_artist(t)
+
+    # decorate plot ---!
+    fig.xlabel(self.xlabel)
+    fig.ylabel(self.ylabel)
+    fig.suptitle(self.title) if self.title != None else None
+    fig.colorbar().set_label(self.cbarlabel)
+    # save fig ---!
+    plt.savefig(self.imgname)
+    # show fig ---!
+    plt.show() if self.show else None
+    plt.close()
     return
