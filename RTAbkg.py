@@ -17,9 +17,8 @@ trials = int(sys.argv[2])  # number of trials
 count = int(sys.argv[3])  # starting count
 
 # ctools/cscripts parameters ---!
-caldb = 'prod3b'
-# caldb_degraded = caldb.replace('prod', 'degr')
-irf = 'South_z40_average_100s'
+caldb = 'prod2'
+irf = 'South_z40_0.5h'
 
 texp = [1, 5, 10, 100]  # exposure times (s)
 texp.sort()
@@ -66,15 +65,14 @@ tObj.pointing = pointing
 tObj.roi = roi
 tObj.e = [elow, ehigh]
 tObj.tmax = max(tmax)
-tObj.caldb = caldb
-tObj.irf = irf
 tObj.debug = debug
 tObj.if_log = if_log
 # degrade IRF if required ---!
 if irf_degrade:
-  if count == 0:
-    tObj.degradeIrf()
-  # tObj.caldb = caldb_degraded
+  tObj.caldb = caldb.replace('prod', 'degr')
+else:
+  tObj.caldb = caldb
+tObj.irf = irf
 print('!!! check ---- caldb:', tObj.caldb) if checks is True else None
 
 # --------------------------------- 1° LOOP :: trials  --------------------------------- !!!
