@@ -126,7 +126,7 @@ for k in range(trials):
     mObj = ManageXml(model)
     mObj.prmsFreeFix()
     mObj.closeXml()
-    likeXml = event_selected.replace(p.getSimDir(), p.getDetDir()).replace('.fits', '.xml')
+    likeXml = event_selected.replace(p.getSelectDir(), p.getDetDir()).replace('.fits', '_like.xml')
     if not skip_exist:
       if os.path.isfile(likeXml):
         os.remove(likeXml)
