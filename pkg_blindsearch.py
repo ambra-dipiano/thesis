@@ -35,6 +35,16 @@ def xmlConfig(cfgfile='/config.xml') :
     cfg = untangle.parse(fd.read())
   return cfg.config
 
+def getDof(cfgfile='/config.xml'):
+  cfg = xmlConfig(cfgfile)
+  if type(cfg.xml.src.free) is list:
+    src = len(cfg.xml.src.free)
+  else:
+    src = len([cfg.xml.src.free])
+  bkg = len(cfg.xml.bkg.free)
+  dof = src
+  return dof, bkg+src, bkg
+
 def getTrueCoords(fits_file):
   '''
   This function extract source position information from a fits table file.
@@ -1191,7 +1201,7 @@ class Graphics():
         with fits.open(skyfile[num-1]) as hdulist:
           data = hdulist[0].data
           # plot skymap ---!
-          ax[cols, rows].imshow(data[num-1], cmap=self.cmap, norm=SymLogNorm(1), interpolation='gaussian',
+          axs[cols, rows].imshow(data[num-1], cmap=self.cmap, norm=SymLogNorm(1), interpolation='gaussian',
                      label=self.grphlabel[num-1])
           # plot regions ---!
           if rfile != None:
@@ -1200,9 +1210,9 @@ class Graphics():
               r[i].attr[1]['color'] = self.colors
               patch_list, text_list = r.get_mpl_patches_texts()
               for p in patch_list:
-                ax[cols, rows].add_patch(p)
+                axs[cols, rows].add_patch(p)
               for t in text_list:
-                ax[cols, rows].add_artist(t)
+                axs[cols, rows].add_artist(t)
 
     # decorate plot ---!
     fig.xlabel(self.xlabel)
