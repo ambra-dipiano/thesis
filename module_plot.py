@@ -4,12 +4,12 @@
 
 # IMPORTS ---!
 import matplotlib.pyplot as plt
+import pyregion
 import seaborn as sns
 from astropy.io import fits
 from matplotlib.colors import SymLogNorm
 from matplotlib import rc
 import numpy as np
-#import pyregion
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.patches import Rectangle
 
