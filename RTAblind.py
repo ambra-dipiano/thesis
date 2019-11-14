@@ -17,9 +17,8 @@ trials = int(sys.argv[2])  # number of trials
 count = int(sys.argv[3])  # starting count
 
 # ctools/cscripts parameters ---!
-caldb = 'prod3b'
-# caldb_degraded = caldb.replace('prod', 'degr')
-irf = 'South_z40_average_100s'
+caldb = 'prod3b-v2'
+irf = 'South_z40_0.5h'
 
 sigma = 5  # detection acceptance (Gaussian)
 texp = [1, 5, 10, 100]  # exposure times (s)
@@ -91,15 +90,14 @@ tObj.roi = roi
 tObj.e = [elow, ehigh]
 tObj.tmax = max(tmax)
 tObj.model = p.getWorkingDir() + model_pl
-tObj.caldb = caldb
-tObj.irf = irf
 tObj.debug = debug
 tObj.if_log = if_log
 # degrade IRF if required ---!
 if irf_degrade:
-  if count == 0:
-    tObj.degradeIrf() # exts=1, factor=2 by default => halve only Aeff ---!
-  # tObj.caldb = caldb_degraded
+  tObj.caldb = caldb.replace('prod', 'degr')
+else:
+  tObj.caldb = caldb
+tObj.irf = irf
 # add EBL to template ---!
 if ebl_fits:
   tObj.template = p.getWorkingDir() + nominal_template # nominal ---!

@@ -17,9 +17,8 @@ trials = int(sys.argv[2])  # number of trials
 count = int(sys.argv[3])  # starting count
 
 # ctools/cscripts parameters ---!
-caldb = 'prod3b'
-# caldb_degraded = caldb.replace('prod', 'degr')
-irf = 'South_z40_average_100s'
+caldb = 'prod3b-v2'
+irf = 'South_z40_0.5h'
 
 texp = [1, 5, 10, 100]  # exposure times (s)
 texp.sort()
@@ -29,7 +28,7 @@ tmax = []
 for i in range(tint):
   tmax.append(tmin + texp[i])
 elow = 0.03  # simulation minimum energy (TeV)
-ehigh = 0.5  # simulation maximum energy (TeV)
+ehigh = 1.0  # simulation maximum energy (TeV)
 emin = 0.03  # selection minimum energy (TeV)
 emax = 0.5  # selection maximum energy (TeV)
 roi = 5  # region of interest (deg)
@@ -66,15 +65,14 @@ tObj.pointing = pointing
 tObj.roi = roi
 tObj.e = [elow, ehigh]
 tObj.tmax = max(tmax)
-tObj.caldb = caldb
-tObj.irf = irf
 tObj.debug = debug
 tObj.if_log = if_log
 # degrade IRF if required ---!
 if irf_degrade:
-  if count == 0:
-    tObj.degradeIrf()
-  # tObj.caldb = caldb_degraded
+  tObj.caldb = caldb.replace('prod', 'degr')
+else:
+  tObj.caldb = caldb
+tObj.irf = irf
 print('!!! check ---- caldb:', tObj.caldb) if checks is True else None
 
 # --------------------------------- 1° LOOP :: trials  --------------------------------- !!!
