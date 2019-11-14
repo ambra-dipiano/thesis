@@ -128,7 +128,7 @@ for k in range(trials):
     if not skip_exist:
       if os.path.isfile(likeXml):
         os.remove(likeXml)
-      tObj.input = event
+      tObj.input = event_selected
       tObj.model = model
       tObj.output = likeXml
       tObj.maxLikelihood()
