@@ -116,15 +116,19 @@ class ConfigureXml() :
 
   # working directory ---!
   def getWorkingDir(self) :
+    self.__makeDir(self.__workdir)
     return self.__workdir
   def setWorkingDir(self, workingDir) :
     self.__workdir = workingDir
+    self.__makeDir(self.__workdir)
 
   # directory containing runs ---!
   def getRunDir(self) :
+    self.__makeDir(self.__runpath.replace('${workdir}', self.getWorkingDir()))
     return self.__runpath.replace('${workdir}', self.getWorkingDir())
   def setRunDir(self, runDir) :
     self.__runpath = runDir
+    self.__makeDir(self.__runpath.replace('${workdir}', self.getWorkingDir()))
 
   # directory storing runs data ---!
   def getDataDir(self) :
