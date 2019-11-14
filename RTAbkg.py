@@ -108,7 +108,8 @@ for k in range(trials):
   for i in range(tint):
     print('\n\n!!! ************ STARTING TEXP %d ************ !!!\n\n' % texp[i]) if checks is True else None
     tObj.t = [tmin, tmax[i]]
-    event_selected = event.replace(p.getSimDir(), p.getSelectDir()).replace('bkg%06d', 'texp%ds_bkg%06d' %(texp[i], count))
+    event_selected = event.replace(p.getSimDir(), p.getSelectDir()).replace('bkg%06d' %count,
+                                                                            'texp%ds_bkg%06d' %(texp[i], count))
     prefix = p.getSelectDir() + 'texp%ds_' % texp[i]
     if not skip_exist:
       if os.path.isfile(event_selected):
