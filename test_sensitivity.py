@@ -26,8 +26,8 @@ event_deg = outpath+'crab_degraded.fits'
 output_deg = outpath+'degr%db_sens.csv' %prod_n
 results_deg = outpath+'degr%db_results.xml' %prod_n
 # setup ---!
-nominal = True
-degraded = True
+nominal = False
+degraded = False
 plot = True
 
 caldb, event, results, output = [], [], [], []
@@ -43,6 +43,10 @@ if degraded:
   results.append(results_deg)
   output.append(output_deg)
   print('compute degraded')
+  irfObj = Analysis()
+  irfObj.irf = irf
+  irfObj.caldb = caldb
+  irfObj.degradeIrf(bkg=False)
 e = [0.03, 150.0]
 t = [0, 150]
 pointing = [83.63, 22.01]
