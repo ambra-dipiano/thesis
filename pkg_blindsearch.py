@@ -775,7 +775,7 @@ class Analysis() :
     return
 
   # cssens wrapper ---!
-  def eventSens(self, bins=0, wbin=0.05):
+  def eventSens(self, bins=20, wbin=0.05, enumbins=0):
     sens = cscripts.cssens()
     nbin = int(self.roi / wbin)
     sens['inobs'] = self.input
@@ -789,7 +789,8 @@ class Analysis() :
     sens['emin'] = self.e[0]
     sens['emax'] = self.e[1]
     sens['bins'] = bins
-    if bins != 0:
+    if enumbins != 0:
+      sens['enumbins'] = enumbins
       sens['npix'] = nbin
       sens['binsz'] = wbin
     sens['sigma'] = self.sigma
