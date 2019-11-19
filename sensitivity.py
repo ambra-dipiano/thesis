@@ -119,7 +119,7 @@ if plot:
     # plot ratio ---!
     plt.figure()
     ax = plt.subplot(111, xscale='log')
-    plt.title('ratio '+ irf.replace('_', '\_') + ' (texp=%ds)' %texp[j])
+    plt.title(caldb_nom + ': '+ irf.replace('_', '\_') + ' (texp=%ds)' %texp[j])
     plt.xlabel('energy (TeV)')
     plt.ylabel('ratio nominal/degraded')
     plt.plot(10**energy_nom, sens_nom/sens_deg)
