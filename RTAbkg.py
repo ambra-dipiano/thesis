@@ -28,13 +28,13 @@ tmax = []
 for i in range(tint):
   tmax.append(tmin + texp[i])
 elow = 0.03  # simulation minimum energy (TeV)
-ehigh = 1.0  # simulation maximum energy (TeV)
+ehigh = 150.0  # simulation maximum energy (TeV)
 emin = 0.03  # selection minimum energy (TeV)
-emax = 0.5  # selection maximum energy (TeV)
+emax = 150.0  # selection maximum energy (TeV)
 roi = 5  # region of interest (deg)
 
 # conditions control ---!
-checks = True  # prints checks info ---!
+checks = False  # prints checks info ---!
 irf_degrade = False  # use degraded irf ---!
 skip_exist = False  # if an output already exists it skips the step ---!
 debug = False  # prints logfiles on terminal ---!
