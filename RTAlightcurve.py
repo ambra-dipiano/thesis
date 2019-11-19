@@ -38,7 +38,7 @@ wbin = 0.02  # skymap bin width (deg)
 corr_rad = 0.1  # Gaussian
 confidence = (0.68, 0.95, 0.9973)  # confidence interval for asymmetrical errors (%)
 max_src = 10  # max candidates
-ts_threshold = 9  # TS threshold for reliable detection
+ts_threshold = 25  # TS threshold for reliable detection
 reduce_flux = None  # flux will be devided by factor reduce_flux, if nominal then set to None ---!
 
 # conditions control ---!
@@ -190,15 +190,22 @@ for k in range(trials):
 
   tObj.e = [emin, emax]
   twindows = [ttotal/texp[i] for i in range(len(texp))]  # number of temporal windows per exposure time in total time
+  tlast = [ttotal for i in range(len(texp))]
   # looping for all lightcurve second by second ---!
   for j in range(int(max(twindows))):
     clocking += 1  # passing time second by second ---!
+    # check tlast, if globally reached then stop current trial ---!
+    if clocking > max(tlast):
+      break
     current_twindows = []
     for i in range(len(texp)):
       current_twindows.append(texp[i]) if clocking%texp[i] == 0 else None
     # looping for all the texp for which the tbin analysis needs to be computed ---!
     for i in range(len(current_twindows)):
-      tbin = clocking/current_twindows[i]  # temporal bin number of this analysis
+      # check tlast, if locally reached then skip current bin ---!
+      if clocking > tlast[i]:
+        continue
+      tbin = clocking/current_twindows[i] # temporal bin number of this analysis
       # data file init and check to avoid doubles ---!
       csvName = p.getCsvDir() + fileroot + '%ds_tbin%d_chunk%02d.csv' % (texp[i], tbin, chunk)
       if os.path.isfile(csvName):
@@ -288,6 +295,15 @@ for k in range(trials):
           n += 1
 
       Nsrc = n
+
+      # --------------------------------- +2h FROM LAST DETECTION --------------------------------- !!!
+
+      if Nsrc == 0:
+        # add 2hrs of obs time ---!
+        tlast[i] = clocking+7200
+        # only 4hrs of simulation avialable, if tlast exceeds them then reset to ttotal ---!
+        if tlast[i] > ttotal:
+          tlast[i] = ttotal
 
       # --------------------------------- BEST FIT RA & DEC --------------------------------- !!!
 
