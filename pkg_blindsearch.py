@@ -17,13 +17,15 @@ import csv
 import re
 import subprocess
 from lxml import etree as ET
+import matplotlib
+matplotlib.rcsetup.validate_backend('agg')
 import matplotlib.pyplot as plt
 import seaborn as sns
 
 def xmlConfig(cfgfile='/config.xml') :
   '''
   This function loads a configuration xml file from the same directory where the code itself is stored.
-  :param cfgfile: str
+  :param cfgfile: str:
             relative path of the configuration xml file wrt the directory of this file, default = "/config.xml"
   :return: cfg.config: dict
             dictionary containing the paths information
@@ -98,6 +100,7 @@ class ConfigureXml() :
 
   def __initPath(self, cfg) :
     self.__cfg = cfg
+    self.__root = self.__cfg.dir.root['path']
     self.__workdir = self.__cfg.dir.workdir['path']
     self.__runpath = self.__cfg.dir.runpath['path']
     self.__datapath = self.__cfg.dir.datapath['path']
@@ -114,68 +117,71 @@ class ConfigureXml() :
     if not self.__checkDir(dir=dir):
       os.mkdir(dir)
 
+  def getRootDir(self):
+    return self.__root
+
   # working directory ---!
-  def getWorkingDir(self) :
-    self.__makeDir(self.__workdir)
-    return self.__workdir
-  def setWorkingDir(self, workingDir) :
+  def getWorkingDir(self):
+    self.__makeDir(self.__workdir.replace('${root}', self.__root))
+    return self.__workdir.replace('${root}', self.__root)
+  def setWorkingDir(self, workingDir):
     self.__workdir = workingDir
-    self.__makeDir(self.__workdir)
+    self.__makeDir(workingDir)
 
   # directory containing runs ---!
-  def getRunDir(self) :
+  def getRunDir(self):
     self.__makeDir(self.__runpath.replace('${workdir}', self.getWorkingDir()))
     return self.__runpath.replace('${workdir}', self.getWorkingDir())
-  def setRunDir(self, runDir) :
+  def setRunDir(self, runDir):
     self.__runpath = runDir
-    self.__makeDir(self.__runpath.replace('${workdir}', self.getWorkingDir()))
+    self.__makeDir(runDir)
 
   # directory storing runs data ---!
-  def getDataDir(self) :
+  def getDataDir(self):
     self.__makeDir(self.__datapath.replace('${runpath}', self.getRunDir()))
     return self.__datapath.replace('${runpath}', self.getRunDir())
-  def setDataDir(self, dataDir) :
+  def setDataDir(self, dataDir):
     self.__runpath = dataDir
-    self.__makeDir(self.__datapath.replace('${runpath}', self.getRunDir()))
+    self.__makeDir(dataDir)
 
   # target directory for simulations ---!
-  def getSimDir(self) :
+  def getSimDir(self):
     self.__makeDir(self.__simpath.replace('${runpath}', self.getRunDir()))
     return self.__simpath.replace('${runpath}', self.getRunDir())
-  def setSimDir(self, simDir) :
+  def setSimDir(self, simDir):
     self.__runpath = simDir
-    self.__makeDir(self.__simpath.replace('${runpath}', self.getRunDir()))
+    self.__makeDir(simDir)
 
   # target directory for selections ---!
-  def getSelectDir(self) :
+  def getSelectDir(self):
     self.__makeDir(self.__selectpath.replace('${runpath}', self.getRunDir()))
     return self.__selectpath.replace('${runpath}', self.getRunDir())
-  def setSelectDir(self, selectDir) :
+  def setSelectDir(self, selectDir):
     self.__runpath = selectDir
-    self.__makeDir(self.__selectpath.replace('${runpath}', self.getRunDir()))
+    self.__makeDir(selectDir)
 
   # target directory for pipeline products ---!
-  def getDetDir(self) :
+  def getDetDir(self):
     self.__makeDir(self.__detpath.replace('${runpath}', self.getRunDir()))
     return self.__detpath.replace('${runpath}', self.getRunDir())
-  def setDetDir(self, detDir) :
+  def setDetDir(self, detDir):
     self.__runpath = detDir
-    self.__makeDir(self.__detpath.replace('${runpath}', self.getRunDir()))
+    self.__makeDir(detDir)
 
   # target directory for output tables ---!
-  def getCsvDir(self) :
+  def getCsvDir(self):
     self.__makeDir(self.__csvpath.replace('${runpath}', self.getRunDir()))
     return self.__csvpath.replace('${runpath}', self.getRunDir())
-  def setCsvDir(self, csvDir) :
+  def setCsvDir(self, csvDir):
     self.__runpath = csvDir
-    self.__makeDir(self.__csvpath.replace('${runpath}', self.getRunDir()))
+    self.__makeDir(csvDir)
 
   def getPngDir(self):
     self.__makeDir(self.__pngpath.replace('${workdir}', self.getWorkingDir()))
     return self.__pngpath.replace('${workdir}', self.getWorkingDir())
   def setPngDir(self, pngDir):
     self.__pngpath = pngDir
-    self.__makeDir(self.__pngpath.replace('${workdir}', self.getWorkingDir()))
+    self.__makeDir(pngDir)
 
 # --------------------------------- CLASS ANALYSIS --------------------------------- !!!
 
@@ -1141,8 +1147,7 @@ class ManageXml():
     self.file.close()
     return
 
-# --------------------------------- CLASS xml HANDLING --------------------------------- !!!
-
+# --------------------------------- CLASS PIPELINE GRAPHICS --------------------------------- !!!
 class Graphics():
   '''
   This class handles all the graphic methods connected to the analysis pipeline. Each public field (self.field)
@@ -1156,7 +1161,7 @@ class Graphics():
     self.__cfg = xmlConfig(cfgfile)
     self.__p = ConfigureXml(self.__cfg)
     # plotting fields ---!
-    self.title = ['title']
+    self.title = ['title'] # title for
     self.xlabel = ['x']
     self.ylabel = ['y']
     self.grphlabel = ['data']
@@ -1194,8 +1199,8 @@ class Graphics():
     self.colors = rcolor
     print('before')
     fig, axs = plt.subplots(self.subplots[0], self.subplots[1], sharex=self.sharex, sharey=self.sharey)
+    print('after')
     plt.rc('text', usetex=self.usetex)
-    print(fig, axs)
     # grid of plots ---!
     num = 0
     for cols in range(self.subplots[0]):
