@@ -34,23 +34,15 @@ emax = 150.0  # selection maximum energy (TeV)
 roi = 5  # region of interest (deg)
 
 # conditions control ---!
-checks = False  # prints checks info ---!
+checks = True  # prints checks info ---!
 irf_degrade = False  # use degraded irf ---!
 skip_exist = False  # if an output already exists it skips the step ---!
 debug = False  # prints logfiles on terminal ---!
 if_log = True  # saves logfiles ---!
 
-# recap and dof ---!
-dof, m2, m1 = getDof()
-print('!!! *** !!! dof = ', m2, ' - ', m1, ' = ', dof)
-print('!!! *** !!! IRF DEGRADATION:', irf_degrade)
-print('!!! *** !!! sim energy range: [', elow, ', ', ehigh, '] (TeV)')
-print('!!! *** !!! selection energy range: [', emin, ', ', emax, '] (TeV)')
-print('!!! *** !!! roi: ', roi, ' (deg)')
-
 # files ---!
-model_pl = 'grb.xml'
-model_bkg = 'CTAIrfBackground.xml'
+model_pl = '/crab_z40.xml'
+model_bkg = '/CTAIrfBackground.xml'
 tcsv = 'time_slices.csv'
 cfg = xmlConfig()
 p = ConfigureXml(cfg)
@@ -60,8 +52,25 @@ true_coord = (33.057, -51.841)  # true position of source RA/DEC (deg)
 offmax = (-1.475, -1.370)  # off-axis RA/DEC (deg)
 pointing = (true_coord[0] + offmax[0], true_coord[1] + offmax[1])  # pointing direction RA/DEC (deg)
 
+# recap and dof ---!
+dof, m2, m1 = getDof()
+print('!!! *** !!! dof = ', m2, ' - ', m1, ' = ', dof)
+print('!!! *** !!! IRF DEGRADATION:', irf_degrade)
+print('!!! *** !!! nominal prod:', caldb)
+print('!!! *** !!! irf:', irf) 
+print('!!! *** !!! sim energy range: [', elow, ', ', ehigh, '] (TeV)')
+print('!!! *** !!! selection energy range: [', emin, ', ', emax, '] (TeV)')
+print('!!! *** !!! roi: ', roi, ' (deg)')
+print('!!! *** !!! pointing:', pointing, ' (deg)')
+
 # --------------------------------- INITIALIZE --------------------------------- !!!
 
+# setup model dof ---!i
+if count == 0:
+  model = p.getWorkingDir() + model_pl
+  mObj = ManageXml(model)
+  mObj.prmsFreeFix()
+  mObj.closeXml()
 # setup trials obj ---!
 tObj = Analysis()
 tObj.pointing = pointing
@@ -93,7 +102,7 @@ for k in range(trials):
   if irf_degrade:
     f += 'irf'
   # simulate ---!
-  model = os.path.dirname(__file__) + model_bkg
+  model = p.getWorkingDir() + model_bkg
   tObj.model = model
   event = p.getSimDir() + f + ".fits"
   if not skip_exist:
@@ -124,10 +133,7 @@ for k in range(trials):
 
     # --------------------------------- MAX LIKELIHOOD --------------------------------- !!!
 
-    model = os.path.dirname(__file__) + model_pl
-    mObj = ManageXml(model)
-    mObj.prmsFreeFix()
-    mObj.closeXml()
+    model = p.getWorkingDir() + model_pl
     likeXml = event_selected.replace(p.getSelectDir(), p.getDetDir()).replace('.fits', '_like.xml')
     if not skip_exist:
       if os.path.isfile(likeXml):
@@ -180,7 +186,7 @@ for k in range(trials):
   # --------------------------------- CLEAR SPACE --------------------------------- !!!
 
   print('!!! check ---- ', count, ') trial done...') if checks is True else None
-  if count > 4:
+  if count not in [1,2,3,4]:
     os.system('rm ' + p.getSimDir() + '*bkg%06d*' % count)
     os.system('rm ' + p.getSelectDir() + '*bkg%06d*' % count)
     os.system('rm ' + p.getDetDir() + '*bkg%06d*' % count)
