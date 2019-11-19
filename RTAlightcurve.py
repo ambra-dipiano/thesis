@@ -30,9 +30,9 @@ for i in range(len(texp)):
   tmax.append(tmin + texp[i])
 ttotal = 300 # 2e4  # simulation total time (s)
 elow = 0.03  # simulation minimum energy (TeV)
-ehigh = 1.0  # simulation maximum energy (TeV)
+ehigh = 150.0  # simulation maximum energy (TeV)
 emin = 0.03  # selection minimum energy (TeV)
-emax = 0.5  # selection maximum energy (TeV)
+emax = 150.0  # selection maximum energy (TeV)
 roi = 5  # region of interest for simulation and selection (deg)
 wbin = 0.02  # skymap bin width (deg)
 corr_rad = 0.1  # Gaussian
@@ -64,18 +64,17 @@ print('!!! *** !!! sim energy range: [', elow, ', ', ehigh, '] (TeV)')
 print('!!! *** !!! selection energy range: [', emin, ', ', emax, '] (TeV)')
 print('!!! *** !!! roi: ', roi, ' (deg)')
 
+# path configuration ---!
+cfg = xmlConfig()
+p = ConfigureXml(cfg)
 # files ---!
 fileroot = 'run0406_'
-ebl_table = os.path.dirname(__file__) + '/ebl_tables/gilmore_tau_fiducial.csv'
+ebl_table = p.getRootDir() + '/ebl_tables/gilmore_tau_fiducial.csv'
 merge_map = 'run0406_MergerID000126_skymap.fits'
 nominal_template = 'run0406_ID000126.fits'
 ebl_template = 'run0406_ID000126_ebl.fits'
 model_pl = 'run0406_ID000126.xml'
 tcsv = 'time_slices.csv'
-
-# path configuration ---!
-cfg = xmlConfig()
-p = ConfigureXml(cfg)
 
 # pointing with off-axis equal to max prob GW ---!
 true_coord = (33.057, -51.841)  # true position of source RA/DEC (deg)
@@ -373,7 +372,7 @@ for k in range(trials):
   # --------------------------------- CLEAR SPACE --------------------------------- !!!
 
   print('!!! check ---- ', count, ') trial done...') if checks is True else None
-  if clocking > 5:
+  if count not in [1,2,3,4]:
     os.system('rm ' + p.getSimDir() + '*run*%06d*' % count)
     os.system('rm ' + p.getSelectDir() + '*run*%06d*' % count)
     os.system('rm ' + p.getDetDir() + '*run*%06d*' % count)
