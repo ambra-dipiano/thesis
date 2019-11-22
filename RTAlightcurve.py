@@ -15,6 +15,9 @@ import sys
 chunk = int(sys.argv[1])  # global count
 trials = int(sys.argv[2])  # number of trials
 count = int(sys.argv[3])  # starting count
+nthreads = 2
+os.environ['OPENBLAS_NUM_THREADS'] = str(nthreads)
+os.environ['MKL_NUM_THREADS'] = str(nthreads)
 
 # ctools/cscripts parameters ---!
 caldb = 'prod3b-v2'
@@ -92,6 +95,7 @@ print('!!! *** !!! pointing:', pointing, ' (deg)')
 
 # setup trials obj ---!
 tObj = Analysis()
+tObj.nthreads = nthreads
 tObj.pointing = pointing
 tObj.roi = roi
 tObj.e = [elow, ehigh]

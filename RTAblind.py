@@ -15,6 +15,9 @@ import sys
 chunk = int(sys.argv[1])  # global count
 trials = int(sys.argv[2])  # number of trials
 count = int(sys.argv[3])  # starting count
+nthreads = 2
+os.environ['OPENBLAS_NUM_THREADS'] = str(nthreads)
+os.environ['MKL_NUM_THREADS'] = str(nthreads)
 
 # ctools/cscripts parameters ---!
 caldb = 'prod3b-v2'
@@ -42,26 +45,14 @@ reduce_flux = None  # flux will be devided by factor reduce_flux, if nominal the
 
 # conditions control ---!
 checks = True  # prints checks info ---!
-if_ebl = False  # uses the EBL absorbed template ---!
+if_ebl = True  # uses the EBL absorbed template ---!
 if_cut = False  # adds a cut-off parameter to the source model ---!
 ebl_fits = False  # generate the EBL absorbed template ---!
 extract_spec = True  # generates spectral tables and obs definition models ---!
 irf_degrade = False  # use degraded irf ---!
 src_sort = False  # sorts scandidates from highest TS to lowest ---!
-skip_exist = False  # if an output already exists it skips the step ---!
 debug = False  # prints logfiles on terminal ---!
 if_log = True  # saves logfiles ---!
-
-# recap and dof ---!
-dof, m2, m1 = getDof()
-print('!!! *** !!! dof = ', m2, ' - ', m1, ' = ', dof)
-print('!!! *** !!! EBL ABSORPTION:', if_ebl)
-print('!!! *** !!! MODEL CUTOFF:', if_cut)
-print('!!! *** !!! IRF DEGRADATION:', irf_degrade)
-print('!!! *** !!! TS SORT:', src_sort)
-print('!!! *** !!! sim energy range: [', elow, ', ', ehigh, '] (TeV)')
-print('!!! *** !!! selection energy range: [', emin, ', ', emax, '] (TeV)')
-print('!!! *** !!! roi: ', roi, ' (deg)')
 
 # path configuration ---!
 cfg = xmlConfig()
@@ -81,12 +72,27 @@ offmax = (-1.475, -1.370)  # off-axis RA/DEC (deg)
 pointing = (true_coord[0] + offmax[0], true_coord[1] + offmax[1])  # pointing direction RA/DEC (deg)
 # true_coord, pointing, offmax = getPointing(None, p.getWorkingDir()+nominal_template)
 # pointing with off-axis equal to max prob GW ---!
-print(true_coord, pointing, offmax) if checks is True else None
+
+# recap and dof ---!
+dof, m2, m1 = getDof()
+print('!!! *** !!! dof = ', m2, ' - ', m1, ' = ', dof)
+print('!!! *** !!! EBL ABSORPTION:', if_ebl)
+print('!!! *** !!! MODEL CUTOFF:', if_cut)
+print('!!! *** !!! IRF DEGRADATION:', irf_degrade)
+print('!!! *** !!! nominal caldb:', caldb)
+print('!!! *** !!! irf:', irf)
+print('!!! *** !!! TS SORT:', src_sort)
+print('!!! *** !!! FLUX REDUCED factor:', reduce_flux)
+print('!!! *** !!! sim energy range: [', elow, ', ', ehigh, '] (TeV)')
+print('!!! *** !!! selection energy range: [', emin, ', ', emax, '] (TeV)')
+print('!!! *** !!! roi: ', roi, ' (deg)')
+print('!!! *** !!! pointing:', pointing, ' (deg)')
 
 # --------------------------------- INITIALIZE --------------------------------- !!!
 
 # setup trials obj ---!
 tObj = Analysis()
+tObj.nthreads = nthreads
 tObj.pointing = pointing
 tObj.roi = roi
 tObj.e = [elow, ehigh]
@@ -115,12 +121,9 @@ else :
   template = p.getWorkingDir() + nominal_template
 tObj.if_ebl = if_ebl
 tObj.template = template
-print('!!! check ---- template=', tObj.template) if checks is True else None
 # load template ---!
 tObj.extract_spec = extract_spec
 tbin_stop = tObj.loadTemplate()
-print('!!! check ---- tbin_stop=', tbin_stop) if checks is True else None
-print('!!! check ---- caldb:', tObj.caldb)
 
 # --------------------------------- REDUCE TEMPLATE FLUX  --------------------------------- !!!
 
@@ -134,7 +137,7 @@ if reduce_flux != None:
 for k in range(trials):
   count += 1
   tObj.seed = count
-  print('\n\n!!! ************ STARTING TRIAL %d ************ !!!\n\n' %count) if checks is True else None
+  print('!!! ************ STARTING TRIAL %d ************ !!!\n\n' %count) if checks is True else None
   print('!!! check ---- seed=', tObj.seed) if checks is True else None
   # attach ID to fileroot ---!
   if if_ebl:
@@ -153,36 +156,30 @@ for k in range(trials):
   # simulate ---!
   for i in range(tbin_stop):
     tObj.t = [tgrid[i], tgrid[i+1]]
-    print(tgrid[i], tgrid[i+1]) if checks is True else None
     if if_ebl:
       tObj.model = p.getDataDir() + 'run0406_ID000126_ebl_tbin%02d.xml' % i
       event = p.getSimDir() + f + "_ebl_tbin%02d.fits" % i
-      print('!!! check ---- simulation %d with EBL' %(i+1)) if checks is True else None
     else:
       tObj.model = p.getDataDir() + 'run0406_ID000126_tbin%02d.xml' % i
       event = p.getSimDir() + f + "_tbin%02d.fits" % i
-      print('!!! check ---- simulation %d without EBL' %(i+1)) if checks is True else None
     if reduce_flux != None:
       tObj.model = tObj.model.replace('_tbin', '_flux%s_tbin' %str(reduce_flux))
       event = event .replace('_tbin', '_flux%s_tbin' %str(reduce_flux))
     event_bins.append(event)
-    if not skip_exist:
-      if os.path.isfile(event):
-        os.remove(event)
-      tObj.output = event
-      tObj.eventSim()
+    if os.path.isfile(event):
+      os.remove(event)
+    tObj.output = event
+    tObj.eventSim()
   # observation list ---!
   event = event_bins
   event_list = p.getSimDir() + 'obs_%s.xml' % f
   if reduce_flux != None:
     event_list = event_list.replace('obs_', 'obs_flux%s_' %str(reduce_flux))
-  if not skip_exist:
-    if os.path.isfile(event_list):
-      os.remove(event_list)
-    tObj.input = event
-    tObj.output = event_list
-    tObj.obsList(obsname=f)
-    print('!!! check ---- obs list=', event_list) if checks is True else None
+  if os.path.isfile(event_list):
+    os.remove(event_list)
+  tObj.input = event
+  tObj.output = event_list
+  tObj.obsList(obsname=f)
 
   # --------------------------------- 2° LOOP :: texp --------------------------------- !!!
 
@@ -190,71 +187,61 @@ for k in range(trials):
 
   tObj.e = [emin, emax]
   for i in range(tint):
-    print('\n\n!!! ************ STARTING TEXP %d ************ !!!\n\n' % texp[i])
+    print('!!! ************ STARTING TEXP %d ************ !!!\n\n' % texp[i])
     tObj.t = [tmin, tmax[i]]
     event_selected = event_list.replace(p.getSimDir(), p.getSelectDir()).replace('obs_', 'texp%ds_' % texp[i])
     prefix = p.getSelectDir() + 'texp%ds_' % texp[i]
-    if not skip_exist:
-      if os.path.isfile(event_selected):
-        os.remove(event_selected)
-      tObj.input = event_list
-      tObj.output = event_selected
-      tObj.eventSelect(prefix=prefix)
-      print('!!! check ---- selection: ', event_selected) if checks is True else None
+    if os.path.isfile(event_selected):
+      os.remove(event_selected)
+    tObj.input = event_list
+    tObj.output = event_selected
+    tObj.eventSelect(prefix=prefix)
 
     # --------------------------------- SKYMAP --------------------------------- !!!
 
     skymap = event_selected.replace(p.getSelectDir(), p.getDetDir()).replace('.xml', '_skymap.fits')
-    if not skip_exist:
-      if os.path.isfile(skymap):
-        os.remove(skymap)
-      tObj.input = event_selected
-      tObj.output = skymap
-      tObj.eventSkymap(wbin=wbin)
-    print('!!! check ---- skymaps: ', skymap) if checks is True else None
+    if os.path.isfile(skymap):
+      os.remove(skymap)
+    tObj.input = event_selected
+    tObj.output = skymap
+    tObj.eventSkymap(wbin=wbin)
 
     # --------------------------------- DETECTION & MODELING --------------------------------- !!!
 
     tObj.corr_rad = corr_rad
     tObj.max_src = max_src
     detectionXml = skymap.replace('_skymap.fits', '_det%dsgm.xml' %sigma)
-    if not skip_exist:
-      if os.path.isfile(detectionXml):
-        os.remove(detectionXml)
-      tObj.input = skymap
-      tObj.output = detectionXml
-      tObj.runDetection()
+    if os.path.isfile(detectionXml):
+      os.remove(detectionXml)
+    tObj.input = skymap
+    tObj.output = detectionXml
+    tObj.runDetection()
     detObj = ManageXml(detectionXml)
     detObj.sigma = sigma
     detObj.if_cut = if_cut
     detObj.modXml()
-    print('!!! check ---- detection.............', texp[i], 's done') if checks is True else None
-    print('\n\n!!! check ---- det mod: ', detectionXml) if checks is True else None
+    detObj.prmsFreeFix()
 
     # --------------------------------- MAX LIKELIHOOD --------------------------------- !!!
 
-    detObj.prmsFreeFix()
     likeXml = detectionXml.replace('_det%dsgm' % tObj.sigma, '_like%dsgm' % tObj.sigma)
-    if not skip_exist:
-      if os.path.isfile(likeXml):
-        os.remove(likeXml)
-      tObj.input = event_selected
-      tObj.model = detectionXml
-      tObj.output = likeXml
-      tObj.maxLikelihood()
+    if os.path.isfile(likeXml):
+      os.remove(likeXml)
+    tObj.input = event_selected
+    tObj.model = detectionXml
+    tObj.output = likeXml
+    tObj.maxLikelihood()
     likeObj = ManageXml(likeXml)
     if src_sort:
       highest_ts_src = likeObj.sortSrcTs()[0]
     else:
       highest_ts_src = None
       print('!!! check ---- highest TS: ', highest_ts_src) if checks is True else None
-    print('\n\n!!! check ---- max likelihoods: ', likeXml) if checks is True else None
 
     # --------------------------------- DETECTION RA & DEC --------------------------------- !!!
 
     pos, ra_det, dec_det = ([] for j in range(3))
     pos.append(detObj.loadRaDec(highest=highest_ts_src))
-    print('!!! check ---- coords:', pos[0]) if checks is True else None
     ra_det.append(pos[0][0][0]) if len(pos[0][0]) > 0 else ra_det.append(np.nan)
     dec_det.append(pos[0][1][0]) if len(pos[0][0]) > 0 else dec_det.append(np.nan)
     Ndet = len(pos[0][0])
@@ -336,7 +323,7 @@ for k in range(trials):
 
     row = []
     if checks:
-      print('\n\n!!! ---------- check trial:', count)
+      print('\n!!! ---------- check trial:', count)
       print('!!! ----- check texp:', texp[i])
       print('!!! *** check Ndet:', Ndet)
       print('!!! *** check Nsrc:', Nsrc)
@@ -362,12 +349,11 @@ for k in range(trials):
         w = csv.writer(f)
         w.writerows(row)
         f.close()
-    print('!!! check ---- data file: ', csvName) if checks is True else None
 
   # --------------------------------- CLEAR SPACE --------------------------------- !!!
 
   print('!!! check ---- ', count, ') trial done...') if checks is True else None
-  if count not in [1,2,3,4]:
+  if count != 1:
     os.system('rm ' + p.getSimDir() + '*run*%06d*' % count)
     os.system('rm ' + p.getSelectDir() + '*run*%06d*' % count)
     os.system('rm ' + p.getDetDir() + '*run*%06d*' % count)
