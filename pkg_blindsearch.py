@@ -234,6 +234,7 @@ class Analysis() :
     self.confidence = 0.95  # confidence level (%) ---!
     self.eref = 1  # energy reference for flux computation ---!
     self.sensType = 'Differential'  # sensitivity type <Integral|Differential> ---!
+    self.nthreads = 1
     # ebl specifics ---!
     self.z = 0.1  # redshift value ---!
     self.z_ind = 1  # redshift value index ---!
@@ -456,6 +457,7 @@ class Analysis() :
     sim["emin"] = self.e[0]
     sim["emax"] = self.e[1]
     sim["seed"] = self.seed
+    sim["nthreads"] = self.nthreads
     sim["logfile"] = self.output.replace('.fits', '.log')
     sim["debug"] = self.debug
     if self.if_log:
@@ -486,6 +488,7 @@ class Analysis() :
     selection['tmax'] = self.t[1]
     selection['emin'] = self.e[0]
     selection['emax'] = self.e[1]
+    # selection["nthreads"] = self.nthreads
     selection['logfile'] = self.output.replace('.xml', '.log')
     selection['debug'] = self.debug
     if self.if_log:
@@ -510,6 +513,7 @@ class Analysis() :
     skymap['coordsys'] = self.coord_sys.upper()
     skymap['proj'] = 'CAR'
     skymap['bkgsubtract'] = self.sky_subtraction.upper()
+    # skymap["nthreads"] = self.nthreads
     skymap['logfile'] = self.output.replace('.fits', '.log')
     skymap['debug'] = self.debug
     if self.if_log:
@@ -535,6 +539,7 @@ class Analysis() :
     detection['corr_kern'] = self.corr_kern.upper()
     detection['logfile'] = self.output.replace('.xml', '.log')
     detection['debug'] = self.debug
+    # detection["nthreads"] = self.nthreads
     if self.if_log:
       detection.logFileOpen()
     detection.execute()
@@ -551,6 +556,7 @@ class Analysis() :
     like['refit'] = True
     like['max_iter'] = 500
     like['fix_spat_for_ts'] = False
+    like["nthreads"] = self.nthreads
     like['logfile'] = self.output.replace('.xml', '.log')
     like['debug'] = self.debug
     if self.if_log:
@@ -573,6 +579,7 @@ class Analysis() :
         err['caldb'] = self.caldb
         err['irf'] = self.irf
         err['confidence'] = self.confidence_level[i]
+        err["nthreads"] = self.nthreads
         err['logfile'] = self.output[i].replace('.xml', '.log')
         err['debug'] = self.debug
         if self.if_log:
@@ -594,6 +601,7 @@ class Analysis() :
     uplim['eref'] = self.eref  # default reference energy for differential limit (in TeV)
     uplim['emin'] = self.e[0]  # default minimum energy for integral flux limit (in TeV)
     uplim['emax'] = self.e[1]  # default maximum energy for integral flux limit (in TeV)
+    uplim["nthreads"] = self.nthreads
     uplim['logfile'] = self.model.replace('results.xml', 'flux.log')
     uplim['debug'] = self.debug
     if self.if_log:
@@ -805,7 +813,9 @@ class Analysis() :
       sens['binsz'] = wbin
     sens['sigma'] = self.sigma
     sens['type'] = self.sensType.capitalize()
+    sens["nthreads"] = self.nthreads
     sens['logfile'] = self.output.replace('.csv', '.log')
+    sens['debug'] = self.debug
     if self.if_log:
       sens.logFileOpen()
     sens.execute()
