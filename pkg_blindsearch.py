@@ -89,6 +89,23 @@ def getPointing(merge_map, fits_file, roi=5):
       pointing = (true_coord[0] + offaxis[0], true_coord[1] + offaxis[1])
   return true_coord, pointing, offaxis
 
+def checkTrialId(file, id):
+  '''
+  This function checks if a trial ID is already existing within a data file.
+  :param file: data file (str)
+  :param id: trial ID (str)
+  :return: True id the ID exists, False if it doesn't
+  '''
+  with open(file=file) as f:
+    df = pd.read_csv(f)
+    cols = list(df.columns)
+    ids = df[cols[0]]
+  if id in ids:
+    skip = True
+  else:
+    skip= False
+  return skip
+
 # --------------------------------- CLASS xml CONFIGURATION --------------------------------- !!!
 
 class ConfigureXml() :
