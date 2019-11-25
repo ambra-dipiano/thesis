@@ -38,7 +38,7 @@ emax = 150.0  # selection maximum energy (TeV)
 roi = 5  # region of interest (deg)
 
 # conditions control ---!
-checks = True  # prints checks info ---!
+checks = False  # prints checks info ---!
 irf_degrade = False  # use degraded irf ---!
 skip_exist = True  # if an output already exists it skips the step ---!
 debug = False  # prints logfiles on terminal ---!
@@ -105,7 +105,9 @@ for k in range(trials):
   ID = 'ID%06d' % count
   csvName = p.getCsvDir() + 'bkg_%ds_chunk%02d.csv' % (texp[-1], chunk)
   skip = checkTrialId(csvName, ID)
-  if skip_exist and skip:
+  print(csvName, ID)
+  print(skip_exist, skip)
+  if skip_exist is True and skip is True:
     print('skipping trial ', count)
     continue
 
@@ -176,6 +178,9 @@ for k in range(trials):
     # --------------------------------- RESULTS TABLE (csv) --------------------------------- !!!
 
     header = '#trial,texp,TS\n'
+    ID = 'ID%06d' % count
+    csvName = p.getCsvDir() + 'bkg_%ds_chunk%02d.csv' % (texp[i], chunk)
+
     row = []
     print('\n\n!!! ---------- check trial:', count) if checks is True else None
     print('!!! ----- check texp:', texp[i]) if checks is True else None
