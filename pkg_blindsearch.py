@@ -100,7 +100,7 @@ def checkTrialId(file, id):
     df = pd.read_csv(f)
     cols = list(df.columns)
     ids = df[cols[0]]
-  if id in ids:
+  if id in list(ids):
     skip = True
   else:
     skip= False
