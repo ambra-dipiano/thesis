@@ -40,7 +40,7 @@ roi = 5  # region of interest (deg)
 # conditions control ---!
 checks = True  # prints checks info ---!
 irf_degrade = False  # use degraded irf ---!
-skip_exist = False  # if an output already exists it skips the step ---!
+skip_exist = True  # if an output already exists it skips the step ---!
 debug = False  # prints logfiles on terminal ---!
 if_log = True  # saves logfiles ---!
 
@@ -99,6 +99,17 @@ for k in range(trials):
   tObj.seed = count
   print('\n\n!!! ************ STARTING TRIAL %d ************ !!!' %count) if checks is True else None
   print('!!! check ---- seed=', tObj.seed) if checks is True else None
+
+  # --------------------------------- CHECK SKIP --------------------------------- !!!
+
+  ID = 'ID%06d' % count
+  csvName = p.getCsvDir() + 'bkg_%ds_chunk%02d.csv' % (texp[-1], chunk)
+  skip = checkTrialId(csvName, ID)
+  if skip_exist and skip:
+    print('skipping trial ', count)
+    continue
+
+  print('doing trial ', count)
 
   # --------------------------------- SIMULATION --------------------------------- !!!
 
@@ -165,9 +176,6 @@ for k in range(trials):
     # --------------------------------- RESULTS TABLE (csv) --------------------------------- !!!
 
     header = '#trial,texp,TS\n'
-    ID = 'ID%06d' % count
-    csvName = p.getCsvDir() + 'bkg_%ds_chunk%02d.csv' % (texp[i], chunk)
-
     row = []
     print('\n\n!!! ---------- check trial:', count) if checks is True else None
     print('!!! ----- check texp:', texp[i]) if checks is True else None
@@ -191,7 +199,7 @@ for k in range(trials):
   # --------------------------------- CLEAR SPACE --------------------------------- !!!
 
   print('!!! check ---- ', count, ') trial done...') if checks is True else None
-  if count not in [1,2,3,4]:
+  if ID != 'ID000001':
     os.system('rm ' + p.getSimDir() + '*bkg%06d*' % count)
     os.system('rm ' + p.getSelectDir() + '*bkg%06d*' % count)
     os.system('rm ' + p.getDetDir() + '*bkg%06d*' % count)
