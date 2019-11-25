@@ -154,7 +154,10 @@ for k in range(trials):
 
   ID = 'ID%06d' % count
   csvName = p.getCsvDir() + fileroot + '%ds_chunk%02d.csv' % (texp[-1], chunk)
-  skip = checkTrialId(csvName, ID)
+  if os.path.isfile(csvName):
+    skip = checkTrialId(csvName, ID)
+  else:
+    skip = False
   if skip_exist is True and skip is True:
     continue
 
