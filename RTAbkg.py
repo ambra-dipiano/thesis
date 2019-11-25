@@ -4,7 +4,6 @@
 
 # IMpORTS ---!
 from pkg_blindsearch import *
-import numpy as np
 import csv
 import os
 import sys
@@ -123,12 +122,11 @@ for k in range(trials):
   model = p.getWorkingDir() + model_bkg
   tObj.model = model
   event = p.getSimDir() + f + ".fits"
-  if not skip_exist:
-    if os.path.isfile(event):
-      os.remove(event)
-    tObj.output = event
-    tObj.eventSim()
-    print('!!! check ---- simulation=', event) if checks is True else None
+  if os.path.isfile(event):
+    os.remove(event)
+  tObj.output = event
+  tObj.eventSim()
+  print('!!! check ---- simulation=', event) if checks is True else None
 
   # --------------------------------- 2° LOOP :: texp --------------------------------- !!!
 
@@ -141,25 +139,23 @@ for k in range(trials):
     event_selected = event.replace(p.getSimDir(), p.getSelectDir()).replace('bkg%06d' %count,
                                                                             'texp%ds_bkg%06d' %(texp[i], count))
     prefix = p.getSelectDir() + 'texp%ds_' % texp[i]
-    if not skip_exist:
-      if os.path.isfile(event_selected):
-        os.remove(event_selected)
-      tObj.input = event
-      tObj.output = event_selected
-      tObj.eventSelect(prefix=prefix)
-      print('!!! check ---- selection: ', event_selected) if checks is True else None
+    if os.path.isfile(event_selected):
+      os.remove(event_selected)
+    tObj.input = event
+    tObj.output = event_selected
+    tObj.eventSelect(prefix=prefix)
+    print('!!! check ---- selection: ', event_selected) if checks is True else None
 
     # --------------------------------- MAX LIKELIHOOD --------------------------------- !!!
 
     model = p.getWorkingDir() + model_pl
     likeXml = event_selected.replace(p.getSelectDir(), p.getDetDir()).replace('.fits', '_like.xml')
-    if not skip_exist:
-      if os.path.isfile(likeXml):
-        os.remove(likeXml)
-      tObj.input = event_selected
-      tObj.model = model
-      tObj.output = likeXml
-      tObj.maxLikelihood()
+    if os.path.isfile(likeXml):
+      os.remove(likeXml)
+    tObj.input = event_selected
+    tObj.model = model
+    tObj.output = likeXml
+    tObj.maxLikelihood()
     likeObj = ManageXml(likeXml)
     print('!!! check ---- max likelihood: ', likeXml) if checks is True else None
 
