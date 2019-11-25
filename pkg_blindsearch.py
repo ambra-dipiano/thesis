@@ -303,7 +303,7 @@ class Analysis() :
     cols = list(df.columns)
     self.__time = np.append(0, np.array(df[cols[1]]))
     for i in range(len(self.__time)):
-      if self.__time[i] > self.tmax:
+      if self.__time[i] > self.tmax or self.__time[i] == self.tmax:
         self.__time[i] = self.tmax
         bin = i+1
         break
