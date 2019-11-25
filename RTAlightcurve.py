@@ -193,9 +193,7 @@ for k in range(trials):
     tObj.output = event_list
     tObj.obsList(obsname=f)
 
-  # --------------------------------- 2° LOOP :: texp --------------------------------- !!!
-
-  # --------------------------------- SELECTION --------------------------------- !!!
+  # --------------------------------- 2° LOOP :: tbins --------------------------------- !!!
 
   tObj.e = [emin, emax]
   twindows = [ttotal/texp[i] for i in range(len(texp))]  # number of temporal windows per exposure time in total time ---!
@@ -205,26 +203,40 @@ for k in range(trials):
   for j in range(int(max(twindows))):
     clocking += 1  # passing time second by second ---!
     print(clocking, 'j loop', tlast, is_detection)
+
+    # --------------------------------- CLOCKING BREAK --------------------------------- !!!
+
     # check tlast, if globally reached then stop current trial ---!
     if clocking > max(tlast):
       print('end analysis trial', count)
       break
     current_twindows = []
+
+    # --------------------------------- 3° LOOP :: texp in tbin --------------------------------- !!!
+
     for i in range(len(texp)):
       current_twindows.append(texp[i]) if clocking%texp[i] == 0 else None
     # looping for all the texp for which the tbin analysis needs to be computed ---!
     for i in range(len(current_twindows)):
+
+      # --------------------------------- CLOCKING SKIP --------------------------------- !!!
+
       # check tlast, if locally reached then skip current bin ---!
       index = texp.index(current_twindows[i])
-      print('i loop', tlast, is_detection, index)
       if clocking > tlast[index]:
         print('skip analysis texp', texp[index])
         continue
+      # --------------------------------- CHECK SKIP --------------------------------- !!!
+
+      ID = 'ID%06d' % count
       tbin = clocking/current_twindows[i] # temporal bin number of this analysis
-      # data file init and check to avoid doubles ---!
       csvName = p.getCsvDir() + fileroot + '%ds_tbin%d_chunk%02d.csv' % (texp[i], tbin, chunk)
-      if os.path.isfile(csvName):
+      skip = checkTrialId(csvName, ID)
+      if skip_exist is True and skip is True:
         continue
+
+      # --------------------------------- SELECTION --------------------------------- !!!
+
       # if first tbin of tepx then don't add clocking time to selection edges ---!
       if (clocking in texp):
         tObj.t = [tmin, tmax[i]]
