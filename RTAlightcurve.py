@@ -16,7 +16,7 @@ chunk = int(sys.argv[1])  # global count
 trials = int(sys.argv[2])  # number of trials
 count = int(sys.argv[3])  # starting count
 # cpus ---!
-nthreads = 2
+nthreads = 1
 os.environ['OPENBLAS_NUM_THREADS'] = str(nthreads)
 os.environ['MKL_NUM_THREADS'] = str(nthreads)
 
