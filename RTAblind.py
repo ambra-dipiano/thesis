@@ -52,6 +52,7 @@ ebl_fits = False  # generate the EBL absorbed template ---!
 extract_spec = True  # generates spectral tables and obs definition models ---!
 irf_degrade = False  # use degraded irf ---!
 src_sort = False  # sorts scandidates from highest TS to lowest ---!
+skip_exist = False  # skip trial if already existing in data file ---!
 debug = False  # prints logfiles on terminal ---!
 if_log = True  # saves logfiles ---!
 
@@ -148,6 +149,17 @@ for k in range(trials):
   if irf_degrade:
     f += 'irf'
   print('!!! check ---- file=', f) if checks is True else None
+
+  # --------------------------------- CHECK SKIP --------------------------------- !!!
+
+  ID = 'ID%06d' % count
+  csvName = p.getCsvDir() + fileroot + '%ds_chunk%02d.csv' % (texp[-1], chunk)
+  if os.path.isfile(csvName):
+    skip = checkTrialId(csvName, ID)
+  else:
+    skip = False
+  if skip_exist is True and skip is True and os.path.isfile(csvName) is True:
+    continue
 
   # --------------------------------- SIMULATION --------------------------------- !!!
 
@@ -354,7 +366,7 @@ for k in range(trials):
   # --------------------------------- CLEAR SPACE --------------------------------- !!!
 
   print('!!! check ---- ', count, ') trial done...') if checks is True else None
-  if count != 1:
+  if ID != 'ID000001':
     os.system('rm ' + p.getSimDir() + '*run*%06d*' % count)
     os.system('rm ' + p.getSelectDir() + '*run*%06d*' % count)
     os.system('rm ' + p.getDetDir() + '*run*%06d*' % count)
