@@ -107,7 +107,7 @@ for k in range(trials):
     skip = checkTrialId(csvName, ID)
   else:
     skip = False
-  if skip_exist is True and skip is True and os.path.isfile(csvName) is True:
+  if skip_exist is True and skip is True:
     continue
 
   # --------------------------------- SIMULATION --------------------------------- !!!
