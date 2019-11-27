@@ -4,7 +4,6 @@
 
 # IMpORTS ---!
 from pkg_blindsearch import *
-import numpy as np
 import csv
 import os
 import sys
@@ -15,6 +14,10 @@ import sys
 chunk = int(sys.argv[1])  # global count
 trials = int(sys.argv[2])  # number of trials
 count = int(sys.argv[3])  # starting count
+# cpus ---!
+nthreads = 1
+os.environ['OPENBLAS_NUM_THREADS'] = str(nthreads)
+os.environ['MKL_NUM_THREADS'] = str(nthreads)
 
 # ctools/cscripts parameters ---!
 caldb = 'prod3b-v2'
@@ -34,9 +37,9 @@ emax = 150.0  # selection maximum energy (TeV)
 roi = 5  # region of interest (deg)
 
 # conditions control ---!
-checks = True  # prints checks info ---!
+checks = False  # prints checks info ---!
 irf_degrade = False  # use degraded irf ---!
-skip_exist = False  # if an output already exists it skips the step ---!
+skip_exist = True  # if an output already exists it skips the step ---!
 debug = False  # prints logfiles on terminal ---!
 if_log = True  # saves logfiles ---!
 
@@ -57,7 +60,7 @@ dof, m2, m1 = getDof()
 print('!!! *** !!! dof = ', m2, ' - ', m1, ' = ', dof)
 print('!!! *** !!! IRF DEGRADATION:', irf_degrade)
 print('!!! *** !!! nominal prod:', caldb)
-print('!!! *** !!! irf:', irf) 
+print('!!! *** !!! irf:', irf)
 print('!!! *** !!! sim energy range: [', elow, ', ', ehigh, '] (TeV)')
 print('!!! *** !!! selection energy range: [', emin, ', ', emax, '] (TeV)')
 print('!!! *** !!! roi: ', roi, ' (deg)')
@@ -73,6 +76,7 @@ if count == 0:
   mObj.closeXml()
 # setup trials obj ---!
 tObj = Analysis()
+tObj.nthreads = nthreads
 tObj.pointing = pointing
 tObj.roi = roi
 tObj.e = [elow, ehigh]
@@ -95,6 +99,19 @@ for k in range(trials):
   print('\n\n!!! ************ STARTING TRIAL %d ************ !!!' %count) if checks is True else None
   print('!!! check ---- seed=', tObj.seed) if checks is True else None
 
+  # --------------------------------- CHECK SKIP --------------------------------- !!!
+
+  ID = 'ID%06d' % count
+  csvName = p.getCsvDir() + 'bkg_%ds_chunk%02d.csv' % (texp[-1], chunk)
+  skip = checkTrialId(csvName, ID)
+  print(csvName, ID)
+  print(skip_exist, skip)
+  if skip_exist is True and skip is True:
+    print('skipping trial ', count)
+    continue
+
+  print('doing trial ', count)
+
   # --------------------------------- SIMULATION --------------------------------- !!!
 
   # attach ID to fileroot ---!
@@ -105,12 +122,11 @@ for k in range(trials):
   model = p.getWorkingDir() + model_bkg
   tObj.model = model
   event = p.getSimDir() + f + ".fits"
-  if not skip_exist:
-    if os.path.isfile(event):
-      os.remove(event)
-    tObj.output = event
-    tObj.eventSim()
-    print('!!! check ---- simulation=', event) if checks is True else None
+  if os.path.isfile(event):
+    os.remove(event)
+  tObj.output = event
+  tObj.eventSim()
+  print('!!! check ---- simulation=', event) if checks is True else None
 
   # --------------------------------- 2° LOOP :: texp --------------------------------- !!!
 
@@ -123,25 +139,23 @@ for k in range(trials):
     event_selected = event.replace(p.getSimDir(), p.getSelectDir()).replace('bkg%06d' %count,
                                                                             'texp%ds_bkg%06d' %(texp[i], count))
     prefix = p.getSelectDir() + 'texp%ds_' % texp[i]
-    if not skip_exist:
-      if os.path.isfile(event_selected):
-        os.remove(event_selected)
-      tObj.input = event
-      tObj.output = event_selected
-      tObj.eventSelect(prefix=prefix)
-      print('!!! check ---- selection: ', event_selected) if checks is True else None
+    if os.path.isfile(event_selected):
+      os.remove(event_selected)
+    tObj.input = event
+    tObj.output = event_selected
+    tObj.eventSelect(prefix=prefix)
+    print('!!! check ---- selection: ', event_selected) if checks is True else None
 
     # --------------------------------- MAX LIKELIHOOD --------------------------------- !!!
 
     model = p.getWorkingDir() + model_pl
     likeXml = event_selected.replace(p.getSelectDir(), p.getDetDir()).replace('.fits', '_like.xml')
-    if not skip_exist:
-      if os.path.isfile(likeXml):
-        os.remove(likeXml)
-      tObj.input = event_selected
-      tObj.model = model
-      tObj.output = likeXml
-      tObj.maxLikelihood()
+    if os.path.isfile(likeXml):
+      os.remove(likeXml)
+    tObj.input = event_selected
+    tObj.model = model
+    tObj.output = likeXml
+    tObj.maxLikelihood()
     likeObj = ManageXml(likeXml)
     print('!!! check ---- max likelihood: ', likeXml) if checks is True else None
 
@@ -186,12 +200,11 @@ for k in range(trials):
   # --------------------------------- CLEAR SPACE --------------------------------- !!!
 
   print('!!! check ---- ', count, ') trial done...') if checks is True else None
-  if count not in [1,2,3,4]:
+  if ID != 'ID000001':
     os.system('rm ' + p.getSimDir() + '*bkg%06d*' % count)
     os.system('rm ' + p.getSelectDir() + '*bkg%06d*' % count)
     os.system('rm ' + p.getDetDir() + '*bkg%06d*' % count)
 
 print('\n\n\n\n\n\n\ndone\n\n\n\n\n\n\n\n')
-
 
 

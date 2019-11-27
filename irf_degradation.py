@@ -11,4 +11,4 @@ for fits in irf:
   irfObj = Analysis()
   irfObj.irf = fits
   irfObj.caldb = caldb
-  irfObj.degradeIrf(bkg=True)
+  irfObj.degradeIrf()
