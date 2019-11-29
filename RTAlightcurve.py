@@ -16,7 +16,7 @@ chunk = int(sys.argv[1])  # global count
 trials = int(sys.argv[2])  # number of trials
 count = int(sys.argv[3])  # starting count
 # cpus ---!
-nthreads = 1
+nthreads = 2
 os.environ['OPENBLAS_NUM_THREADS'] = str(nthreads)
 os.environ['MKL_NUM_THREADS'] = str(nthreads)
 
@@ -90,8 +90,10 @@ print('!!! *** !!! TS SORT:', src_sort)
 print('!!! *** !!! FLUX REDUCED factor:', reduce_flux)
 print('!!! *** !!! sim energy range: [', elow, ', ', ehigh, '] (TeV)')
 print('!!! *** !!! selection energy range: [', emin, ', ', emax, '] (TeV)')
-print('!!! *** !!! roi: ', roi, ' (deg)')
+print('!!! *** !!! roi:', roi, ' (deg)')
 print('!!! *** !!! pointing:', pointing, ' (deg)')
+print('!!! *** !!! blind detection confidence:', sigma, ' sigmas')
+print('!!! *** !!! detection confidence ts threshold:', ts_threshold)
 
 # --------------------------------- INITIALIZE --------------------------------- !!!
 
@@ -227,7 +229,7 @@ for k in range(trials):
 
       ID = 'ID%06d' % count
       tbin = clocking/current_twindows[i] # temporal bin number of this analysis
-      csvName = p.getCsvDir() + fileroot + '%ds_tbin%d_chunk%02d.csv' % (texp[i], tbin, chunk)
+      csvName = p.getCsvDir() + fileroot + 'ID%06d_%ds.csv' %(count, texp[index])
       if os.path.isfile(csvName):
         skip = checkTrialId(csvName, ID)
       else:
@@ -385,7 +387,7 @@ for k in range(trials):
 
       # --------------------------------- RESULTS TABLE (csv) --------------------------------- !!!
 
-      header = '#trial,texp,sigma,Ndet,Nsrc,RA_det,DEC_det,RA_fit,DEC_fit,flux_ph,flux_erg,TS\n'
+      header = '#tbin,tinit,tend,Ndet,Nsrc,RA_det,DEC_det,RA_fit,DEC_fit,flux_ph,flux_erg,TS\n'
       ID = 'ID%06d' % count
 
       row = []
@@ -403,7 +405,7 @@ for k in range(trials):
         print('!!! *** check ts:', ts[0])
         print('!!! *** ---------------------------')
 
-      row.append([ID, texp[i], sigma, Ndet, Nsrc, ra_det[0], dec_det[0], ra_fit[0], dec_fit[0],
+      row.append([tbin, tObj.t[0], tObj.t[1], Ndet, Nsrc, ra_det[0], dec_det[0], ra_fit[0], dec_fit[0],
                   flux_ph[0], flux_en[0], ts[0]])
       if os.path.isfile(csvName):
         with open(csvName, 'a') as f:
@@ -419,11 +421,11 @@ for k in range(trials):
 
   # --------------------------------- CLEAR SPACE --------------------------------- !!!
 
-  print('!!! check ---- ', count, ') trial done...') if checks else None
-  # if count != 1:
-  os.system('rm ' + p.getSimDir() + '*run*%06d*' % count)
-  os.system('rm ' + p.getSelectDir() + '*run*%06d*' % count)
-  os.system('rm ' + p.getDetDir() + '*run*%06d*' % count)
+    os.system('rm ' + p.getSelectDir() + '*run*%06d*' % count)
+    os.system('rm ' + p.getDetDir() + '*run*%06d*' % count)
+
+  if count != 1:
+    os.system('rm ' + p.getSimDir() + '*run*%06d*' % count)
 
 print('\n\n\n\n\n\n\ndone\n\n\n\n\n\n\n\n')
 
