@@ -522,9 +522,8 @@ def chi2_reduced(x, trials, df=1, nbin=None, width=None, var=True):
     print('Error: set either nbin or width')
 
   h, edges = np.histogram(x, bins=int(nbin), density=False, range=(0., max(x)))
-  yerr = np.sqrt(h)/trials
+  # yerr = np.sqrt(h)/trials
   h = h/trials
-  # yerr = np.sqrt(h)
   cbin = (edges[1:] + edges[:-1])/2
   p = (1 - stats.chi2.pdf(cbin, df=df))/2
 
