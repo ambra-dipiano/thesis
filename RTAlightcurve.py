@@ -388,7 +388,8 @@ for k in range(trials):
       # --------------------------------- RESULTS TABLE (csv) --------------------------------- !!!
 
       header = '#tbin,tinit,tend,Ndet,Nsrc,RA_det,DEC_det,RA_fit,DEC_fit,flux_ph,flux_erg,TS\n'
-      ID = 'ID%06d' % count
+      ID = 'ID%06d' %count
+      IDbin = 'tbin%09d' %tbin
 
       row = []
       if checks:
@@ -405,7 +406,7 @@ for k in range(trials):
         print('!!! *** check ts:', ts[0])
         print('!!! *** ---------------------------')
 
-      row.append([tbin, tObj.t[0], tObj.t[1], Ndet, Nsrc, ra_det[0], dec_det[0], ra_fit[0], dec_fit[0],
+      row.append([IDbin, tObj.t[0], tObj.t[1], Ndet, Nsrc, ra_det[0], dec_det[0], ra_fit[0], dec_fit[0],
                   flux_ph[0], flux_en[0], ts[0]])
       if os.path.isfile(csvName):
         with open(csvName, 'a') as f:
