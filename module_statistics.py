@@ -513,7 +513,7 @@ def ts_wilks_cumulative(x, trials, df=1, nbin=None, width=None, ylim=None, xlim=
   return fig, ax
 
 def chi2_reduced(x, trials, df=1, nbin=None, width=None, var=True):
-
+  np.seterr(divide='ignore', invalid='ignore')
   if width is None:
     width = (max(x)-min(x))/nbin
   if nbin is None:
@@ -528,10 +528,12 @@ def chi2_reduced(x, trials, df=1, nbin=None, width=None, var=True):
   cbin = (edges[1:] + edges[:-1])/2
   p = (1 - stats.chi2.pdf(cbin, df=df))/2
 
-  if var:
-    chi2 = 2*np.sum((h[1:] - p[1:])**2/h[1:])
-  else:
-    chi2 = 2*np.sum((h[1:] - p[1:])**2/p[1:])
-  chi2r = chi2 / (len(h[1:]) - 1)
-
+  with np.errstate(invalid='raise'):
+    if var:
+      chi2 = 2*np.sum((h[1:] - p[1:])**2/h[1:])
+    else:
+      chi2 = 2*np.sum((h[1:] - p[1:])**2/p[1:])
+      h[1:] = np.array(h[1:])
+    N = np.count_nonzero(h[1:])
+    chi2r = chi2 / (N - 1)
   return chi2, chi2r
