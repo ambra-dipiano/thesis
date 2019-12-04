@@ -366,7 +366,7 @@ for k in range(trials):
   # --------------------------------- CLEAR SPACE --------------------------------- !!!
 
   print('!!! check ---- ', count, ') trial done...') if checks is True else None
-  if ID != 'ID000001':
+  if int(count) != 1:
     os.system('rm ' + p.getSimDir() + '*run*%06d*' % count)
     os.system('rm ' + p.getSelectDir() + '*run*%06d*' % count)
     os.system('rm ' + p.getDetDir() + '*run*%06d*' % count)

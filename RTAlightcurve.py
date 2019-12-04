@@ -432,7 +432,7 @@ for k in range(trials):
     os.system('rm ' + p.getSelectDir() + '*run*%06d*' % count)
     os.system('rm ' + p.getDetDir() + '*run*%06d*' % count)
 
-  if count != 1:
+  if int(count) != 1:
     os.system('rm ' + p.getSimDir() + '*run*%06d*' % count)
 
 print('\n\n!!! ================== END ================== !!!\n\n')
