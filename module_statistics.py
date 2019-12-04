@@ -395,7 +395,7 @@ def ts_wilks(x, trials, df=1, nbin=None, width=None, ylim=None, xlim=None, show=
   x2 = np.arange(0, 30, 1)
   plt.errorbar(cbin, h, fmt='k+', yerr=yerr, xerr=xerr, markersize=5, label='ts')
   plt.plot(x2, stats.chi2.pdf(x2, df=df), c='orange', lw=1, ls='--', label='$\\chi^2$(dof=%d)' %df)
-  plt.plot(x2, stats.chi2.pdf(x2, df=df)/2, lw=1, ls='--', label='$\\chi^2$/2(dof=%d)' %df)
+  plt.plot(x2, stats.chi2.pdf(x2, df=df)/2, c='b', lw=1, ls='--', label='$\\chi^2$/2(dof=%d)' %df)
 
   plt.xlabel(xlabel, fontsize=fontsize)
   plt.ylabel(ylabel, fontsize=fontsize)
