@@ -158,7 +158,7 @@ for k in range(trials):
     skip = checkTrialId(csvName, ID)
   else:
     skip = False
-  if skip_exist is True and skip is True:
+  if (skip_exist and skip) is True:
     continue
 
   # --------------------------------- SIMULATION --------------------------------- !!!
@@ -371,7 +371,7 @@ for k in range(trials):
     os.system('rm ' + p.getSelectDir() + '*run*%06d*' % count)
     os.system('rm ' + p.getDetDir() + '*run*%06d*' % count)
 
-print('\n\n\n\n\n\n\ndone\n\n\n\n\n\n\n\n')
+print('\n\n!!! ================== END ================== !!!\n\n')
 
 
 

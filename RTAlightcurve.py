@@ -32,7 +32,7 @@ tmin = 30  # slewing time (s)
 tmax = []
 for i in range(len(texp)):
   tmax.append(tmin + texp[i])
-ttotal = 1e5  # maximum tobs (4h at least) simulation total time (s)
+ttotal = 1e6  # maximum tobs (4h at least) simulation total time (s)
 add_hours = 7200  # +2h observation time added after first none detection (s)
 elow = 0.03  # simulation minimum energy (TeV)
 ehigh = 150.0  # simulation maximum energy (TeV)
@@ -42,7 +42,7 @@ roi = 5  # region of interest for simulation and selection (deg)
 wbin = 0.02  # skymap bin width (deg)
 corr_rad = 0.1  # Gaussian
 confidence = (0.68, 0.95, 0.9973)  # confidence interval for asymmetrical errors (%)
-max_src = 10  # max candidates
+max_src = 5  # max candidates
 ts_threshold = 25  # TS threshold for reliable detection
 reduce_flux = None  # flux will be devided by factor reduce_flux, if nominal then set to None ---!
 
@@ -53,13 +53,13 @@ if_cut = False  # adds a cut-off parameter to the source model ---!
 ebl_fits = False  # generate the EBL absorbed template ---!
 extract_spec = True  # generates spectral tables and obs definition models ---!
 irf_degrade = False  # use degraded irf ---!
-src_sort = False  # sorts scandidates from highest TS to lowest ---!
+src_sort = True  # sorts scandidates from highest TS to lowest ---!
 skip_exist = False  # if an output already exists it skips the step ---!
 debug = False  # prints logfiles on terminal ---!
 if_log = True  # saves logfiles ---!
 
 # path configuration ---!
-cfg = xmlConfig()
+cfg = xmlConfig(cfgfile='/config_lc.xml')
 p = ConfigureXml(cfg)
 # files ---!
 fileroot = 'run0406_'
@@ -98,7 +98,7 @@ print('!!! *** !!! detection confidence ts threshold:', ts_threshold)
 # --------------------------------- INITIALIZE --------------------------------- !!!
 
 # setup trials obj ---!
-tObj = Analysis()
+tObj = Analysis(cfgfile='/config_lc.xml')
 tObj.nthreads = nthreads
 tObj.pointing = pointing
 tObj.roi = roi
@@ -201,13 +201,13 @@ for k in range(trials):
   # looping for all lightcurve second by second ---!
   for j in range(int(max(twindows))):
     clocking += min(texp)  # passing time second by second ---!
-    print(clocking, 'j loop', tlast, is_detection)
+    print(clocking, 'j loop', tlast, is_detection) if checks else None
 
     # --------------------------------- CLOCKING BREAK --------------------------------- !!!
 
     # check tlast, if globally reached then stop current trial ---!
     if clocking > max(tlast):
-      print('end analysis trial', count)
+      print('end analysis trial', count, ' at clocking', clocking)
       break
     current_twindows = []
 
@@ -235,16 +235,17 @@ for k in range(trials):
       else:
         skip = False
       if skip_exist is True and skip is True:
-        print('skip trial', count)
         continue
 
       # --------------------------------- SELECTION --------------------------------- !!!
 
       # if first tbin of tepx then don't add clocking time to selection edges ---!
-      if (clocking in texp):
+      if clocking < tmin:
+        continue
+      elif (clocking in texp):
         tObj.t = [tmin, tmax[i]]
       else:
-        tObj.t = [tmin+clocking, tmax[i]+clocking]
+        tObj.t = [clocking, texp[i]+clocking]
       # select events ---!
       event_selected = event_list.replace(p.getSimDir(), p.getSelectDir()).replace('obs_', 'texp%ds_tbin%d_' %(texp[i], tbin))
       prefix = p.getSelectDir() + 'texp%ds_tbin%d_' %(texp[i], tbin)
@@ -273,11 +274,17 @@ for k in range(trials):
       tObj.input = skymap
       tObj.output = detectionXml
       tObj.runDetection()
-      detObj = ManageXml(detectionXml)
+      detObj = ManageXml(detectionXml, cfgfile='/config_lc.xml')
       detObj.sigma = sigma
       detObj.if_cut = if_cut
       detObj.modXml()
       detObj.prmsFreeFix()
+
+      # --------------------------------- CANDIDATES NUMBER --------------------------------- !!!
+
+      pos = []
+      pos.append(detObj.loadRaDec())
+      Ndet = len(pos[0][0])
 
       # --------------------------------- MAX LIKELIHOOD --------------------------------- !!!
 
@@ -288,8 +295,8 @@ for k in range(trials):
       tObj.model = detectionXml
       tObj.output = likeXml
       tObj.maxLikelihood()
-      likeObj = ManageXml(likeXml)
-      if src_sort:
+      likeObj = ManageXml(likeXml, cfgfile='/config_lc.xml')
+      if src_sort and Ndet>0:
         highest_ts_src = likeObj.sortSrcTs()[0]
         print('!!! check ---- highest TS: ', highest_ts_src) if checks else None
       else:
@@ -388,7 +395,8 @@ for k in range(trials):
       # --------------------------------- RESULTS TABLE (csv) --------------------------------- !!!
 
       header = '#tbin,tinit,tend,Ndet,Nsrc,RA_det,DEC_det,RA_fit,DEC_fit,flux_ph,flux_erg,TS\n'
-      ID = 'ID%06d' % count
+      ID = 'ID%06d' %count
+      IDbin = 'tbin%09d' %tbin
 
       row = []
       if checks:
@@ -405,7 +413,7 @@ for k in range(trials):
         print('!!! *** check ts:', ts[0])
         print('!!! *** ---------------------------')
 
-      row.append([tbin, tObj.t[0], tObj.t[1], Ndet, Nsrc, ra_det[0], dec_det[0], ra_fit[0], dec_fit[0],
+      row.append([IDbin, tObj.t[0], tObj.t[1], Ndet, Nsrc, ra_det[0], dec_det[0], ra_fit[0], dec_fit[0],
                   flux_ph[0], flux_en[0], ts[0]])
       if os.path.isfile(csvName):
         with open(csvName, 'a') as f:
@@ -427,7 +435,7 @@ for k in range(trials):
   if count != 1:
     os.system('rm ' + p.getSimDir() + '*run*%06d*' % count)
 
-print('\n\n\n\n\n\n\ndone\n\n\n\n\n\n\n\n')
+print('\n\n!!! ================== END ================== !!!\n\n')
 
 
 

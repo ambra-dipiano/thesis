@@ -39,7 +39,7 @@ roi = 5  # region of interest (deg)
 # conditions control ---!
 checks = False  # prints checks info ---!
 irf_degrade = False  # use degraded irf ---!
-skip_exist = True  # if an output already exists it skips the step ---!
+skip_exist = False  # if an output already exists it skips the step ---!
 debug = False  # prints logfiles on terminal ---!
 if_log = True  # saves logfiles ---!
 
@@ -163,7 +163,36 @@ for k in range(trials):
     ts_list.append(likeObj.loadTs())
 
     # only first elem ---!
-    ts.append(ts_list[0])
+    ts.append(ts_list[0][0])
+
+    # --------------------------------- BEST FIT RA & DEC --------------------------------- !!!
+
+    ra_list, ra_fit, dec_list, dec_fit = ([] for j in range(4))
+    coord = likeObj.loadRaDec()
+    ra_list.append(coord[0])
+    dec_list.append(coord[1])
+
+    # only first elem ---!
+    ra_fit.append(ra_list[0][0])
+    dec_fit.append(dec_list[0][0])
+
+    # --------------------------------- BEST FIT SPECTRAL --------------------------------- !!!
+
+    pref_list, pref, index_list, index, pivot_list, pivot = ([] for j in range(6))
+    spectral = likeObj.loadSpectral()
+    index_list.append(spectral[0])
+    pref_list.append(spectral[1])
+    pivot_list.append(spectral[2])
+
+    # only first elem ---!
+    index.append(index_list[0][0])
+    pref.append(pref_list[0][0])
+    pivot.append(pivot_list[0][0])
+
+    # --------------------------------- INTEGRATED FLUX --------------------------------- !!!
+
+    flux_ph = []
+    flux_ph.append(tObj.photonFluxPowerLaw(index[0], pref[0], pivot[0]))  # E (MeV)
 
     # --------------------------------- CLOSE LIKE XML --------------------------------- !!!
 
@@ -171,7 +200,7 @@ for k in range(trials):
 
     # --------------------------------- RESULTS TABLE (csv) --------------------------------- !!!
 
-    header = '#trial,texp,TS\n'
+    header = '#trial,RA_fit,DEC_fit,flux_ph,TS\n'
     ID = 'ID%06d' % count
     csvName = p.getCsvDir() + 'bkg_%ds_chunk%02d.csv' % (texp[i], chunk)
 
@@ -180,7 +209,7 @@ for k in range(trials):
     print('!!! ----- check texp:', texp[i]) if checks is True else None
     print('!!! *** check ts:', ts[0][0]) if checks is True else None
 
-    row.append([ID, texp[i], ts[0][0]])
+    row.append([ID, ra_fit[0], dec_fit[0], flux_ph[0], ts[0]])
     print('!!! check row: seed %d --- texp' %i, texp[i], 's =====', row) if checks is True else None
     if os.path.isfile(csvName):
       with open(csvName, 'a') as f:
@@ -198,11 +227,11 @@ for k in range(trials):
   # --------------------------------- CLEAR SPACE --------------------------------- !!!
 
   print('!!! check ---- ', count, ') trial done...') if checks is True else None
-  if ID != 'ID000001':
+  if count != 1:
     os.system('rm ' + p.getSimDir() + '*bkg%06d*' % count)
     os.system('rm ' + p.getSelectDir() + '*bkg%06d*' % count)
     os.system('rm ' + p.getDetDir() + '*bkg%06d*' % count)
 
-print('\n\n\n\n\n\n\ndone\n\n\n\n\n\n\n\n')
+print('\n\n!!! ================== END ================== !!!\n\n')
 
 
