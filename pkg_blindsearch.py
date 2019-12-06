@@ -21,7 +21,6 @@ import matplotlib
 matplotlib.rcsetup.validate_backend('agg')
 import matplotlib.pyplot as plt
 import seaborn as sns
-from astropy.table import Table
 
 def xmlConfig(cfgfile='/config.xml') :
   '''
