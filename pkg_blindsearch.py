@@ -21,6 +21,7 @@ import matplotlib
 matplotlib.rcsetup.validate_backend('agg')
 import matplotlib.pyplot as plt
 import seaborn as sns
+from astropy.table import Table
 
 def xmlConfig(cfgfile='/config.xml') :
   '''
@@ -493,13 +494,53 @@ class Analysis() :
     xml.save(self.output)
     return
 
+  # created one FITS table containing all events and GTIs ---!
+  def appendEvents(self):
+    # remove old ---!
+    if os.path.isfile(self.output):
+      os.remove(self.output)
+    # collect events ---!
+    print(len(self.input))
+    for i, f in enumerate(self.input):
+      with fits.open(f) as hdul:
+        if i==0:
+          h1 = hdul[1].header
+          h2 = hdul[2].header
+          ext1 = hdul[1].data
+          ext2 = hdul[2].data
+        else:
+          ext1 = np.append(ext1, hdul[1].data)
+          if i == len(self.input)-1:
+            GTIlast = hdul[2].data[0][1]
+    # create output FITS file empty ---!
+    hdu = fits.PrimaryHDU()
+    hdul = fits.HDUList([hdu])
+    hdul.writeto(self.output)
+    # update FITS file ---!
+    with fits.open(self.output, mode='update') as hdul:
+      hdu1 = fits.BinTableHDU(name='EVENTS', data=ext1, header=h1)
+      hdu2 = fits.BinTableHDU(name='GTI', data=ext2, header=h2)
+      hdul.append(hdu1)
+      hdul.append(hdu2)
+      hdul.writeto(self.output, overwrite=True)
+    with fits.open(self.output, mode='update') as hdul:
+      # modify indexes ---!
+      indexes = hdul[1].data.field(0)
+      for i, ind in enumerate(indexes):
+        hdul[1].data.field(0)[i] = i+1
+      hdul.flush()
+      # modify GTI ---!
+      hdul[2].data[0][1] = GTIlast
+    return
+
   # ctselect wrapper ---!
-  def eventSelect(self, prefix):
+  def eventSelect(self, prefix=None):
     selection = ctools.ctselect()
     selection['inobs'] = self.input
     selection['outobs'] = self.output
     selection['usepnt'] = True
-    selection['prefix'] = prefix
+    if prefix != None:
+      selection['prefix'] = prefix
     selection['rad'] = self.roi
     selection['tmin'] = self.t[0]
     selection['tmax'] = self.t[1]
