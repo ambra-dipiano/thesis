@@ -12,9 +12,10 @@ import sys
 # --------------------------------- SETUP --------------------------------- !!!
 
 # initialize global count ---!
-chunk = int(sys.argv[1])  # global count
-trials = int(sys.argv[2])  # number of trials
-count = int(sys.argv[3])  # starting count
+trials = int(sys.argv[1])  # global count
+ttotal = int(sys.argv[2])  # number of trials
+add_hours = int(sys.argv[3])  # starting count
+count = 0
 # cpus ---!
 nthreads = 2
 os.environ['OPENBLAS_NUM_THREADS'] = str(nthreads)
@@ -32,8 +33,8 @@ tmin = 30  # slewing time (s)
 tmax = []
 for i in range(len(texp)):
   tmax.append(tmin + texp[i])
-ttotal = 1e6  # maximum tobs (4h at least) simulation total time (s)
-add_hours = 7200  # +2h observation time added after first none detection (s)
+#ttotal = 1e6  # maximum tobs (4h at least) simulation total time (s)
+#add_hours = 7200  # +2h observation time added after first none detection (s)
 elow = 0.03  # simulation minimum energy (TeV)
 ehigh = 150.0  # simulation maximum energy (TeV)
 emin = 0.03  # selection minimum energy (TeV)
@@ -47,7 +48,7 @@ ts_threshold = 25  # TS threshold for reliable detection
 reduce_flux = None  # flux will be devided by factor reduce_flux, if nominal then set to None ---!
 
 # conditions control ---!
-checks = False  # prints checks info ---!
+checks = True  # prints checks info ---!
 if_ebl = True  # uses the EBL absorbed template ---!
 if_cut = False  # adds a cut-off parameter to the source model ---!
 ebl_fits = False  # generate the EBL absorbed template ---!
@@ -182,15 +183,19 @@ for k in range(trials):
     if not os.path.isfile(event):
       tObj.eventSim()
   # observation list ---!
-  event = event_bins
-  event_list = p.getSimDir() + 'obs_%s.xml' % f
+  #event_list = p.getSimDir() + 'obs_%s.xml' % f
+  event_list = p.getSimDir() + f + '.fits'
   if reduce_flux != None:
-    event_list = event_list.replace('obs_', 'obs_flux%s_' %str(reduce_flux))
+    #event_list = event_list.replace('obs_', 'obs_flux%s_' %str(reduce_flux))
+    event_list = event_list.replace('.fits', '_flux%s.fits' % str(reduce_flux))
   if os.path.isfile(event_list):
     os.remove(event_list)
-  tObj.input = event
+  tObj.input = event_bins
   tObj.output = event_list
-  tObj.obsList(obsname=f)
+  #tObj.obsList(obsname=f)
+  tObj.appendEvents()
+
+  #breakpoint()
 
   # --------------------------------- 2° LOOP :: tbins --------------------------------- !!!
 
@@ -207,7 +212,7 @@ for k in range(trials):
 
     # check tlast, if globally reached then stop current trial ---!
     if clocking > max(tlast):
-      print('end analysis trial', count, ' at clocking', clocking)
+      print('end analysis trial', count, ' at clocking', clocking-min(texp))
       break
     current_twindows = []
 
@@ -247,8 +252,9 @@ for k in range(trials):
       else:
         tObj.t = [clocking, texp[i]+clocking]
       # select events ---!
-      event_selected = event_list.replace(p.getSimDir(), p.getSelectDir()).replace('obs_', 'texp%ds_tbin%d_' %(texp[i], tbin))
-      prefix = p.getSelectDir() + 'texp%ds_tbin%d_' %(texp[i], tbin)
+      #event_selected = event_list.replace(p.getSimDir(), p.getSelectDir()).replace('obs_', 'texp%ds_tbin%d_' %(texp[i], tbin))
+      event_selected = event_list.replace(p.getSimDir(), p.getSelectDir()).replace('.fits', 'texp%ds_tbin%d.fits' %(texp[i], tbin))
+      prefix = p.getSelectDir() + '_texp%ds_tbin%d_' %(texp[i], tbin)
       if os.path.isfile(event_selected):
         os.remove(event_selected)
       tObj.input = event_list
@@ -257,7 +263,8 @@ for k in range(trials):
 
       # --------------------------------- SKYMAP --------------------------------- !!!
 
-      skymap = event_selected.replace(p.getSelectDir(), p.getDetDir()).replace('.xml', '_skymap.fits')
+      #skymap = event_selected.replace(p.getSelectDir(), p.getDetDir()).replace('.xml', '_skymap.fits')
+      skymap = event_list.replace(p.getSelectDir(), p.getDetDir()).replace('.fits', '_skymap.fits')
       if os.path.isfile(skymap):
         os.remove(skymap)
       tObj.input = event_selected
@@ -429,11 +436,11 @@ for k in range(trials):
 
   # --------------------------------- CLEAR SPACE --------------------------------- !!!
 
-    os.system('rm ' + p.getSelectDir() + '*run*%06d*' % count)
-    os.system('rm ' + p.getDetDir() + '*run*%06d*' % count)
-
-  if int(count) != 1:
-    os.system('rm ' + p.getSimDir() + '*run*%06d*' % count)
+  #   os.system('rm ' + p.getSelectDir() + '*run*%06d*' % count)
+  #   os.system('rm ' + p.getDetDir() + '*run*%06d*' % count)
+  #
+  # if int(count) != 1:
+  #   os.system('rm ' + p.getSimDir() + '*run*%06d*' % count)
 
 print('\n\n!!! ================== END ================== !!!\n\n')
 
