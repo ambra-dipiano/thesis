@@ -227,9 +227,10 @@ for k in range(trials):
   # --------------------------------- CLEAR SPACE --------------------------------- !!!
 
   print('!!! check ---- ', count, ') trial done...') if checks is True else None
-  os.system('rm ' + p.getSimDir() + '*bkg%06d*' % count)
-  os.system('rm ' + p.getSelectDir() + '*bkg%06d*' % count)
-  os.system('rm ' + p.getDetDir() + '*bkg%06d*' % count)
+  if int(count) != 1:
+    os.system('rm ' + p.getSimDir() + '*bkg%06d*' % count)
+    os.system('rm ' + p.getSelectDir() + '*bkg%06d*' % count)
+    os.system('rm ' + p.getDetDir() + '*bkg%06d*' % count)
 
 print('\n\n!!! ================== END ================== !!!\n\n')
 
