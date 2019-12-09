@@ -33,8 +33,8 @@ def xmlConfig(cfgfile='/config.xml') :
   # load configuration file ---!
   cfgfile = os.path.dirname(__file__)+str(cfgfile)
   # create configuration dictionary ---!
-  with open(cfgfile) as fd:
-    cfg = untangle.parse(fd.read())
+  with open(cfgfile) as f:
+    cfg = untangle.parse(f.read())
   return cfg.config
 
 def getDof(cfgfile='/config.xml'):
