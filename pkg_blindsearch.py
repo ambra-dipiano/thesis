@@ -504,11 +504,8 @@ class Analysis() :
       ext2 = hdul[2].data
       GTIi = hdul[2].data[0][0]
       GTIid = 0
-      print(len(times))
       for i, t in enumerate(times):
         if (t > (max_length*(n+1)) or t == (max_length*(n+1))):
-          print(i)
-          print(n, max_length*(n+1))
           n += 1
           ext1 = all_data[GTIid:i]  # all untill index i-1 which is the last < or = to max_length ---!
           GTIf = times[i-1]
@@ -539,8 +536,6 @@ class Analysis() :
           n += 1
           ext1 = all_data[GTIid:]  # all index from last chunk till the end ---!
           GTIf = times[-1]
-          print(i)
-          print(GTIi, GTIf)
           # create output FITS file empty ---!
           hdu_new = fits.PrimaryHDU()
           hdul_new = fits.HDUList([hdu_new])
