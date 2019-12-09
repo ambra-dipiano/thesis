@@ -207,8 +207,6 @@ for k in range(trials):
     # for file in event_bins:
     #   os.remove(p.getSimDir()+file)
 
-  breakpoint()
-
   # --------------------------------- 2° LOOP :: tbins --------------------------------- !!!
 
   tObj.e = [emin, emax]
