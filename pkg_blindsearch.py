@@ -493,112 +493,106 @@ class Analysis() :
     xml.save(self.output)
     return
 
-  # from single fits file produces subfiles ---!
-  def __splitEvents(self, max_length):
-    with fits.open(self.output) as hdul:
-      h1 = hdul[1].header
-      h2 = hdul[2].header
-      all_data = hdul[1].data
-      times = hdul[1].data.field('TIME')
-      n = 0
-      ext2 = hdul[2].data
-      GTIi = hdul[2].data[0][0]
-      GTIid = 0
-      for i, t in enumerate(times):
-        if (t > (max_length*(n+1)) or t == (max_length*(n+1))):
-          n += 1
-          ext1 = all_data[GTIid:i]  # all untill index i-1 which is the last < or = to max_length ---!
-          GTIf = times[i-1]
-          # create output FITS file empty ---!
-          hdu_new = fits.PrimaryHDU()
-          hdul_new = fits.HDUList([hdu_new])
-          filename = self.output.replace('.fits', '_n%03d.fits' %(n))
-          hdul_new.writeto(filename)
-          with fits.open(filename, mode='update') as hdul_new:
-            hdu1 = fits.BinTableHDU(name='EVENTS', data=ext1, header=h1)
-            hdu2 = fits.BinTableHDU(name='GTI', data=ext2, header=h2)
-            hdul_new.append(hdu1)
-            hdul_new.append(hdu2)
-            hdul_new.writeto(filename, overwrite=True)
-          # update ---!
-          with fits.open(filename, mode='update') as hdul_new:
-            # modify indexes ---!
-            indexes = hdul_new[1].data.field(0)
-            for i, ind in enumerate(indexes):
-              hdul_new[1].data.field(0)[i] = i + 1
-            # modify GTI ---!
-            hdul_new[2].data[0][0] = GTIi
-            hdul_new[2].data[0][1] = GTIf
-            hdul_new.flush()
-          GTIi = GTIf
-          GTIid = i
-        elif i == len(times)-1:
-          n += 1
-          ext1 = all_data[GTIid:]  # all index from last chunk till the end ---!
-          GTIf = times[-1]
-          # create output FITS file empty ---!
-          hdu_new = fits.PrimaryHDU()
-          hdul_new = fits.HDUList([hdu_new])
-          filename = self.output.replace('.fits', '_n%03d.fits' %(n))
-          hdul_new.writeto(filename)
-          with fits.open(filename, mode='update') as hdul_new:
-            hdu1 = fits.BinTableHDU(name='EVENTS', data=ext1, header=h1)
-            hdu2 = fits.BinTableHDU(name='GTI', data=ext2, header=h2)
-            hdul_new.append(hdu1)
-            hdul_new.append(hdu2)
-            hdul_new.writeto(filename, overwrite=True)
-          # update ---!
-          with fits.open(filename, mode='update') as hdul_new:
-            # modify indexes ---!
-            indexes = hdul_new[1].data.field(0)
-            for i, ind in enumerate(indexes):
-              hdul_new[1].data.field(0)[i] = i + 1
-            # modify GTI ---!
-            hdul_new[2].data[0][0] = GTIi
-            hdul_new[2].data[0][1] = GTIf
-            hdul_new.flush()
-    return
-
-  # created one FITS table containing all events and GTIs ---!
-  def appendEvents(self, max_length=None):
-    # remove old ---!
-    if os.path.isfile(self.output):
-      os.remove(self.output)
-    # collect events ---!
-    for i, f in enumerate(self.input):
+  # create single photon list from obs list ---!
+  def __singlePhotonList(self, sample):
+    for i, f in enumerate(sample):
       with fits.open(f) as hdul:
-        if i==0:
+        if i == 0:
           h1 = hdul[1].header
           h2 = hdul[2].header
           ext1 = hdul[1].data
           ext2 = hdul[2].data
         else:
           ext1 = np.append(ext1, hdul[1].data)
-          if i == len(self.input)-1:
+          if i == len(sample)-1:
             GTIlast = hdul[2].data[0][1]
     # create output FITS file empty ---!
     hdu = fits.PrimaryHDU()
     hdul = fits.HDUList([hdu])
-    hdul.writeto(self.output)
+    hdul.writeto(self.output, overwrite=True)
+    hdul.close()
     # update FITS file ---!
     with fits.open(self.output, mode='update') as hdul:
       hdu1 = fits.BinTableHDU(name='EVENTS', data=ext1, header=h1)
       hdu2 = fits.BinTableHDU(name='GTI', data=ext2, header=h2)
       hdul.append(hdu1)
       hdul.append(hdu2)
-      hdul.writeto(self.output, overwrite=True)
+      hdul.flush()
     with fits.open(self.output, mode='update') as hdul:
       # modify indexes ---!
       indexes = hdul[1].data.field(0)
       for i, ind in enumerate(indexes):
-        hdul[1].data.field(0)[i] = i+1
+        hdul[1].data.field(0)[i] = i + 1
       # modify GTI ---!
       hdul[2].data[0][1] = GTIlast
       hdul.flush()
+    return
 
-    if max_length != None:
-      self.__splitEvents(max_length=max_length)
+  # from single fits file produces subfiles ---!
+  def __multiplePhotonLists(self, sample, filename, GTI):
+    self.__singlePhotonList(sample=sample)
+    GTIid = []
+    with fits.open(self.output) as hdul:
+      h1 = hdul[1].header
+      h2 = hdul[2].header
+      all_data = hdul[1].data
+      times = hdul[1].data.field('TIME')
+      ext2 = hdul[2].data
+    skip = False
+    for i, t in enumerate(times):
+      if (t > GTI[0] or t == GTI[0]) and not skip:
+        GTIid.append(i)
+        skip = True
+      elif (t > GTI[1] or t == GTI[1] or i==len(times)-1) and skip:
+        GTIid.append(i)
+        break
 
+    ext1 = all_data[GTIid[0]:GTIid[1]]  # all untill index i-1 which is the last < or = to max_length ---!
+    # create output FITS file empty ---!
+    hdu_new = fits.PrimaryHDU()
+    hdul_new = fits.HDUList([hdu_new])
+    hdul_new.writeto(filename, overwrite=True)
+    hdul_new.close()
+    with fits.open(filename, mode='update') as hdul_new:
+      hdu1 = fits.BinTableHDU(name='EVENTS', data=ext1, header=h1)
+      hdu2 = fits.BinTableHDU(name='GTI', data=ext2, header=h2)
+      hdul_new.append(hdu1)
+      hdul_new.append(hdu2)
+      hdul_new.flush()
+    # update ---!
+    with fits.open(filename, mode='update') as hdul_new:
+      # modify indexes ---!
+      indexes = hdul_new[1].data.field(0)
+      for i, ind in enumerate(indexes):
+        hdul_new[1].data.field(0)[i] = i + 1
+      # modify GTI ---!
+      hdul_new[2].data[0][0] = GTI[0]
+      hdul_new[2].data[0][1] = GTI[1]
+      hdul_new.flush()
+    return
+
+  # created a number of FITS table containing all events and GTIs ---!
+  def appendEvents(self, max_length=None, remove_old=False):
+    # remove old ---!
+    if os.path.isfile(self.output) and remove_old:
+      os.remove(self.output)
+    # collect events ---!
+    if max_length == None:
+      self.__singlePhotonList(sample=self.input)
+    else:
+      n = 1
+      sample = []
+      for i, f in enumerate(self.input):
+        with fits.open(f) as hdul:
+          tlast = hdul[2].data[0][1]
+          if tlast < max_length*n:
+            sample.append(f)
+          else:
+            sample.append(f)
+            filename = self.output.replace('.fits', '_n%03d.fits' %n)
+            self.__multiplePhotonLists(sample=sample, filename=filename, GTI=[max_length*(n-1), max_length*n])
+            sample = [f]
+            n += 1
     return
 
   # ctselect wrapper ---!
