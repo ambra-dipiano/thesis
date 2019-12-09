@@ -15,16 +15,11 @@ import sys
 # chunk = int(sys.argv[1])  # global count
 # trials = int(sys.argv[2])  # number of trials
 # count = int(sys.argv[3])  # starting count
-# initialize observation time for trials ---!
-# trials = int(sys.argv[1])  # number of trials
-# ttotal = int(sys.argv[2])  # total observation time
-# add_hours = int(sys.argv[3])  # additional observation time
-count = 0
 # compact initialisation ---!
 trials = 1  # trials
-count = 0
+count = 0  # starting count
 # cpus ---!
-nthreads = 1
+nthreads = 2
 os.environ['OPENBLAS_NUM_THREADS'] = str(nthreads)
 os.environ['MKL_NUM_THREADS'] = str(nthreads)
 
