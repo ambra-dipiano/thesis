@@ -12,12 +12,19 @@ import sys
 # --------------------------------- SETUP --------------------------------- !!!
 
 # initialize global count ---!
-trials = int(sys.argv[1])  # global count
-ttotal = int(sys.argv[2])  # number of trials
-add_hours = int(sys.argv[3])  # starting count
+# chunk = int(sys.argv[1])  # global count
+# trials = int(sys.argv[2])  # number of trials
+# count = int(sys.argv[3])  # starting count
+# initialize observation time for trials ---!
+# trials = int(sys.argv[1])  # number of trials
+# ttotal = int(sys.argv[2])  # total observation time
+# add_hours = int(sys.argv[3])  # additional observation time
+count = 0
+# compact initialisation ---!
+trials = 1  # trials
 count = 0
 # cpus ---!
-nthreads = 2
+nthreads = 1
 os.environ['OPENBLAS_NUM_THREADS'] = str(nthreads)
 os.environ['MKL_NUM_THREADS'] = str(nthreads)
 
@@ -33,8 +40,9 @@ tmin = 30  # slewing time (s)
 tmax = []
 for i in range(len(texp)):
   tmax.append(tmin + texp[i])
-#ttotal = 1e6  # maximum tobs (4h at least) simulation total time (s)
-#add_hours = 7200  # +2h observation time added after first none detection (s)
+ttotal = 1e6  # maximum tobs (4h at least) simulation total time (s)
+add_hours = 7200  # +2h observation time added after first none detection (s)
+run_duration = 1200  # 20min observation run time for LST in RTA (s) ---!
 elow = 0.03  # simulation minimum energy (TeV)
 ehigh = 150.0  # simulation maximum energy (TeV)
 emin = 0.03  # selection minimum energy (TeV)
@@ -95,6 +103,8 @@ print('!!! *** !!! roi:', roi, ' (deg)')
 print('!!! *** !!! pointing:', pointing, ' (deg)')
 print('!!! *** !!! blind detection confidence:', sigma, ' sigmas')
 print('!!! *** !!! detection confidence ts threshold:', ts_threshold)
+print('!!! *** !!! total observation time:', ttotal, ' s')
+print('!!! *** !!! additional observation time:', add_hours, ' s')
 
 # --------------------------------- INITIALIZE --------------------------------- !!!
 
@@ -116,9 +126,9 @@ else:
 tObj.irf = irf
 # add EBL to template ---!
 if ebl_fits:
-  tObj.template = p.getWorkingDir() + nominal_template # nominal ---!
-  new_template = p.getWorkingDir() + ebl_template # absorbed ---!
-  tObj.table = ebl_table # fiducial ---!
+  tObj.template = p.getWorkingDir() + nominal_template  # nominal ---!
+  new_template = p.getWorkingDir() + ebl_template  # absorbed ---!
+  tObj.table = ebl_table  # fiducial ---!
   tObj.zfetch = True
   tObj.if_ebl = False
   tObj.fitsEbl(new_template)
@@ -126,7 +136,7 @@ if ebl_fits:
 if if_ebl:
   template = p.getWorkingDir() + ebl_template
   print('with EBL') if checks else None
-else :
+else:
   template = p.getWorkingDir() + nominal_template
   print('w/o EBL') if checks else None
 tObj.if_ebl = if_ebl
@@ -143,7 +153,7 @@ print('!!! check ---- caldb:', tObj.caldb) if checks else None
 if reduce_flux != None:
   tObj.factor = reduce_flux
   tObj.makeFainter()
-  print('!!! check ---- reduce flux by factor %s' %str(reduce_flux)) if checks else None
+  print('!!! check ---- reduce flux by factor %s' % str(reduce_flux)) if checks else None
 
 # --------------------------------- 1° LOOP :: trials  --------------------------------- !!!
 
@@ -151,12 +161,12 @@ for k in range(trials):
   count += 1
   tObj.seed = count
   clocking = 0  # simulate flowing time (subsequent temporal windows of 1s)
-  print('\n\n!!! ************ STARTING TRIAL %d ************ !!!\n\n' %count) if checks else None
+  print('\n\n!!! ************ STARTING TRIAL %d ************ !!!\n\n' % count) if checks else None
   print('!!! check ---- seed=', tObj.seed) if checks else None
   # attach ID to fileroot ---!
   if if_ebl:
     f = fileroot + 'ebl%06d' % (count)
-  else :
+  else:
     f = fileroot + 'sim%06d' % (count)
   if irf_degrade:
     f += 'irf'
@@ -169,40 +179,42 @@ for k in range(trials):
   tgrid = tObj.getTimeSlices()  # methods which returns time slice edges
   # simulate ---!
   for i in range(tbin_stop):
-    tObj.t = [tgrid[i], tgrid[i+1]]
+    tObj.t = [tgrid[i], tgrid[i + 1]]
     if if_ebl:
       tObj.model = p.getDataDir() + 'run0406_ID000126_ebl_tbin%02d.xml' % i
     else:
       tObj.model = p.getDataDir() + 'run0406_ID000126_tbin%02d.xml' % i
     event = p.getSimDir() + f + "_tbin%02d.fits" % i
     if reduce_flux != None:
-      tObj.model = tObj.model.replace('_tbin', '_flux%s_tbin' %str(reduce_flux))
-      event = event .replace('_tbin', '_flux%s_tbin' %str(reduce_flux))
+      tObj.model = tObj.model.replace('_tbin', '_flux%s_tbin' % str(reduce_flux))
+      event = event.replace('_tbin', '_flux%s_tbin' % str(reduce_flux))
     event_bins.append(event)
     tObj.output = event
     if not os.path.isfile(event):
       tObj.eventSim()
+      print('doing sim') if checks else None
   # observation list ---!
-  #event_list = p.getSimDir() + 'obs_%s.xml' % f
+  # event_list = p.getSimDir() + 'obs_%s.xml' % f
   event_list = p.getSimDir() + f + '.fits'
   if reduce_flux != None:
-    #event_list = event_list.replace('obs_', 'obs_flux%s_' %str(reduce_flux))
+    # event_list = event_list.replace('obs_', 'obs_flux%s_' %str(reduce_flux))
     event_list = event_list.replace('.fits', '_flux%s.fits' % str(reduce_flux))
-  if os.path.isfile(event_list):
-    os.remove(event_list)
   tObj.input = event_bins
   tObj.output = event_list
-  #tObj.obsList(obsname=f)
-  tObj.appendEvents()
-
-  #breakpoint()
+  if not os.path.isfile(event_list):
+    # tObj.obsList(obsname=f)
+    tObj.appendEvents(max_length=run_duration)
+    # for file in event_bins:
+    #   os.remove(p.getSimDir()+file)
 
   # --------------------------------- 2° LOOP :: tbins --------------------------------- !!!
 
   tObj.e = [emin, emax]
-  twindows = [ttotal/texp[i] for i in range(len(texp))]  # number of temporal windows per exposure time in total time ---!
+  twindows = [ttotal / texp[i] for i in
+              range(len(texp))]  # number of temporal windows per exposure time in total time ---!
   tlast = [ttotal for i in range(len(texp))]  # maximum observation time from last detection (not exceeding ttotal) ---!
-  is_detection = [True for i in range(len(texp))]  # controls which avoid forwarding of tlast for subsequent non-detections ---!
+  is_detection = [True for i in
+                  range(len(texp))]  # controls which avoid forwarding of tlast for subsequent non-detections ---!
   # looping for all lightcurve second by second ---!
   for j in range(int(max(twindows))):
     clocking += min(texp)  # passing time second by second ---!
@@ -212,14 +224,14 @@ for k in range(trials):
 
     # check tlast, if globally reached then stop current trial ---!
     if clocking > max(tlast):
-      print('end analysis trial', count, ' at clocking', clocking-min(texp))
+      print('end analysis trial', count, ' at clocking', clocking - min(texp))
       break
     current_twindows = []
 
     # --------------------------------- 3° LOOP :: texp in tbin --------------------------------- !!!
 
     for i in range(len(texp)):
-      current_twindows.append(texp[i]) if clocking%texp[i] == 0 else None
+      current_twindows.append(texp[i]) if clocking % texp[i] == 0 else None
     # looping for all the texp for which the tbin analysis needs to be computed ---!
     for i in range(len(current_twindows)):
 
@@ -232,11 +244,11 @@ for k in range(trials):
         continue
       # --------------------------------- CHECK SKIP --------------------------------- !!!
 
-      ID = 'ID%06d' % count
-      tbin = clocking/current_twindows[i] # temporal bin number of this analysis
-      csvName = p.getCsvDir() + fileroot + 'ID%06d_%ds.csv' %(count, texp[index])
+      tbin = clocking / current_twindows[i]  # temporal bin number of this analysis
+      IDbin = 'tbin%09d' % tbin
+      csvName = p.getCsvDir() + fileroot + 'ID%06d_%ds.csv' % (count, texp[index])
       if os.path.isfile(csvName):
-        skip = checkTrialId(csvName, ID)
+        skip = checkTrialId(csvName, IDbin)
       else:
         skip = False
       if skip_exist is True and skip is True:
@@ -250,37 +262,42 @@ for k in range(trials):
       elif (clocking in texp):
         tObj.t = [tmin, tmax[i]]
       else:
-        tObj.t = [clocking, texp[i]+clocking]
+        tObj.t = [clocking, texp[i] + clocking]
       # select events ---!
-      #event_selected = event_list.replace(p.getSimDir(), p.getSelectDir()).replace('obs_', 'texp%ds_tbin%d_' %(texp[i], tbin))
-      event_selected = event_list.replace(p.getSimDir(), p.getSelectDir()).replace('.fits', 'texp%ds_tbin%d.fits' %(texp[i], tbin))
-      prefix = p.getSelectDir() + '_texp%ds_tbin%d_' %(texp[i], tbin)
+      # event_selected = event_list.replace(p.getSimDir(), p.getSelectDir()).replace('obs_', 'texp%ds_tbin%d_' %(
+      # texp[i], tbin))
+      event_selected = event_list.replace(p.getSimDir(), p.getSelectDir()).replace('.fits', '_texp%ds_tbin%d.fits' % (
+      texp[i], tbin))
+      # prefix = p.getSelectDir() + 'texp%ds_tbin%d_' %(texp[i], tbin)
       if os.path.isfile(event_selected):
         os.remove(event_selected)
       tObj.input = event_list
       tObj.output = event_selected
-      tObj.eventSelect(prefix=prefix)
+      tObj.eventSelect(prefix=None)
+      print(tObj.output) if checks else None
 
       # --------------------------------- SKYMAP --------------------------------- !!!
 
-      #skymap = event_selected.replace(p.getSelectDir(), p.getDetDir()).replace('.xml', '_skymap.fits')
-      skymap = event_list.replace(p.getSelectDir(), p.getDetDir()).replace('.fits', '_skymap.fits')
+      # skymap = event_selected.replace(p.getSelectDir(), p.getDetDir()).replace('.xml', '_skymap.fits')
+      skymap = event_selected.replace(p.getSelectDir(), p.getDetDir()).replace('.fits', '_skymap.fits')
       if os.path.isfile(skymap):
         os.remove(skymap)
       tObj.input = event_selected
       tObj.output = skymap
       tObj.eventSkymap(wbin=wbin)
+      print(tObj.output) if checks else None
 
       # --------------------------------- DETECTION & MODELING --------------------------------- !!!
 
       tObj.corr_rad = corr_rad
       tObj.max_src = max_src
-      detectionXml = skymap.replace('_skymap.fits', '_det%dsgm.xml' %sigma)
+      detectionXml = skymap.replace('_skymap.fits', '_det%dsgm.xml' % sigma)
       if os.path.isfile(detectionXml):
         os.remove(detectionXml)
       tObj.input = skymap
       tObj.output = detectionXml
       tObj.runDetection()
+      print(tObj.output) if checks else None
       detObj = ManageXml(detectionXml, cfgfile='/config_lc.xml')
       detObj.sigma = sigma
       detObj.if_cut = if_cut
@@ -302,8 +319,9 @@ for k in range(trials):
       tObj.model = detectionXml
       tObj.output = likeXml
       tObj.maxLikelihood()
+      print(tObj.output) if checks else None
       likeObj = ManageXml(likeXml, cfgfile='/config_lc.xml')
-      if src_sort and Ndet>0:
+      if src_sort and Ndet > 0:
         highest_ts_src = likeObj.sortSrcTs()[0]
         print('!!! check ---- highest TS: ', highest_ts_src) if checks else None
       else:
@@ -402,8 +420,8 @@ for k in range(trials):
       # --------------------------------- RESULTS TABLE (csv) --------------------------------- !!!
 
       header = '#tbin,tinit,tend,Ndet,Nsrc,RA_det,DEC_det,RA_fit,DEC_fit,flux_ph,flux_erg,TS\n'
-      ID = 'ID%06d' %count
-      IDbin = 'tbin%09d' %tbin
+      ID = 'ID%06d' % count
+      IDbin = 'tbin%09d' % tbin
 
       row = []
       if checks:
@@ -434,15 +452,14 @@ for k in range(trials):
           w.writerows(row)
           f.close()
 
-  # --------------------------------- CLEAR SPACE --------------------------------- !!!
+    # --------------------------------- CLEAR SPACE --------------------------------- !!!
 
-  #   os.system('rm ' + p.getSelectDir() + '*run*%06d*' % count)
-  #   os.system('rm ' + p.getDetDir() + '*run*%06d*' % count)
-  #
-  # if int(count) != 1:
-  #   os.system('rm ' + p.getSimDir() + '*run*%06d*' % count)
+    os.system('rm ' + p.getSelectDir() + '*run*%06d*' % count)
+    os.system('rm ' + p.getDetDir() + '*run*%06d*' % count)
+
+  if int(count) != 1:
+    os.system('rm ' + p.getSimDir() + '*run*%06d*' % count)
 
 print('\n\n!!! ================== END ================== !!!\n\n')
-
 
 
