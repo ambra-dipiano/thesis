@@ -34,9 +34,9 @@ tmin = 30  # slewing time (s)
 tmax = []
 for i in range(len(texp)):
   tmax.append(tmin + texp[i])
-ttotal = 900 #1e6  # maximum tobs (4h at least) simulation total time (s)
-add_hours = 50 #7200  # +2h observation time added after first none detection (s)
-run_duration = 200 #1200  # 20min observation run time for LST in RTA (s) ---!
+ttotal = 1e6  # maximum tobs (4h at least) simulation total time (s)
+add_hours = 7200  # +2h observation time added after first none detection (s)
+run_duration = 1200  # 20min observation run time for LST in RTA (s) ---!
 elow = 0.03  # simulation minimum energy (TeV)
 ehigh = 150.0  # simulation maximum energy (TeV)
 emin = 0.03  # selection minimum energy (TeV)
@@ -50,7 +50,7 @@ ts_threshold = 25  # TS threshold for reliable detection
 reduce_flux = None  # flux will be devided by factor reduce_flux, if nominal then set to None ---!
 
 # conditions control ---!
-checks = True  # prints checks info ---!
+checks = False  # prints checks info ---!
 if_ebl = True  # uses the EBL absorbed template ---!
 if_cut = False  # adds a cut-off parameter to the source model ---!
 ebl_fits = False  # generate the EBL absorbed template ---!
@@ -151,7 +151,6 @@ for k in range(trials):
   count += 1
   tObj.seed = count
   clocking = tmin-min(texp)  # simulate flowing time (subsequent temporal windows of 1s)
-  tcheck = list(texp)
   GTIf = [run_duration for i in range(len(texp))]  # LST runs are of 20mins chunks ---!
   num = [1 for i in range(len(texp))]  # count on LST-like run chunks ---!
   print('\n\n!!! ************ STARTING TRIAL %d ************ !!!\n\n' % count) if checks else None
