@@ -151,7 +151,6 @@ for k in range(trials):
   count += 1
   tObj.seed = count
   clocking = tmin-min(texp)  # simulate flowing time (subsequent temporal windows of 1s)
-  tcheck = list(texp)
   GTIf = [run_duration for i in range(len(texp))]  # LST runs are of 20mins chunks ---!
   num = [1 for i in range(len(texp))]  # count on LST-like run chunks ---!
   print('\n\n!!! ************ STARTING TRIAL %d ************ !!!\n\n' % count) if checks else None
