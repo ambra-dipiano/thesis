@@ -34,7 +34,7 @@ tmin = 30  # slewing time (s)
 tmax = []
 for i in range(len(texp)):
   tmax.append(tmin + texp[i])
-ttotal = 500 #1e6  # maximum tobs (4h at least) simulation total time (s)
+ttotal = 900 #1e6  # maximum tobs (4h at least) simulation total time (s)
 add_hours = 50 #7200  # +2h observation time added after first none detection (s)
 run_duration = 200 #1200  # 20min observation run time for LST in RTA (s) ---!
 elow = 0.03  # simulation minimum energy (TeV)
@@ -152,8 +152,8 @@ for k in range(trials):
   tObj.seed = count
   clocking = tmin-min(texp)  # simulate flowing time (subsequent temporal windows of 1s)
   tcheck = list(texp)
-  GTIf = run_duration  # LST runs are of 20mins chunks ---!
-  num = [1, 1, 1, 1]  # count on LST-like run chunks ---!
+  GTIf = [run_duration for i in range(len(texp))]  # LST runs are of 20mins chunks ---!
+  num = [1 for i in range(len(texp))]  # count on LST-like run chunks ---!
   print('\n\n!!! ************ STARTING TRIAL %d ************ !!!\n\n' % count) if checks else None
   print('!!! check ---- seed=', tObj.seed) if checks else None
   # attach ID to fileroot ---!
@@ -262,23 +262,23 @@ for k in range(trials):
       # check num of ph list file ---!
       print('num_max', num_max, 'and time sel', tObj.t)
       print('num', num)
-      if (tObj.t[0] < GTIf and tObj.t[1] < GTIf):
+      if (tObj.t[0] < GTIf[index] or tObj.t[0] == GTIf[index]) and (tObj.t[1] == GTIf[index] or tObj.t[1] < GTIf[index]):
         if num[index] > num_max and num[index] != num_max:
           break
         event_bins = [phlist.replace('.fits', '_n%03d.fits' %num[index])]
-      elif (tObj.t[0] < GTIf and tObj.t[1] > GTIf):
+      elif (tObj.t[0] < GTIf[index] or tObj.t[0] == GTIf[index]) and (tObj.t[1] == GTIf[index] or tObj.t[1] > GTIf[index]):
         if num[index] > num_max and num[index] != num_max:
           break
         event_bins = [phlist.replace('.fits', '_n%03d.fits' %num[index])]
         if num[index]+1 < num_max or num[index]+1 == num_max:
           event_bins.append(phlist.replace('.fits', '_n%03d.fits' %(num[index]+1)))
-        GTIf += run_duration
+        GTIf[index] += run_duration
         num[index] += 1
       else:
         if num[index]+1 > num_max and num[index]+1 != num_max:
           break
         event_bins = [phlist.replace('.fits', '_n%03d.fits' %(num[index]+1))]
-        GTIf += run_duration
+        GTIf[index] += run_duration
         num[index] += 1
 
       # actual computation of obs list ---!

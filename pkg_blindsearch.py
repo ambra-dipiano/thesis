@@ -532,7 +532,6 @@ class Analysis() :
   def __multiplePhotonLists(self, sample, filename):
     self.output = filename
     self.__singlePhotonList(sample=sample)
-    print(self.output)
     GTI = []
     with fits.open(filename, mode='update') as hdul:
       # find GTI in time array
