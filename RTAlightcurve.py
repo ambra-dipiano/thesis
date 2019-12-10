@@ -34,9 +34,9 @@ tmin = 30  # slewing time (s)
 tmax = []
 for i in range(len(texp)):
   tmax.append(tmin + texp[i])
-ttotal = 900 #1e6  # maximum tobs (4h at least) simulation total time (s)
-add_hours = 50 #7200  # +2h observation time added after first none detection (s)
-run_duration = 200 #1200  # 20min observation run time for LST in RTA (s) ---!
+ttotal = 8000 #7200 #1e6  # maximum tobs (4h at least) simulation total time (s)
+add_hours = 100 #7200  # +2h observation time added after first none detection (s)
+run_duration = 7200 #7200 #1200  # 20min observation run time for LST in RTA (s) ---!
 elow = 0.03  # simulation minimum energy (TeV)
 ehigh = 150.0  # simulation maximum energy (TeV)
 emin = 0.03  # selection minimum energy (TeV)
@@ -50,7 +50,8 @@ ts_threshold = 25  # TS threshold for reliable detection
 reduce_flux = None  # flux will be devided by factor reduce_flux, if nominal then set to None ---!
 
 # conditions control ---!
-checks = True  # prints checks info ---!
+checks1 = True  # prints info ---!
+checks2 = False  # prints more info ---!
 if_ebl = True  # uses the EBL absorbed template ---!
 if_cut = False  # adds a cut-off parameter to the source model ---!
 ebl_fits = False  # generate the EBL absorbed template ---!
@@ -79,7 +80,7 @@ offmax = (-1.475, -1.370)  # off-axis RA/DEC (deg)
 pointing = (true_coord[0] + offmax[0], true_coord[1] + offmax[1])  # pointing direction RA/DEC (deg)
 # true_coord, pointing, offmax = getPointing(None, p.getWorkingDir()+nominal_template)
 # pointing with off-axis equal to max prob GW ---!
-print('coords true:', true_coord, 'point', pointing, 'off', offmax) if checks else None
+print('coords true:', true_coord, 'point', pointing, 'off', offmax) if checks2 else None
 
 # recap and dof ---!
 dof, m2, m1 = getDof()
@@ -128,22 +129,22 @@ if ebl_fits:
   tObj.fitsEbl(new_template)
 # assign template ---!
 template = p.getWorkingDir() + ebl_template
-print('with EBL') if checks else None
+print('with EBL') if checks2 else None
 tObj.if_ebl = if_ebl
 tObj.template = template
-print('!!! check ---- template=', tObj.template) if checks else None
+print('!!! check ---- template=', tObj.template) if checks2 else None
 # load template ---!
 tObj.extract_spec = extract_spec
 tbin_stop = tObj.loadTemplate()
-print('!!! check ---- tbin_stop=', tbin_stop) if checks else None
-print('!!! check ---- caldb:', tObj.caldb) if checks else None
+print('!!! check ---- tbin_stop=', tbin_stop) if checks2 else None
+print('!!! check ---- caldb:', tObj.caldb) if checks2 else None
 
 # --------------------------------- REDUCE TEMPLATE FLUX  --------------------------------- !!!
 
 if reduce_flux != None:
   tObj.factor = reduce_flux
   tObj.makeFainter()
-  print('!!! check ---- reduce flux by factor %s' % str(reduce_flux)) if checks else None
+  print('!!! check ---- reduce flux by factor %s' % str(reduce_flux)) if checks2 else None
 
 # --------------------------------- 1° LOOP :: trials  --------------------------------- !!!
 
@@ -153,13 +154,13 @@ for k in range(trials):
   clocking = tmin-min(texp)  # simulate flowing time (subsequent temporal windows of 1s)
   GTIf = [run_duration for i in range(len(texp))]  # LST runs are of 20mins chunks ---!
   num = [1 for i in range(len(texp))]  # count on LST-like run chunks ---!
-  print('\n\n!!! ************ STARTING TRIAL %d ************ !!!\n\n' % count) if checks else None
-  print('!!! check ---- seed=', tObj.seed) if checks else None
+  print('\n\n!!! ************ STARTING TRIAL %d ************ !!!\n\n' % count) if checks1 else None
+  print('!!! check ---- seed=', tObj.seed) if checks2 else None
   # attach ID to fileroot ---!
   f = fileroot + 'ebl%06d' % (count)
   if irf_degrade:
     f += 'irf'
-  print('!!! check ---- file=', f) if checks else None
+  print('!!! check ---- file=', f) if checks2 else None
 
   # --------------------------------- SIMULATION --------------------------------- !!!
 
@@ -187,8 +188,8 @@ for k in range(trials):
     event_all = event_all.replace('.fits', '_flux%s.fits' % str(reduce_flux))
   tObj.input = event_bins
   tObj.output = event_all
-  num_max, phlist = tObj.appendEvents(max_length=run_duration, remove_old=True)
-  print('phlist root name', phlist) if checks else None
+  num_max, phlist = tObj.appendEvents(max_length=run_duration, last=ttotal, remove_old=False)
+  print('phlist root name', phlist) if checks2 else None
   #breakpoint()
 
   # --------------------------------- 2° LOOP :: tbins --------------------------------- !!!
@@ -203,7 +204,7 @@ for k in range(trials):
   # looping through all light-curve time intervals ---!
   for j in range(int(max(twindows))):
     clocking += min(texp)  # passing time second by second ---!
-    print(clocking, 'clock', tlast, is_detection) if checks else None
+    print(clocking, 'clock', tlast, is_detection) if checks1 else None
 
     # --------------------------------- CLOCKING BREAK --------------------------------- !!!
 
@@ -228,7 +229,7 @@ for k in range(trials):
       # check tlast, if locally reached then skip current bin ---!
       index = texp.index(current_twindows[i])
       if clocking > tlast[index]:
-        print('skip analysis texp', texp[index]) if checks else None
+        print('skip analysis texp', texp[index]) if checks1 else None
         continue
       # --------------------------------- CHECK SKIP --------------------------------- !!!
 
@@ -262,20 +263,20 @@ for k in range(trials):
       print('num_max', num_max, 'and time sel', tObj.t)
       print('num', num)
       if (tObj.t[0] < GTIf[index] or tObj.t[0] == GTIf[index]) and (tObj.t[1] == GTIf[index] or tObj.t[1] < GTIf[index]):
-        if num[index] > num_max and num[index] != num_max:
-          break
+        # if num[index] > num_max and num[index] != num_max:
+        #   break
         event_bins = [phlist.replace('.fits', '_n%03d.fits' %num[index])]
       elif (tObj.t[0] < GTIf[index] or tObj.t[0] == GTIf[index]) and (tObj.t[1] == GTIf[index] or tObj.t[1] > GTIf[index]):
-        if num[index] > num_max and num[index] != num_max:
-          break
+        # if num[index] > num_max and num[index] != num_max:
+        #   break
         event_bins = [phlist.replace('.fits', '_n%03d.fits' %num[index])]
         if num[index]+1 < num_max or num[index]+1 == num_max:
           event_bins.append(phlist.replace('.fits', '_n%03d.fits' %(num[index]+1)))
         GTIf[index] += run_duration
         num[index] += 1
       else:
-        if num[index]+1 > num_max and num[index]+1 != num_max:
-          break
+        # if num[index]+1 > num_max and num[index]+1 != num_max:
+        #   break
         event_bins = [phlist.replace('.fits', '_n%03d.fits' %(num[index]+1))]
         GTIf[index] += run_duration
         num[index] += 1
@@ -287,9 +288,9 @@ for k in range(trials):
       tObj.input = event_bins
       tObj.output = event_list
       tObj.obsList(obsname='run0406_ID000126')
-      print('event_bins', event_bins) if checks else None
-      print('current phlist', phlist) if checks else None
-      print('event_list', event_list) if checks else None
+      print('event_bins', event_bins) if checks2 else None
+      print('current phlist', phlist) if checks2 else None
+      print('event_list', event_list) if checks2 else None
 
       # --------------------------------- SELECTION --------------------------------- !!!
 
@@ -301,7 +302,7 @@ for k in range(trials):
       tObj.input = event_list
       tObj.output = event_selected
       tObj.eventSelect(prefix=prefix)
-      print('selection', tObj.output) if checks else None
+      print('selection', tObj.output) if checks2 else None
 
       # --------------------------------- SKYMAP --------------------------------- !!!
 
@@ -311,7 +312,7 @@ for k in range(trials):
       tObj.input = event_selected
       tObj.output = skymap
       tObj.eventSkymap(wbin=wbin)
-      print('skymap', tObj.output) if checks else None
+      print('skymap', tObj.output) if checks2 else None
 
       # --------------------------------- DETECTION & MODELING --------------------------------- !!!
 
@@ -323,7 +324,7 @@ for k in range(trials):
       tObj.input = skymap
       tObj.output = detectionXml
       tObj.runDetection()
-      print('detection', tObj.output) if checks else None
+      print('detection', tObj.output) if checks2 else None
       detObj = ManageXml(detectionXml, cfgfile='/config_lc.xml')
       detObj.sigma = sigma
       detObj.if_cut = if_cut
@@ -345,11 +346,11 @@ for k in range(trials):
       tObj.model = detectionXml
       tObj.output = likeXml
       tObj.maxLikelihood()
-      print('likelihood', tObj.output) if checks else None
+      print('likelihood', tObj.output) if checks2 else None
       likeObj = ManageXml(likeXml, cfgfile='/config_lc.xml')
       if src_sort and Ndet > 0:
         highest_ts_src = likeObj.sortSrcTs()[0]
-        print('!!! check ---- highest TS: ', highest_ts_src) if checks else None
+        print('!!! check ---- highest TS: ', highest_ts_src) if checks1 else None
       else:
         highest_ts_src = None
 
@@ -372,7 +373,7 @@ for k in range(trials):
 
       # only first elem ---!
       ts.append(ts_list[0][0])
-      print('ts:', ts[0]) if checks else None
+      print('ts:', ts[0]) if checks1 else None
 
       # --------------------------------- Nsrc FOR TSV THRESHOLD --------------------------------- !!!
 
@@ -448,7 +449,7 @@ for k in range(trials):
       IDbin = 'tbin%09d' % tbin
 
       row = []
-      if checks:
+      if checks1:
         print('!!! ---------- check trial:', count)
         print('!!! ----- check texp:', texp[i], 's between: [', tObj.t[0], ', ', tObj.t[1], ' ] s')
         print('!!! *** check Ndet:', Ndet)
@@ -477,7 +478,6 @@ for k in range(trials):
 
     # --------------------------------- CLEAR SPACE --------------------------------- !!!
 
-      #os.system('rm ' + p.getSimDir() + 'obs*ebl%06d*' % count)
       #os.system('rm ' + p.getSelectDir() + '*ebl%06d*' % count)
       #os.system('rm ' + p.getDetDir() + '*ebl%06d*' % count)
 
