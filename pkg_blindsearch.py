@@ -574,26 +574,27 @@ class Analysis() :
   # created a number of FITS table containing all events and GTIs ---!
   def appendEvents(self, max_length=None, remove_old=False):
     # remove old ---!
+    n = 1
     if os.path.isfile(self.output) and remove_old:
       os.remove(self.output)
     # collect events ---!
     if max_length == None:
       self.__singlePhotonList(sample=self.input)
     else:
-      n = 1
       sample = []
       for i, f in enumerate(self.input):
         with fits.open(f) as hdul:
           tlast = hdul[2].data[0][1]
           if tlast < max_length*n:
             sample.append(f)
-          else:
+          elif tlast > max_length*n or i == len(self.input)-1:
             sample.append(f)
             filename = self.output.replace('.fits', '_n%03d.fits' %n)
             self.__multiplePhotonLists(sample=sample, filename=filename, GTI=[max_length*(n-1), max_length*n])
             sample = [f]
-            n += 1
-    return
+            if i != len(self.input) - 1:
+              n += 1
+    return n
 
   # ctselect wrapper ---!
   def eventSelect(self, prefix=None):

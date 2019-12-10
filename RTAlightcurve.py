@@ -29,15 +29,14 @@ caldb = 'prod3b-v2'
 irf = 'South_z40_0.5h'
 
 sigma = 5  # detection acceptance (Gaussian)
-texp = [10, 100]  # exposure times (s)
-texp.sort()
+texp = (10, 100, 250)  # exposure times (s)
 tmin = 30  # slewing time (s)
 tmax = []
 for i in range(len(texp)):
   tmax.append(tmin + texp[i])
-ttotal = 600 # 1e6  # maximum tobs (4h at least) simulation total time (s)
-add_hours = 20 # 7200  # +2h observation time added after first none detection (s)
-run_duration = 100 # 1200  # 20min observation run time for LST in RTA (s) ---!
+ttotal = 900 #1e6  # maximum tobs (4h at least) simulation total time (s)
+add_hours = 50 #7200  # +2h observation time added after first none detection (s)
+run_duration = 200 #1200  # 20min observation run time for LST in RTA (s) ---!
 elow = 0.03  # simulation minimum energy (TeV)
 ehigh = 150.0  # simulation maximum energy (TeV)
 emin = 0.03  # selection minimum energy (TeV)
@@ -51,14 +50,14 @@ ts_threshold = 25  # TS threshold for reliable detection
 reduce_flux = None  # flux will be devided by factor reduce_flux, if nominal then set to None ---!
 
 # conditions control ---!
-checks = True  # prints checks info ---!
+checks = False  # prints checks info ---!
 if_ebl = True  # uses the EBL absorbed template ---!
 if_cut = False  # adds a cut-off parameter to the source model ---!
 ebl_fits = False  # generate the EBL absorbed template ---!
 extract_spec = True  # generates spectral tables and obs definition models ---!
 irf_degrade = False  # use degraded irf ---!
 src_sort = True  # sorts scandidates from highest TS to lowest ---!
-skip_exist = True  # if an output already exists it skips the step ---!
+skip_exist = False  # if an output already exists it skips the step ---!
 debug = False  # prints logfiles on terminal ---!
 if_log = True  # saves logfiles ---!
 
@@ -80,7 +79,7 @@ offmax = (-1.475, -1.370)  # off-axis RA/DEC (deg)
 pointing = (true_coord[0] + offmax[0], true_coord[1] + offmax[1])  # pointing direction RA/DEC (deg)
 # true_coord, pointing, offmax = getPointing(None, p.getWorkingDir()+nominal_template)
 # pointing with off-axis equal to max prob GW ---!
-print(true_coord, pointing, offmax) if checks else None
+print('coords true:', true_coord, 'point', pointing, 'off', offmax) if checks else None
 
 # recap and dof ---!
 dof, m2, m1 = getDof()
@@ -128,12 +127,8 @@ if ebl_fits:
   tObj.if_ebl = False
   tObj.fitsEbl(new_template)
 # assign template ---!
-if if_ebl:
-  template = p.getWorkingDir() + ebl_template
-  print('with EBL') if checks else None
-else:
-  template = p.getWorkingDir() + nominal_template
-  print('w/o EBL') if checks else None
+template = p.getWorkingDir() + ebl_template
+print('with EBL') if checks else None
 tObj.if_ebl = if_ebl
 tObj.template = template
 print('!!! check ---- template=', tObj.template) if checks else None
@@ -155,16 +150,14 @@ if reduce_flux != None:
 for k in range(trials):
   count += 1
   tObj.seed = count
-  clocking = 0  # simulate flowing time (subsequent temporal windows of 1s)
-  GTIf = 1200  # LST runs are of 20mins chunks ---!
+  clocking = tmin-min(texp)  # simulate flowing time (subsequent temporal windows of 1s)
+  tcheck = list(texp)
+  GTIf = run_duration  # LST runs are of 20mins chunks ---!
   num = 1  # count on LST-like run chunks ---!
   print('\n\n!!! ************ STARTING TRIAL %d ************ !!!\n\n' % count) if checks else None
   print('!!! check ---- seed=', tObj.seed) if checks else None
   # attach ID to fileroot ---!
-  if if_ebl:
-    f = fileroot + 'ebl%06d' % (count)
-  else:
-    f = fileroot + 'sim%06d' % (count)
+  f = fileroot + 'ebl%06d' % (count)
   if irf_degrade:
     f += 'irf'
   print('!!! check ---- file=', f) if checks else None
@@ -189,44 +182,45 @@ for k in range(trials):
     tObj.output = event
     if not os.path.isfile(event):
       tObj.eventSim()
-      print('doing sim') if checks else None
   # append events ---!
   event_all = p.getSimDir() + f + '.fits'
   if reduce_flux != None:
     event_all = event_all.replace('.fits', '_flux%s.fits' % str(reduce_flux))
   tObj.input = event_bins
   tObj.output = event_all
-  if not os.path.isfile(event_all):
-    tObj.appendEvents(max_length=run_duration)
-    # for file in event_bins:
-    #   if int(count) != 1:
-    #     os.remove(p.getSimDir()+file)
+  num_max = tObj.appendEvents(max_length=run_duration, remove_old=True)
+
+  #breakpoint()
 
   # --------------------------------- 2° LOOP :: tbins --------------------------------- !!!
 
   tObj.e = [emin, emax]
-  twindows = [ttotal / texp[i] for i in
-              range(len(texp))]  # number of temporal windows per exposure time in total time ---!
-  tlast = [ttotal for i in range(len(texp))]  # maximum observation time from last detection (not exceeding ttotal) ---!
-  is_detection = [True for i in
-                  range(len(texp))]  # controls which avoid forwarding of tlast for subsequent non-detections ---!
-  # looping for all lightcurve second by second ---!
+  twindows = [int((ttotal-tmin) / texp[i])+1 for i in range(len(texp))]  # number of temporal windows per exposure time in total time ---!
+  tlast = [ttotal+tmax[i] for i in range(len(texp))]  # maximum observation time from last detection (not exceeding ttotal) ---!
+  for i, t in enumerate(tlast):
+    if t > ttotal:
+      tlast[i] = ttotal
+  is_detection = [True for i in range(len(texp))]  # controls which avoid forwarding of tlast for subsequent non-detections ---!
+  # looping through all light-curve time intervals ---!
   for j in range(int(max(twindows))):
     clocking += min(texp)  # passing time second by second ---!
-    print(clocking, 'j loop', tlast, is_detection) if checks else None
+    print(clocking, 'clock', tlast, is_detection) if checks else None
 
     # --------------------------------- CLOCKING BREAK --------------------------------- !!!
 
     # check tlast, if globally reached then stop current trial ---!
     if clocking > max(tlast):
-      print('end analysis trial', count, ' at clocking', clocking - min(texp))
+      print('end analysis trial', count, ' at clocking', tlast)
       break
     current_twindows = []
 
     # --------------------------------- 3° LOOP :: texp in tbin --------------------------------- !!!
 
     for i in range(len(texp)):
-      current_twindows.append(texp[i]) if clocking % texp[i] == 0 else None
+      if j == 0:
+        current_twindows.append(texp[i])
+      else:
+        current_twindows.append(texp[i]) if clocking % texp[i] == 0 else None
     # looping for all the texp for which the tbin analysis needs to be computed ---!
     for i in range(len(current_twindows)):
 
@@ -235,7 +229,7 @@ for k in range(trials):
       # check tlast, if locally reached then skip current bin ---!
       index = texp.index(current_twindows[i])
       if clocking > tlast[index]:
-        print('skip analysis texp', texp[index])
+        print('skip analysis texp', texp[index]) if checks else None
         continue
       # --------------------------------- CHECK SKIP --------------------------------- !!!
 
@@ -254,35 +248,52 @@ for k in range(trials):
       # if first tbin of tepx then don't add clocking time to selection edges ---!
       if clocking < tmin:
         continue
-      elif (clocking in texp):
-        tObj.t = [tmin, tmax[i]]
-      else:
-        tObj.t = [clocking, texp[i] + clocking]
+      elif clocking == tmin:
+        tObj.t = [tmin, tmax[index]]
+      elif clocking > tmin and texp[index] == min(texp):
+        tObj.t = [clocking, texp[index]+clocking]
+      elif clocking > tmin and texp[index] != min(texp):
+        tObj.t = [tmin + clocking, tmax[index] + clocking]
+      if tObj.t[1] > ttotal:
+        tObj.t[1] = ttotal
 
       # --------------------------------- OBSERVATION LIST --------------------------------- !!!
 
-      if tObj.t[0] < GTIf and tObj.t[1] < GTIf:
+      # check num of ph list file ---!
+      print('num_max', num_max, 'and time sel', tObj.t)
+      if (tObj.t[0] < GTIf and tObj.t[1] < GTIf):
+        if num > num_max and num != num_max:
+          break
         event_bins = [event_all.replace('.fits', '_n%03d.fits' %num)]
-      elif tObj.t[0] < GTIf and tObj.t[1] >> GTIf:
-        event_bins = [event_all.replace('.fits', '_n%03d.fits' %num),
-                      event_all.replace('.fits', '_n%03d.fits' %(num+1))]
-        GTIf += 1200
+      elif (tObj.t[0] < GTIf and tObj.t[1] > GTIf):
+        if num > num_max and num != num_max:
+          break
+        event_bins = [event_all.replace('.fits', '_n%03d.fits' %num)]
+        if num+1 < num_max or num+1 == num_max:
+          event_bins.append(event_all.replace('.fits', '_n%03d.fits' %(num+1)))
+        GTIf += run_duration
         num += 1
       else:
+        if num+1 > num_max and num+1 != num_max:
+          break
         event_bins = [event_all.replace('.fits', '_n%03d.fits' %(num+1))]
-        GTIf += 1200
+        GTIf += run_duration
         num += 1
+
       # actual computation of obs list ---!
-      event_list = event_all.replace(p.getSimDir(), p.getSelectDir()).replace('run0406_ebl', 'obs_ebl').replace('.fits', '_t%d.xml' %clocking)
-      print('event_list', event_list) if checks else None
+      event_list = event_all.replace('run0406_ebl', 'obs_t%dt%d_ebl' %(tObj.t[0], tObj.t[1])).replace('.fits', '.xml')
+      if os.path.isfile(event_list):
+        os.remove(event_list)
       tObj.input = event_bins
       tObj.output = event_list
-      tObj.obsList(obsname=f)
+      tObj.obsList(obsname='run0406_ID000126')
+      print('event_bins', event_bins) if checks else None
+      print('event_list', event_list) if checks else None
 
       # --------------------------------- SELECTION --------------------------------- !!!
 
-      event_selected = event_list.replace('_t%d.xml' %clocking, '_tbin%d.xml' %tbin)
-      prefix = p.getSelectDir() + 'texp%ds_' % texp[i]
+      event_selected = event_list.replace(p.getSimDir(), p.getSelectDir()).replace('obs_', 'texp%ds_' %texp[i])
+      prefix = p.getSelectDir() + 'texp%ds_t%dt%d_' %(texp[i], tObj.t[0], tObj.t[1])
       # select events ---!
       if os.path.isfile(event_selected):
         os.remove(event_selected)
@@ -360,7 +371,7 @@ for k in range(trials):
 
       # only first elem ---!
       ts.append(ts_list[0][0])
-      print(ts[0])
+      print('ts:', ts[0]) if checks else None
 
       # --------------------------------- Nsrc FOR TSV THRESHOLD --------------------------------- !!!
 
@@ -377,7 +388,7 @@ for k in range(trials):
       if (float(ts[0]) < ts_threshold or str(ts[0]) == 'nan') and is_detection[index]:
         is_detection[index] = False
         # add 2hrs of obs time ---!
-        tlast[index] = clocking + add_hours  # +2h ---!
+        tlast[index] = tObj.t[1] + add_hours  # +2h ---!
         print('+2h tlast = ', tlast[index], ' with texp = ', texp[index])
         # only 4hrs of simulation avialable, if tlast exceeds them then reset to ttotal ---!
         if tlast[index] > ttotal:
@@ -465,8 +476,9 @@ for k in range(trials):
 
     # --------------------------------- CLEAR SPACE --------------------------------- !!!
 
-      os.system('rm ' + p.getSelectDir() + '*ebl%06d*' % count)
-      os.system('rm ' + p.getDetDir() + '*ebl%06d*' % count)
+      #os.system('rm ' + p.getSimDir() + 'obs*ebl%06d*' % count)
+      #os.system('rm ' + p.getSelectDir() + '*ebl%06d*' % count)
+      #os.system('rm ' + p.getDetDir() + '*ebl%06d*' % count)
 
   if int(count) != 1:
     os.system('rm ' + p.getSimDir() + '*ebl%06d*' % count)
