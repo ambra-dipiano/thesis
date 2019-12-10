@@ -34,7 +34,7 @@ tmin = 30  # slewing time (s)
 tmax = []
 for i in range(len(texp)):
   tmax.append(tmin + texp[i])
-ttotal = 900 #1e6  # maximum tobs (4h at least) simulation total time (s)
+ttotal = 500 #1e6  # maximum tobs (4h at least) simulation total time (s)
 add_hours = 50 #7200  # +2h observation time added after first none detection (s)
 run_duration = 200 #1200  # 20min observation run time for LST in RTA (s) ---!
 elow = 0.03  # simulation minimum energy (TeV)
@@ -50,7 +50,7 @@ ts_threshold = 25  # TS threshold for reliable detection
 reduce_flux = None  # flux will be devided by factor reduce_flux, if nominal then set to None ---!
 
 # conditions control ---!
-checks = False  # prints checks info ---!
+checks = True  # prints checks info ---!
 if_ebl = True  # uses the EBL absorbed template ---!
 if_cut = False  # adds a cut-off parameter to the source model ---!
 ebl_fits = False  # generate the EBL absorbed template ---!
@@ -153,7 +153,7 @@ for k in range(trials):
   clocking = tmin-min(texp)  # simulate flowing time (subsequent temporal windows of 1s)
   tcheck = list(texp)
   GTIf = run_duration  # LST runs are of 20mins chunks ---!
-  num = 1  # count on LST-like run chunks ---!
+  num = [1, 1, 1, 1]  # count on LST-like run chunks ---!
   print('\n\n!!! ************ STARTING TRIAL %d ************ !!!\n\n' % count) if checks else None
   print('!!! check ---- seed=', tObj.seed) if checks else None
   # attach ID to fileroot ---!
@@ -188,8 +188,8 @@ for k in range(trials):
     event_all = event_all.replace('.fits', '_flux%s.fits' % str(reduce_flux))
   tObj.input = event_bins
   tObj.output = event_all
-  num_max = tObj.appendEvents(max_length=run_duration, remove_old=True)
-
+  num_max, phlist = tObj.appendEvents(max_length=run_duration, remove_old=True)
+  print('phlist root name', phlist) if checks else None
   #breakpoint()
 
   # --------------------------------- 2° LOOP :: tbins --------------------------------- !!!
@@ -261,33 +261,35 @@ for k in range(trials):
 
       # check num of ph list file ---!
       print('num_max', num_max, 'and time sel', tObj.t)
+      print('num', num)
       if (tObj.t[0] < GTIf and tObj.t[1] < GTIf):
-        if num > num_max and num != num_max:
+        if num[index] > num_max and num[index] != num_max:
           break
-        event_bins = [event_all.replace('.fits', '_n%03d.fits' %num)]
+        event_bins = [phlist.replace('.fits', '_n%03d.fits' %num[index])]
       elif (tObj.t[0] < GTIf and tObj.t[1] > GTIf):
-        if num > num_max and num != num_max:
+        if num[index] > num_max and num[index] != num_max:
           break
-        event_bins = [event_all.replace('.fits', '_n%03d.fits' %num)]
-        if num+1 < num_max or num+1 == num_max:
-          event_bins.append(event_all.replace('.fits', '_n%03d.fits' %(num+1)))
+        event_bins = [phlist.replace('.fits', '_n%03d.fits' %num[index])]
+        if num[index]+1 < num_max or num[index]+1 == num_max:
+          event_bins.append(phlist.replace('.fits', '_n%03d.fits' %(num[index]+1)))
         GTIf += run_duration
-        num += 1
+        num[index] += 1
       else:
-        if num+1 > num_max and num+1 != num_max:
+        if num[index]+1 > num_max and num[index]+1 != num_max:
           break
-        event_bins = [event_all.replace('.fits', '_n%03d.fits' %(num+1))]
+        event_bins = [phlist.replace('.fits', '_n%03d.fits' %(num[index]+1))]
         GTIf += run_duration
-        num += 1
+        num[index] += 1
 
       # actual computation of obs list ---!
-      event_list = event_all.replace('run0406_ebl', 'obs_t%dt%d_ebl' %(tObj.t[0], tObj.t[1])).replace('.fits', '.xml')
+      event_list = phlist.replace(p.getSimDir(), p.getSelectDir()).replace('run0406_ebl', 'obs_t%dt%d_ebl' %(tObj.t[0], tObj.t[1])).replace('.fits', '.xml')
       if os.path.isfile(event_list):
         os.remove(event_list)
       tObj.input = event_bins
       tObj.output = event_list
       tObj.obsList(obsname='run0406_ID000126')
       print('event_bins', event_bins) if checks else None
+      print('current phlist', phlist) if checks else None
       print('event_list', event_list) if checks else None
 
       # --------------------------------- SELECTION --------------------------------- !!!
