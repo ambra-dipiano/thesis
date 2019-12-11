@@ -526,8 +526,7 @@ class Analysis() :
     with fits.open(filename, mode='update') as hdul:
       # drop events exceeding GTI ---!
       slice = self.__dropExceedingEvents(hdul=hdul, GTI=GTI)
-      ext1 = ext1[slice]
-      hdul[1] = fits.BinTableHDU(name='GTI', data=ext1, header=h2)
+      hdul[1].data = hdul[1].data[slice]
       hdul.flush()
       # modify indexes and GTI ---!
       indexes = hdul[1].data.field(0)
