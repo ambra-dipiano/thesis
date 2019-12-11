@@ -494,7 +494,7 @@ class Analysis() :
     return
 
   # create single photon list from obs list ---!
-  def __singlePhotonList(self, sample, filename):
+  def __singlePhotonList(self, sample, filename, GTI):
     print(sample[0], '---', sample[-1])
     for i, f in enumerate(sample):
       with fits.open(f) as hdul:
@@ -505,8 +505,8 @@ class Analysis() :
           ext2 = hdul[2].data
         else:
           ext1 = np.append(ext1, hdul[1].data)
-          if i == len(sample)-1:
-            GTIlast = hdul[2].data[0][1]
+          # if i == len(sample)-1:
+          #   GTIlast = hdul[2].data[0][1]
     # create output FITS file empty ---!
     hdu = fits.PrimaryHDU()
     hdul = fits.HDUList([hdu])
@@ -525,13 +525,14 @@ class Analysis() :
       for i, ind in enumerate(indexes):
         hdul[1].data.field(0)[i] = i + 1
       # modify GTI ---!
-      hdul[2].data[0][1] = GTIlast
+      hdul[2].data[0][0] = GTI[0]
+      hdul[2].data[0][1] = GTI[1]
       hdul.flush()
     return
 
   # from sample of fits files produces multiple photon-lists of given time length ---!
   def __multiplePhotonLists(self, sample, filename, interval):
-    self.__singlePhotonList(sample=sample, filename=filename)
+    self.__singlePhotonList(sample=sample, filename=filename, GTI=interval)
     GTI = []
     with fits.open(filename, mode='update') as hdul:
       # find GTI in time array
@@ -552,18 +553,18 @@ class Analysis() :
       os.remove(self.output)
     # collect events ---!
     if max_length == None:
-      self.__singlePhotonList(sample=self.input, filename=self.output)
+      with fits.open(self.input) as hdul:
+        GTI = [hdul[2].data[0][0], hdul[2].data[0][1]]
+      self.__singlePhotonList(sample=self.input, filename=self.output, GTI=GTI)
       return
     else:
       sample = []
       singlefile = str(self.output)
       print(len(self.input))
       for i, f in enumerate(self.input):
-        print(i)
         with fits.open(f) as hdul:
           tlast = hdul[2].data[0][1]
           tfirst = hdul[2].data[0][0]
-          print(tfirst, tlast, last)
           if (tlast < max_length*n and tlast != max_length*n):
             sample.append(f)
           elif (tlast > max_length*n or tlast == max_length*n) and i != len(self.input)-1:
@@ -575,8 +576,7 @@ class Analysis() :
             self.__multiplePhotonLists(sample=sample, filename=filename, interval=[max_length*(n-1), max_length*n])
             sample = [f]
             n += 1
-          elif (tfirst < last and i == len(self.input)-1):
-            print('yes!', n)
+          if (tfirst < last and i == len(self.input)-1):
             filename = self.output.replace('_n%03d.fits' %(n), '_n%03d.fits' %n)
             sample.append(f)
             self.__multiplePhotonLists(sample=sample, filename=filename, interval=[max_length*(n-1), max_length*n])
