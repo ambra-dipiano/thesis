@@ -29,7 +29,7 @@ caldb = 'prod3b-v2'
 irf = 'South_z40_0.5h'
 
 sigma = 5  # detection acceptance (Gaussian)
-texp = (10, 100, 250)  # exposure times (s)
+texp = (10, 100)  # exposure times (s)
 tmin = 30  # slewing time (s)
 tmax = []
 for i in range(len(texp)):
@@ -58,7 +58,7 @@ ebl_fits = False  # generate the EBL absorbed template ---!
 extract_spec = True  # generates spectral tables and obs definition models ---!
 irf_degrade = False  # use degraded irf ---!
 src_sort = True  # sorts scandidates from highest TS to lowest ---!
-skip_exist = False  # if an output already exists it skips the step ---!
+skip_exist = False  # skips the step if ID exists in csv (issue: if True than add+2h will start anew from last csv tbin) ---!
 debug = False  # prints logfiles on terminal ---!
 if_log = True  # saves logfiles ---!
 
