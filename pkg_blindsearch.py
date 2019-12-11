@@ -493,9 +493,15 @@ class Analysis() :
     xml.save(self.output)
     return
 
+  def __dropExceedingEvents(self, hdul, GTI):
+    slice_list = []
+    for i, row in enumerate(hdul[1].data.field('TIME')):
+      if hdul[1].data.field('TIME')[i] > GTI[0] and hdul[1].data.field('TIME')[i] < GTI[1]:
+        slice_list.append(i)
+    return slice_list
+
   # create single photon list from obs list ---!
   def __singlePhotonList(self, sample, filename, GTI):
-    print('call', filename)
     for i, f in enumerate(sample):
       with fits.open(f) as hdul:
         if i == 0:
@@ -505,8 +511,6 @@ class Analysis() :
           ext2 = hdul[2].data
         else:
           ext1 = np.append(ext1, hdul[1].data)
-          # if i == len(sample)-1:
-          #   GTIlast = hdul[2].data[0][1]
     # create output FITS file empty ---!
     hdu = fits.PrimaryHDU()
     hdul = fits.HDUList([hdu])
@@ -520,7 +524,16 @@ class Analysis() :
       hdul.append(hdu2)
       hdul.flush()
     with fits.open(filename, mode='update') as hdul:
-      # modify indexes ---!
+      # drop events exceeding GTI ---!
+      print('times', hdul[1].data.field('TIME')[0], hdul[1].data.field('TIME')[-1])
+      slice = self.__dropExceedingEvents(hdul=hdul, GTI=GTI)
+      print(len(ext1))
+      ext1 = ext1[slice]
+      print(len(ext1))
+      hdul[1] = fits.BinTableHDU(name='GTI', data=ext1, header=h2)
+      print('new times', hdul[1].data.field('TIME')[0], hdul[1].data.field('TIME')[-1])
+      hdul.flush()
+      # modify indexes and GTI ---!
       indexes = hdul[1].data.field(0)
       GTI_new = []
       for i, ind in enumerate(indexes):
@@ -528,10 +541,10 @@ class Analysis() :
       # find GTI in time array
       GTI_new.append(min(hdul[1].data.field('TIME'), key=lambda x: abs(x - GTI[0])))
       GTI_new.append(min(hdul[1].data.field('TIME'), key=lambda x: abs(x - GTI[1])))
-      # modify GTI ---!
       hdul[2].data[0][0] = GTI_new[0]
       hdul[2].data[0][1] = GTI_new[1]
       hdul.flush()
+    print('GTI', GTI_new)
     return
 
   # created a number of FITS table containing all events and GTIs ---!
@@ -568,8 +581,7 @@ class Analysis() :
             n += 1
             sample = [f]
           if (tfirst > max_length*(n-1) and tfirst < last) and i == len(self.input)-1:
-            n += 1
-            filename = singlefile.replace('.fits', '_n%03d.fits' %n)
+            filename = filename.replace('_n%03d.fits' %(n-1), '_n%03d.fits' %n)
             sample.append(f)
             self.__singlePhotonList(sample=sample, filename=filename, GTI=[max_length*(n-1), max_length*n])
 
