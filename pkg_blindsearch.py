@@ -495,7 +495,6 @@ class Analysis() :
 
   # create single photon list from obs list ---!
   def __singlePhotonList(self, sample, filename, GTI):
-    print(sample[0], '---', sample[-1])
     for i, f in enumerate(sample):
       with fits.open(f) as hdul:
         if i == 0:
@@ -524,21 +523,10 @@ class Analysis() :
       indexes = hdul[1].data.field(0)
       for i, ind in enumerate(indexes):
         hdul[1].data.field(0)[i] = i + 1
-      # modify GTI ---!
-      hdul[2].data[0][0] = GTI[0]
-      hdul[2].data[0][1] = GTI[1]
-      hdul.flush()
-    return
-
-  # from sample of fits files produces multiple photon-lists of given time length ---!
-  def __multiplePhotonLists(self, sample, filename, interval):
-    self.__singlePhotonList(sample=sample, filename=filename, GTI=interval)
-    GTI = []
-    with fits.open(filename, mode='update') as hdul:
-      # find GTI in time array
-      GTI.append(min(hdul[1].data.field('TIME'), key=lambda x: abs(x - interval[0])))
-      GTI.append(min(hdul[1].data.field('TIME'), key=lambda x: abs(x - interval[1])))
-      # modify GTI ---!
+        # find GTI in time array
+        # GTI.append(min(hdul[1].data.field('TIME'), key=lambda x: abs(x - interval[0])))
+        # GTI.append(min(hdul[1].data.field('TIME'), key=lambda x: abs(x - interval[1])))
+        # modify GTI ---!
       hdul[2].data[0][0] = GTI[0]
       hdul[2].data[0][1] = GTI[1]
       hdul.flush()
@@ -546,21 +534,22 @@ class Analysis() :
 
   # created a number of FITS table containing all events and GTIs ---!
   def appendEvents(self, max_length=None, last=None, remove_old=True):
-    print(self.input[-1])
     # remove old ---!
     n = 1
     if os.path.isfile(self.output) and remove_old:
       os.remove(self.output)
     # collect events ---!
     if max_length == None:
-      with fits.open(self.input) as hdul:
-        GTI = [hdul[2].data[0][0], hdul[2].data[0][1]]
+      GTI = []
+      with fits.open(self.input[0]) as hdul:
+        GTI.append(hdul[2].data[0][0])
+      with fits.open(self.input[-1]) as hdul:
+        GTI.append(hdul[2].data[0][1])
       self.__singlePhotonList(sample=self.input, filename=self.output, GTI=GTI)
       return
     else:
       sample = []
       singlefile = str(self.output)
-      print(len(self.input))
       for i, f in enumerate(self.input):
         with fits.open(f) as hdul:
           tlast = hdul[2].data[0][1]
@@ -573,13 +562,13 @@ class Analysis() :
               filename = self.output.replace('.fits', '_n%03d.fits' % n)
             else:
               filename = self.output.replace('_n%03d.fits' %(n-1), '_n%03d.fits' %n)
-            self.__multiplePhotonLists(sample=sample, filename=filename, interval=[max_length*(n-1), max_length*n])
+            self.__singlePhotonList(sample=sample, filename=filename, GTI=[max_length*(n-1), max_length*n])
             sample = [f]
             n += 1
           if (tfirst < last and i == len(self.input)-1):
-            filename = self.output.replace('_n%03d.fits' %(n), '_n%03d.fits' %n)
+            filename = self.output.replace('.fits', '_n%03d.fits' %n)
             sample.append(f)
-            self.__multiplePhotonLists(sample=sample, filename=filename, interval=[max_length*(n-1), max_length*n])
+            self.__singlePhotonList(sample=sample, filename=filename, GTI=[max_length*(n-1), max_length*n])
 
       return n, singlefile
 
@@ -1157,7 +1146,7 @@ class ManageXml():
 
   def __setModel(self):
     if self.default_model is True:
-      Att_Prefactor = {'name': 'Prefactor', 'scale': '1e-16', 'value': '5.7', 'min': '1e-07', 'max': '1000', 'free': '1'}
+      Att_Prefactor = {'name': 'Prefactor', 'scale': '1e-16', 'value': '5.7', 'min': '1e-07', 'max': '1000.0', 'free': '1'}
       Att_Index = {'name': 'Index', 'scale': '-1', 'value': '2.48', 'min': '0', 'max': '5.0', 'free': '1'}
       Att_PivotEn = {'name': 'PivotEnergy', 'scale': '1e6', 'value': '0.3', 'min': '1e-07', 'max': '1000.0', 'free': '0'}
       Bkg_Prefactor = {'name': 'Prefactor', 'scale': '1', 'value': '1.0', 'min': '1e-03', 'max': '1e+3.0', 'free': '1'}
