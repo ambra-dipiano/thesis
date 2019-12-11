@@ -525,13 +525,9 @@ class Analysis() :
       hdul.flush()
     with fits.open(filename, mode='update') as hdul:
       # drop events exceeding GTI ---!
-      print('times', hdul[1].data.field('TIME')[0], hdul[1].data.field('TIME')[-1])
       slice = self.__dropExceedingEvents(hdul=hdul, GTI=GTI)
-      print(len(ext1))
       ext1 = ext1[slice]
-      print(len(ext1))
       hdul[1] = fits.BinTableHDU(name='GTI', data=ext1, header=h2)
-      print('new times', hdul[1].data.field('TIME')[0], hdul[1].data.field('TIME')[-1])
       hdul.flush()
       # modify indexes and GTI ---!
       indexes = hdul[1].data.field(0)
@@ -544,7 +540,6 @@ class Analysis() :
       hdul[2].data[0][0] = GTI_new[0]
       hdul[2].data[0][1] = GTI_new[1]
       hdul.flush()
-    print('GTI', GTI_new)
     return
 
   # created a number of FITS table containing all events and GTIs ---!
