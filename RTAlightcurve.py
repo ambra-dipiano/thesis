@@ -34,9 +34,9 @@ tmin = 30  # slewing time (s)
 tmax = []
 for i in range(len(texp)):
   tmax.append(tmin + texp[i])
-ttotal = 8000 #7200 #1e6  # maximum tobs (4h at least) simulation total time (s)
+ttotal = 8000 #1e6  # maximum tobs (4h at least) simulation total time (s)
 add_hours = 100 #7200  # +2h observation time added after first none detection (s)
-run_duration = 7200 #7200 #1200  # 20min observation run time for LST in RTA (s) ---!
+run_duration = 1200  # 20min observation run time for LST in RTA (s) ---!
 elow = 0.03  # simulation minimum energy (TeV)
 ehigh = 150.0  # simulation maximum energy (TeV)
 emin = 0.03  # selection minimum energy (TeV)
@@ -182,14 +182,21 @@ for k in range(trials):
     tObj.output = event
     if not os.path.isfile(event):
       tObj.eventSim()
-  # append events ---!
+
+  # --------------------------------- APPEND EVENTS IN PH-LIST --------------------------------- !!!
+
   event_all = p.getSimDir() + f + '.fits'
   if reduce_flux != None:
     event_all = event_all.replace('.fits', '_flux%s.fits' % str(reduce_flux))
   tObj.input = event_bins
   tObj.output = event_all
-  num_max, phlist = tObj.appendEvents(max_length=run_duration, last=ttotal, remove_old=False)
-  print('phlist root name', phlist) if checks2 else None
+  if run_duration == ttotal:
+    tObj.appendEvents()
+    phlist = event_all
+  else:
+    num_max, phlist = tObj.appendEvents(max_length=run_duration, last=ttotal, remove_old=True)
+    print('phlist root name', phlist) if checks2 else None
+
   #breakpoint()
 
   # --------------------------------- 2° LOOP :: tbins --------------------------------- !!!
@@ -259,27 +266,30 @@ for k in range(trials):
 
       # --------------------------------- OBSERVATION LIST --------------------------------- !!!
 
-      # check num of ph list file ---!
-      print('num_max', num_max, 'and time sel', tObj.t)
-      print('num', num)
-      if (tObj.t[0] < GTIf[index] or tObj.t[0] == GTIf[index]) and (tObj.t[1] == GTIf[index] or tObj.t[1] < GTIf[index]):
-        # if num[index] > num_max and num[index] != num_max:
-        #   break
-        event_bins = [phlist.replace('.fits', '_n%03d.fits' %num[index])]
-      elif (tObj.t[0] < GTIf[index] or tObj.t[0] == GTIf[index]) and (tObj.t[1] == GTIf[index] or tObj.t[1] > GTIf[index]):
-        # if num[index] > num_max and num[index] != num_max:
-        #   break
-        event_bins = [phlist.replace('.fits', '_n%03d.fits' %num[index])]
-        if num[index]+1 < num_max or num[index]+1 == num_max:
-          event_bins.append(phlist.replace('.fits', '_n%03d.fits' %(num[index]+1)))
-        GTIf[index] += run_duration
-        num[index] += 1
+      # check num of ph list file and select the correct files ---!
+      if run_duration != ttotal:
+        print('num_max', num_max, 'and time sel', tObj.t)
+        print('num', num)
+        if (tObj.t[0] < GTIf[index] or tObj.t[0] == GTIf[index]) and (tObj.t[1] == GTIf[index] or tObj.t[1] < GTIf[index]):
+          # if num[index] > num_max and num[index] != num_max:
+          #   break
+          event_bins = [phlist.replace('.fits', '_n%03d.fits' %num[index])]
+        elif (tObj.t[0] < GTIf[index] or tObj.t[0] == GTIf[index]) and (tObj.t[1] == GTIf[index] or tObj.t[1] > GTIf[index]):
+          # if num[index] > num_max and num[index] != num_max:
+          #   break
+          event_bins = [phlist.replace('.fits', '_n%03d.fits' %num[index])]
+          if num[index]+1 < num_max or num[index]+1 == num_max:
+            event_bins.append(phlist.replace('.fits', '_n%03d.fits' %(num[index]+1)))
+          GTIf[index] += run_duration
+          num[index] += 1
+        else:
+          # if num[index]+1 > num_max and num[index]+1 != num_max:
+          #   break
+          event_bins = [phlist.replace('.fits', '_n%03d.fits' %(num[index]+1))]
+          GTIf[index] += run_duration
+          num[index] += 1
       else:
-        # if num[index]+1 > num_max and num[index]+1 != num_max:
-        #   break
-        event_bins = [phlist.replace('.fits', '_n%03d.fits' %(num[index]+1))]
-        GTIf[index] += run_duration
-        num[index] += 1
+        event_bins = [phlist]
 
       # actual computation of obs list ---!
       event_list = phlist.replace(p.getSimDir(), p.getSelectDir()).replace('run0406_ebl', 'obs_t%dt%d_ebl' %(tObj.t[0], tObj.t[1])).replace('.fits', '.xml')
