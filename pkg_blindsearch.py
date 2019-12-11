@@ -716,13 +716,13 @@ class Analysis() :
     return
 
   # compute integral photon flux for PL model ---!
-  def photonFluxPowerLaw(self, gamma, k0, e0):
+  def photonFluxPowerLaw(self, gamma, k0, e0, norm_factor=1):
     e1 = self.e[0]*1e6
     e2 = self.e[1]*1e6
     delta = gamma + 1
     factor = k0 / (e0**gamma * delta)
     flux = factor * (e2**delta - e1**delta)
-    return flux/(self.e[1]-self.e[0])
+    return flux/norm_factor
 
   # compute integral energy flux for PL model ---!
   def energyFluxPowerLaw(self, gamma, k0, e0):

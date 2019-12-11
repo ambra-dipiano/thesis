@@ -34,8 +34,8 @@ tmin = 30  # slewing time (s)
 tmax = []
 for i in range(len(texp)):
   tmax.append(tmin + texp[i])
-ttotal = 8000 #1e6  # maximum tobs (4h at least) simulation total time (s)
-add_hours = 100 #7200  # +2h observation time added after first none detection (s)
+ttotal = 2000 #1e6  # maximum tobs (4h at least) simulation total time (s)
+add_hours = 1000 #7200  # +2h observation time added after first none detection (s)
 run_duration = 1200  # 20min observation run time for LST in RTA (s) ---!
 elow = 0.03  # simulation minimum energy (TeV)
 ehigh = 150.0  # simulation maximum energy (TeV)
@@ -50,7 +50,7 @@ ts_threshold = 25  # TS threshold for reliable detection
 reduce_flux = None  # flux will be devided by factor reduce_flux, if nominal then set to None ---!
 
 # conditions control ---!
-checks1 = True  # prints info ---!
+checks1 = False  # prints info ---!
 checks2 = False  # prints more info ---!
 if_ebl = True  # uses the EBL absorbed template ---!
 if_cut = False  # adds a cut-off parameter to the source model ---!
@@ -202,7 +202,7 @@ for k in range(trials):
   # --------------------------------- 2° LOOP :: tbins --------------------------------- !!!
 
   tObj.e = [emin, emax]
-  twindows = [int((ttotal-tmin) / texp[i])+1 for i in range(len(texp))]  # number of temporal windows per exposure time in total time ---!
+  twindows = [int((ttotal-tmin) / texp[i]) for i in range(len(texp))]  # number of temporal windows per exposure time in total time ---!
   tlast = [ttotal+tmax[i] for i in range(len(texp))]  # maximum observation time from last detection (not exceeding ttotal) ---!
   for i, t in enumerate(tlast):
     if t > ttotal:
@@ -268,8 +268,6 @@ for k in range(trials):
 
       # check num of ph list file and select the correct files ---!
       if run_duration != ttotal:
-        print('num_max', num_max, 'and time sel', tObj.t)
-        print('num', num)
         if (tObj.t[0] < GTIf[index] or tObj.t[0] == GTIf[index]) and (tObj.t[1] == GTIf[index] or tObj.t[1] < GTIf[index]):
           # if num[index] > num_max and num[index] != num_max:
           #   break
@@ -441,8 +439,14 @@ for k in range(trials):
       # --------------------------------- INTEGRATED FLUX --------------------------------- !!!
 
       flux_ph = []
+      if clocking > run_duration:
+        norm_factor = 1
+      elif elow == emin and ehigh == emax:
+        norm_factor = (ehigh - elow)
+      else:
+        norm_factor = (ehigh - elow) - (emax - emin)
       if Ndet > 0:
-        flux_ph.append(tObj.photonFluxPowerLaw(index[0], pref[0], pivot[0]))  # E (MeV)
+        flux_ph.append(tObj.photonFluxPowerLaw(index[0], pref[0], pivot[0], norm_factor=norm_factor))  # E (MeV)
       else:
         flux_ph.append(np.nan)
 
@@ -488,8 +492,8 @@ for k in range(trials):
 
     # --------------------------------- CLEAR SPACE --------------------------------- !!!
 
-      #os.system('rm ' + p.getSelectDir() + '*ebl%06d*' % count)
-      #os.system('rm ' + p.getDetDir() + '*ebl%06d*' % count)
+      os.system('rm ' + p.getSelectDir() + '*ebl%06d*' % count)
+      os.system('rm ' + p.getDetDir() + '*ebl%06d*' % count)
 
   if int(count) != 1:
     os.system('rm ' + p.getSimDir() + '*ebl%06d*' % count)
