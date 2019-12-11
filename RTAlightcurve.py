@@ -477,9 +477,9 @@ for k in range(trials):
 
     # --------------------------------- CLEAR SPACE --------------------------------- !!!
 
-      #os.system('rm ' + p.getSimDir() + 'obs*ebl%06d*' % count)
-      #os.system('rm ' + p.getSelectDir() + '*ebl%06d*' % count)
-      #os.system('rm ' + p.getDetDir() + '*ebl%06d*' % count)
+      os.system('rm ' + p.getSimDir() + 'obs*ebl%06d*' % count)
+      os.system('rm ' + p.getSelectDir() + '*ebl%06d*' % count)
+      os.system('rm ' + p.getDetDir() + '*ebl%06d*' % count)
 
   if int(count) != 1:
     os.system('rm ' + p.getSimDir() + '*ebl%06d*' % count)
