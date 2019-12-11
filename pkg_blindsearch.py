@@ -495,6 +495,7 @@ class Analysis() :
 
   # create single photon list from obs list ---!
   def __singlePhotonList(self, sample, filename, GTI):
+    print('call', filename)
     for i, f in enumerate(sample):
       with fits.open(f) as hdul:
         if i == 0:
@@ -521,14 +522,15 @@ class Analysis() :
     with fits.open(filename, mode='update') as hdul:
       # modify indexes ---!
       indexes = hdul[1].data.field(0)
+      GTI_new = []
       for i, ind in enumerate(indexes):
         hdul[1].data.field(0)[i] = i + 1
-        # find GTI in time array
-        # GTI.append(min(hdul[1].data.field('TIME'), key=lambda x: abs(x - interval[0])))
-        # GTI.append(min(hdul[1].data.field('TIME'), key=lambda x: abs(x - interval[1])))
-        # modify GTI ---!
-      hdul[2].data[0][0] = GTI[0]
-      hdul[2].data[0][1] = GTI[1]
+      # find GTI in time array
+      GTI_new.append(min(hdul[1].data.field('TIME'), key=lambda x: abs(x - GTI[0])))
+      GTI_new.append(min(hdul[1].data.field('TIME'), key=lambda x: abs(x - GTI[1])))
+      # modify GTI ---!
+      hdul[2].data[0][0] = GTI_new[0]
+      hdul[2].data[0][1] = GTI_new[1]
       hdul.flush()
     return
 
@@ -559,14 +561,15 @@ class Analysis() :
           elif (tlast > max_length*n or tlast == max_length*n) and i != len(self.input)-1:
             sample.append(f)
             if n == 1:
-              filename = self.output.replace('.fits', '_n%03d.fits' % n)
+              filename = singlefile.replace('.fits', '_n%03d.fits' % n)
             else:
-              filename = self.output.replace('_n%03d.fits' %(n-1), '_n%03d.fits' %n)
+              filename = filename.replace('_n%03d.fits' %(n-1), '_n%03d.fits' %n)
             self.__singlePhotonList(sample=sample, filename=filename, GTI=[max_length*(n-1), max_length*n])
-            sample = [f]
             n += 1
-          if (tfirst < last and i == len(self.input)-1):
-            filename = self.output.replace('.fits', '_n%03d.fits' %n)
+            sample = [f]
+          if (tfirst > max_length*(n-1) and tfirst < last) and i == len(self.input)-1:
+            n += 1
+            filename = singlefile.replace('.fits', '_n%03d.fits' %n)
             sample.append(f)
             self.__singlePhotonList(sample=sample, filename=filename, GTI=[max_length*(n-1), max_length*n])
 
@@ -713,7 +716,7 @@ class Analysis() :
     delta = gamma + 1
     factor = k0 / (e0**gamma * delta)
     flux = factor * (e2**delta - e1**delta)
-    return flux
+    return flux/(self.e[1]-self.e[0])
 
   # compute integral energy flux for PL model ---!
   def energyFluxPowerLaw(self, gamma, k0, e0):
@@ -1146,7 +1149,7 @@ class ManageXml():
 
   def __setModel(self):
     if self.default_model is True:
-      Att_Prefactor = {'name': 'Prefactor', 'scale': '1e-16', 'value': '5.7', 'min': '1e-07', 'max': '1000.0', 'free': '1'}
+      Att_Prefactor = {'name': 'Prefactor', 'scale': '1e-16', 'value': '5.7', 'min': '1e-07', 'max': '1e7', 'free': '1'}
       Att_Index = {'name': 'Index', 'scale': '-1', 'value': '2.48', 'min': '0', 'max': '5.0', 'free': '1'}
       Att_PivotEn = {'name': 'PivotEnergy', 'scale': '1e6', 'value': '0.3', 'min': '1e-07', 'max': '1000.0', 'free': '0'}
       Bkg_Prefactor = {'name': 'Prefactor', 'scale': '1', 'value': '1.0', 'min': '1e-03', 'max': '1e+3.0', 'free': '1'}
