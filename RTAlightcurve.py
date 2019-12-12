@@ -34,7 +34,7 @@ tmin = 30  # slewing time (s)
 tmax = []
 for i in range(len(texp)):
   tmax.append(tmin + texp[i])
-ttotal = 2000 #1e6  # maximum tobs (4h at least) simulation total time (s)
+ttotal = 15000 #1e6  # maximum tobs (4h at least) simulation total time (s)
 add_hours = 1000 #7200  # +2h observation time added after first none detection (s)
 run_duration = 1200  # 20min observation run time for LST in RTA (s) ---!
 elow = 0.03  # simulation minimum energy (TeV)
@@ -198,10 +198,10 @@ for k in range(trials):
     tObj.appendEvents()
     phlist = event_all
   else:
-    num_max, phlist = tObj.appendEvents(max_length=run_duration, last=ttotal, remove_old=True)
+    num_max, phlist = tObj.appendEvents(max_length=run_duration, last=ttotal)
     print('phlist root name', phlist) if checks2 else None
 
-  #breakpoint()
+  breakpoint()
 
   # --------------------------------- 2° LOOP :: tbins --------------------------------- !!!
 
@@ -443,9 +443,9 @@ for k in range(trials):
       # --------------------------------- INTEGRATED FLUX --------------------------------- !!!
 
       flux_ph = []
-      if clocking > run_duration:
-        norm_factor = 1
-      elif elow == emin and ehigh == emax:
+      # if clocking > run_duration:
+      #   norm_factor = 1
+      if elow == emin and ehigh == emax:
         norm_factor = (ehigh - elow)
       else:
         norm_factor = (ehigh - elow) - (emax - emin)
