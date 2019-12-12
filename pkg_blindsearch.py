@@ -516,7 +516,7 @@ class Analysis() :
     print('sample len:', len(sample))
     sample = sorted(sample)
     for i, f in enumerate(sample):
-      print(f)
+      #print(f)
       with fits.open(f) as hdul:
         if i == 0:
           h1 = hdul[1].header
@@ -540,7 +540,7 @@ class Analysis() :
     with fits.open(filename, mode='update') as hdul:
       # drop events exceeding GTI ---!
       slice = self.__dropExceedingEvents(hdul=hdul, GTI=GTI)
-      print(filename, len(hdul[1].data) - len(slice), len(hdul[1].data), len(slice))
+      #print(filename, len(hdul[1].data) - len(slice), len(hdul[1].data), len(slice))
       if len(slice) > 2:
         hdul[1].data = hdul[1].data[slice]
         hdul.flush()
@@ -573,21 +573,20 @@ class Analysis() :
     else:
       sample = []
       singlefile = str(self.output)
-      drop = 0
       for j in range(int(last/max_length)+1):
-        print('j loop', j, 'start with n=', n, 'input len:', len(self.input), 'GTI start', max_length*j)
+        #print('j loop', j+1, 'start with n=', n, 'input len:', len(self.input), 'GTI start', max_length*j)
         for i, f in enumerate(self.input):
           with fits.open(f) as hdul:
             tfirst = hdul[2].data[0][0]
             tlast = hdul[2].data[0][1]
             if (tfirst > max_length*(j) and tlast < max_length*(j+1)) or (tfirst < max_length*(j) and tlast > max_length*(j)):
               sample.append(f)
-              print('append')
+              #print('append')
             else:
               sample.append(f)
             if tlast > max_length*(j+1) or last == max_length*(j+1):
               sample.append(f)
-              print(j, 'call')
+              #print(j+1, 'call')
               if n == 1:
                 filename = singlefile.replace('.fits', '_n%03d.fits' % n)
               else:
@@ -599,14 +598,14 @@ class Analysis() :
               if drop > 2:
                 self.input = self.input[drop-1:]
               sample = [f]
-              print('j loop', j, 'end with n=', n)
+              #print('j loop', j+1, 'end with n=', n)
               break
             if tlast > last-max_length or i == len(self.input)-1:
               filename = filename.replace('_n%03d.fits' %(n-1), '_n%03d.fits' %n)
               sample.append(f)
               sample = self.__dropListDuplicates(sample)
               self.__singlePhotonList(sample=sample, filename=filename, GTI=[max_length*(j), max_length*(j+1)])
-              print('j loop', j, 'end with n=', n)
+              #print('j loop', j+1, 'end with n=', n)
               sample = [f]
               break
 
