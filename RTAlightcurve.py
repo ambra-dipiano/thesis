@@ -50,8 +50,6 @@ ts_threshold = 25  # TS threshold for reliable detection
 reduce_flux = None  # flux will be devided by factor reduce_flux, if nominal then set to None
 
 # conditions control ---!
-checks1 = False  # prints info
-checks2 = False  # prints more info
 if_ebl = True  # uses the EBL absorbed template
 if_cut = False  # adds a cut-off parameter to the source model
 ebl_fits = False  # generate the EBL absorbed template
@@ -62,6 +60,8 @@ src_sort = True  # sorts scandidates from highest TS to lowest
 skip_exist = False  # skips the step if ID exists in csv (issue: if True than add+2h will start anew from last csv tbin)
 debug = False  # prints logfiles on terminal
 if_log = True  # saves logfiles
+checks1 = True  # prints info
+checks2 = True  # prints more info
 
 # path configuration ---!
 cfg = xmlConfig(cfgfile='/config_lc.xml')
@@ -137,7 +137,9 @@ tObj.template = template
 print('!!! check ---- template=', tObj.template) if checks2 else None
 # load template ---!
 tObj.extract_spec = extract_spec
-tbin_stop = tObj.loadTemplate()
+tbin_stop, max_tbin = tObj.loadTemplate()
+if tbin_stop > max_tbin:
+  tbin_stop = max_tbin
 print('!!! check ---- tbin_stop=', tbin_stop) if checks2 else None
 print('!!! check ---- caldb:', tObj.caldb) if checks2 else None
 

@@ -457,7 +457,8 @@ class Analysis() :
     # extract spectrum if required ---!
     if self.extract_spec:
       self.__extractSpec()
-    return tbin_stop
+    max_tbin = self.__Nt
+    return tbin_stop, max_tbin
 
   # ctobssim wrapper ---!
   def eventSim(self) :
