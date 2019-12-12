@@ -21,7 +21,7 @@ irf = 'South_z40_0.5h'
 # setup ---!
 nominal = True
 degraded = True
-compute = False
+compute = True
 plot = True
 
 caldb = []
@@ -38,7 +38,7 @@ if degraded:
     irfObj.factor = 2
     irfObj.degradeIrf()
 e = [0.03, 150.0]
-texp = [1, 5, 10, 100]
+texp = [10, 100, 250]
 pointing = (33.057, -51.841) # pointing direction RA/DEC (deg)
 
 # INITIALIZE ---!
