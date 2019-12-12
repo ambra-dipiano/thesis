@@ -23,6 +23,8 @@ nominal = True
 degraded = True
 compute = True
 plot = True
+sens_type = 'int' # <diff|int>
+stype = 'Integral' # <Differential|Integral>
 
 caldb = []
 if nominal:
@@ -69,6 +71,7 @@ if compute:
       # NOMINAL SENS ---!
       nObj.model = results
       nObj.output = output
+      nObj.sens_typeype = stype
       nObj.src_name = 'GRB'
       nObj.eventSens(bins=20)
       print('sens')
@@ -82,9 +85,9 @@ if plot:
     for j in range(len(texp)):
       csv[i].append(outpath + 'texp%ds_' %texp[j] + caldb[i] + '_crab_sens.csv')
       pngroot = caldb[i] + '_texp%ds' %texp[j]
-      savefig1.append(pngpath + pngroot + '_sensdiff.png')
-      savefig2.append(pngpath + pngroot + '_sensdiff_phflux.png')
-      savefig3.append(pngpath + pngroot + '_sensdiff_ratio.png')
+      savefig1.append(pngpath + pngroot + '_sens%s.png' %sens_type)
+      savefig2.append(pngpath + pngroot + '_sens%s_phflux.png' %sens_type)
+      savefig3.append(pngpath + pngroot + '_sens%s_ratio.png' %sens_type)
 
   print(savefig1, savefig2, savefig3)
   for j in range(len(texp)):
