@@ -57,6 +57,7 @@ if_cut = False  # adds a cut-off parameter to the source model ---!
 ebl_fits = False  # generate the EBL absorbed template ---!
 extract_spec = True  # generates spectral tables and obs definition models ---!
 irf_degrade = False  # use degraded irf ---!
+compute_degr = False
 src_sort = True  # sorts scandidates from highest TS to lowest ---!
 skip_exist = False  # skips the step if ID exists in csv (issue: if True than add+2h will start anew from last csv tbin) ---!
 debug = False  # prints logfiles on terminal ---!
@@ -114,11 +115,12 @@ tObj.model = p.getWorkingDir() + model_pl
 tObj.debug = debug
 tObj.if_log = if_log
 # degrade IRF if required ---!
-if irf_degrade:
-  tObj.caldb = caldb.replace('prod', 'degr')
-else:
-  tObj.caldb = caldb
+tObj.caldb = caldb
 tObj.irf = irf
+if irf_degrade:
+  if compute_degr:
+    tObj.degradeIrf()
+  tObj.caldb = caldb.replace('prod', 'degr')
 # add EBL to template ---!
 if ebl_fits:
   tObj.template = p.getWorkingDir() + nominal_template  # nominal ---!
