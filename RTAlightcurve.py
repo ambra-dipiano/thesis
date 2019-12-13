@@ -27,15 +27,14 @@ os.environ['MKL_NUM_THREADS'] = str(nthreads)
 caldb = 'prod3b-v2'
 # caldb_degraded = caldb.replace('prod', 'degr')
 irf = 'South_z40_0.5h'
-# irf_sim = 'South_z40_5h'
 
-sigma = 3  # detection acceptance (Gaussian)
+sigma = 5  # detection acceptance (Gaussian)
 texp = (10, 100)  # exposure times (s)
 tmin = 30  # slewing time (s)
 tmax = []
 for i in range(len(texp)):
   tmax.append(tmin + texp[i])
-ttotal = 5000 #1e6  # maximum tobs (4h at least) simulation total time (s)
+ttotal = 2000 #1e6  # maximum tobs (4h at least) simulation total time (s)
 add_hours = 7200  # +2h observation time added after first none detection (s)
 run_duration = 1200  # 20min observation run time for LST in RTA (s) ---!
 elow = 0.03  # simulation minimum energy (TeV)
@@ -164,7 +163,7 @@ for k in range(trials):
   # attach ID to fileroot ---!
   f = fileroot + 'ebl%06d' % (count)
   if irf_degrade:
-    f += 'irf'
+    f.replace('ebl', 'irf')
   print('!!! check ---- file=', f) if checks2 else None
 
   # --------------------------------- SIMULATION --------------------------------- !!!
@@ -172,7 +171,7 @@ for k in range(trials):
   event_bins = []
   tObj.table = p.getDataDir() + tcsv
   tgrid = tObj.getTimeSlices()  # methods which returns time slice edges
-  # gather all event bins ---!
+  # gather all event bins for total obs ---!
   for i in range(tbin_stop):
     event = p.getSimDir() + f + "_tbin%02d.fits" % i
     if reduce_flux != None:
@@ -180,48 +179,48 @@ for k in range(trials):
       event = event.replace('_tbin', '_flux%s_tbin' % str(reduce_flux))
     event_bins.append(event)
 
-  # simulate ---!
-  for i in range(int(ttotal/run_duration)+1):
-    for i in range(int(ttotal/run_duration)+1):
-      GTI = [run_duration*i, run_duration*(i+1)]
-      # tObj.t[0] = min(tgrid, key=lambda x: abs(x-GTI[0]))
-      # tObj.t[0] = min(tgrid, key=lambda x: abs(x-GTI[1]))
-      tbins = tObj.getTimeBins(GTI=GTI)
-      suffix = '_n%03d' %(i+1)
-      print(tbins)
+  # total number of runs ---!
+  num_max = int(ttotal/run_duration)+1
+  for n in range(num_max):  # inner loop ---!
+    GTI = [run_duration*n, run_duration*(n+1)]
+    # tObj.t[0] = min(tgrid, key=lambda x: abs(x-GTI[0]))
+    # tObj.t[0] = min(tgrid, key=lambda x: abs(x-GTI[1]))
+    tbins = tObj.getTimeBins(GTI=GTI)
+    print(tbins) if checks2 else None
 
-      for bin in tbins:
-        if tgrid[bin+1] - tgrid[bin] <= run_duration:
-          tObj.t = [tgrid[bin], tgrid[bin + 1]]
-        else:
-          tObj.t = GTI
-        if tObj.t[1] > ttotal:
-          tObj.t[1] = ttotal
-        tObj.model = p.getDataDir() + 'run0406_ID000126_ebl_tbin%02d.xml' % bin
-        tObj.output = event_bins[bin]
-        print('simulating', event_bins[bin], 'in', tObj.t)
-        #tObj.eventSim()
-        phlist = p.getSimDir() + f + '_n%03d.fits' % (i + 1)
-        print('phlist', phlist)
-    breakpoint()
+    # bins per each ph-list ---!
+    for bin in tbins:
+      # set grid ---!
+      if tgrid[bin] - tgrid[bin] <= run_duration:
+        tObj.t = [tgrid[bin], tgrid[bin + 1]]
+      else:
+        tObj.t = GTI
+      # check GTI and total ---!
+      if tObj.t[1] > GTI[1]:
+        tObj.t[1] = GTI[1]
+      if tObj.t[1] > ttotal:
+        tObj.t[1] = ttotal
+      if tObj.t[0] < GTI[0]:
+        tObj.t[0] = GTI[0]
+      # simulate ---!
+      tObj.model = p.getDataDir() + 'run0406_ID000126_ebl_tbin%02d.xml' % bin
+      tObj.output = event_bins[bin]
+      print('simulating', event_bins[bin], 'in', tObj.t) if checks2 else None
+      tObj.eventSim()
 
     # --------------------------------- APPEND EVENTS IN PH-LIST --------------------------------- !!!
 
-    phlist = p.getSimDir() + f + '_n%03d.fits' %(i+1)
+    phlist = p.getSimDir() + f + '_n%03d.fits' %(n+1)
     if reduce_flux != None:
-      event_all = phlist.replace('.fits', '_flux%s.fits' % str(reduce_flux))
-    tObj.input = event_bins
+      phlist = phlist.replace('.fits', '_flux%s.fits' % str(reduce_flux))
+    tObj.input = []
+    for bin in tbins:
+      tObj.input.append(event_bins[bin])
     tObj.output = phlist
-    if run_duration == ttotal:
-      tObj.appendEvents()
-      phlist = phlist
-    else:
-      num_max, phlist = tObj.appendEvents(max_length=run_duration, last=ttotal)
-      print('phlist root name', phlist) if checks2 else None
+    tObj.appendEventsSinglePhList()
+    print('phlist', phlist) if checks2 else None
 
-  breakpoint()
-
-  # --------------------------------- 2° LOOP :: tbins --------------------------------- !!!
+  # --------------------------------- LC TIME WINDOWS --------------------------------- !!!
 
   tObj.e = [emin, emax]
   twindows = [int((ttotal-tmin) / texp[i]) for i in range(len(texp))]  # number of temporal windows per exposure time in total time ---!
@@ -230,10 +229,13 @@ for k in range(trials):
     if t > ttotal:
       tlast[i] = ttotal
   is_detection = [True for i in range(len(texp))]  # controls which avoid forwarding of tlast for subsequent non-detections ---!
+
+  # --------------------------------- 2° LOOP :: tbins --------------------------------- !!!
+
   # looping through all light-curve time intervals ---!
   for j in range(int(max(twindows))):
     clocking += min(texp)  # passing time second by second ---!
-    print(clocking, 'clock', tlast, is_detection) if checks1 else None
+    print(clocking, 'clock - tlast', tlast, is_detection) if checks1 else None
 
     # --------------------------------- CLOCKING BREAK --------------------------------- !!!
 
@@ -243,13 +245,16 @@ for k in range(trials):
       break
     current_twindows = []
 
-    # --------------------------------- 3° LOOP :: texp in tbin --------------------------------- !!!
+    # --------------------------------- CURRENT TIME WINDOS --------------------------------- !!!
 
     for i in range(len(texp)):
       if j == 0:
         current_twindows.append(texp[i])
       else:
         current_twindows.append(texp[i]) if clocking % texp[i] == 0 else None
+
+    # --------------------------------- 3° LOOP :: texp in tbin --------------------------------- !!!
+
     # looping for all the texp for which the tbin analysis needs to be computed ---!
     for i in range(len(current_twindows)):
 
@@ -260,7 +265,7 @@ for k in range(trials):
       if clocking > tlast[index]:
         print('skip analysis texp', texp[index]) if checks1 else None
         continue
-      # --------------------------------- CHECK SKIP --------------------------------- !!!
+      # --------------------------------- CHECK SKIP EXISTING --------------------------------- !!!
 
       tbin = clocking / current_twindows[i]  # temporal bin number of this analysis
       IDbin = 'tbin%09d' % tbin
@@ -272,7 +277,7 @@ for k in range(trials):
       if skip_exist is True and skip is True:
         continue
 
-      # --------------------------------- SELECTION TIME --------------------------------- !!!
+      # --------------------------------- SET SELECTION TIME --------------------------------- !!!
 
       # if first tbin of tepx then don't add clocking time to selection edges ---!
       if clocking < tmin:
@@ -288,44 +293,37 @@ for k in range(trials):
 
       # --------------------------------- OBSERVATION LIST --------------------------------- !!!
 
-      print(GTI_final, 'at clocking', clocking)
+      print('GTI stop per texp', GTI_final, 'at clocking', clocking, 'with ph list num', num) if checks2 else None
+      print(type(p.getSimDir()))
+      run_name = p.getSimDir() + f + '.fits'
+      event_runs = []
       # check num of ph list file and select the correct files ---!
-      if run_duration != ttotal:
-        if (tObj.t[0] < GTI_final[index] or tObj.t[0] == GTI_final[index]) and (tObj.t[1] == GTI_final[index] or tObj.t[1] < GTI_final[index]):
-          # if num[index] > num_max and num[index] != num_max:
-          #   break
-          event_bins = [phlist.replace('.fits', '_n%03d.fits' %num[index])]
-        elif (tObj.t[0] < GTI_final[index] or tObj.t[0] == GTI_final[index]) and (tObj.t[1] == GTI_final[index] or tObj.t[1] > GTI_final[index]):
-          # if num[index] > num_max and num[index] != num_max:
-          #   break
-          event_bins = [phlist.replace('.fits', '_n%03d.fits' %num[index])]
-          if num[index]+1 < num_max or num[index]+1 == num_max:
-            event_bins.append(phlist.replace('.fits', '_n%03d.fits' %(num[index]+1)))
-          GTI_final[index] += run_duration
-          num[index] += 1
-        else:
-          # if num[index]+1 > num_max and num[index]+1 != num_max:
-          #   break
-          event_bins = [phlist.replace('.fits', '_n%03d.fits' %(num[index]+1))]
-          GTI_final[index] += run_duration
-          num[index] += 1
+      if tObj.t[0] <= GTI_final[index] and tObj.t[1] <= GTI_final[index]:
+        event_runs.append(run_name.replace('.fits', '_n%03d.fits' %num[index]))
+      elif tObj.t[0] <= GTI_final[index] and tObj.t[1] > GTI_final[index]:
+        event_runs.append(run_name.replace('.fits', '_n%03d.fits' %num[index]))
+        event_runs.append(run_name.replace('.fits', '_n%03d.fits' %(num[index]+1)))
+        GTI_final[index] += run_duration
+        num[index] += 1
       else:
-        event_bins = [phlist]
+        event_runs.append(run_name.replace('.fits', '_n%03d.fits' %(num[index]+1)))
+        GTI_final[index] += run_duration
+        num[index] += 1
 
       # actual computation of obs list ---!
-      event_list = phlist.replace(p.getSimDir(), p.getSelectDir()).replace('run0406_ebl', 'obs_t%dt%d_ebl' %(tObj.t[0], tObj.t[1])).replace('.fits', '.xml')
+      list_name = p.getSelectDir() + f + '.xml'
+      event_list = list_name.replace('run0406_ebl', 'obs_t%dt%d_ebl' %(tObj.t[0], tObj.t[1]))
       if os.path.isfile(event_list):
         os.remove(event_list)
-      tObj.input = event_bins
+      tObj.input = event_runs
       tObj.output = event_list
       tObj.obsList(obsname='run0406_ID000126')
-      print('event_bins', event_bins) if checks2 else None
-      print('current phlist', phlist) if checks2 else None
-      print('event_list', event_list) if checks2 else None
+      print('event_runs', event_runs) if checks2 else None
+      print('event_list', event_list, 'with inputs', event_runs) if checks2 else None
 
       # --------------------------------- SELECTION --------------------------------- !!!
 
-      tObj.irf = irf
+      print('selection times', tObj.t)
       event_selected = event_list.replace(p.getSimDir(), p.getSelectDir()).replace('obs_', 'texp%ds_' %texp[i])
       prefix = p.getSelectDir() + 'texp%ds_t%dt%d_' %(texp[i], tObj.t[0], tObj.t[1])
       # select events ---!
@@ -356,12 +354,12 @@ for k in range(trials):
       tObj.input = skymap
       tObj.output = detectionXml
       tObj.runDetection()
-      print('detection', tObj.output) if checks2 else None
       detObj = ManageXml(detectionXml, cfgfile='/config_lc.xml')
       detObj.sigma = sigma
       detObj.if_cut = if_cut
       detObj.modXml()
       detObj.prmsFreeFix()
+      print('detection', tObj.output, os.path.isfile(tObj.output)) if checks2 else None
 
       # --------------------------------- CANDIDATES NUMBER --------------------------------- !!!
 
