@@ -18,16 +18,17 @@ import re
 import subprocess
 from lxml import etree as ET
 import matplotlib
-matplotlib.rcsetup.validate_backend('agg')
+from astropy.table import unique
+#matplotlib.rcsetup.validate_backend('agg')
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-def xmlConfig(cfgfile='/config.xml') :
+def xmlConfig(cfgfile='/config.xml'):
   '''
   This function loads a configuration xml file from the same directory where the code itself is stored.
-  :param cfgfile: str:
+ :param cfgfile: str:
             relative path of the configuration xml file wrt the directory of this file, default = "/config.xml"
-  :return: cfg.config: dict
+ :return: cfg.config: dict
             dictionary containing the paths information
   '''
   # load configuration file ---!
@@ -50,9 +51,9 @@ def getDof(cfgfile='/config.xml'):
 def getTrueCoords(fits_file):
   '''
   This function extract source position information from a fits table file.
-  :param fits_file: str
+ :param fits_file: str
             absolute path of the fits table file
-  :return: (ra, dec): tuple
+ :return: (ra, dec): tuple
             source coordinates RA/DEC
   '''
   with fits.open(fits_file) as hdul:
@@ -65,17 +66,17 @@ def getPointing(merge_map, fits_file, roi=5):
   This function extract source position information from a fits table file, max probability coordinates from a
   probability fits map and compute the corresponding off axis. If None prob map is given the offaxis is randomly
   computed and the pointing coordinates accordingly derived.
-  :param merge_map: str
+ :param merge_map: str
             absolute path of the probability map fits file
-  :param fits_file: str
+ :param fits_file: str
             absolute path of the fits table file
-  :param roi: scalar
+ :param roi: scalar
             region of interest
-  :return: true_coord: tuple
+ :return: true_coord: tuple
             source coordinates RA/DEC
-  :return: pointing: tuple
+ :return: pointing: tuple
             pointing coordinates RA/DEC
-  :return: offaxis: tuple
+ :return: offaxis: tuple
             offaxis angle between pointing and position RA/DEC
   '''
   true_coord = getTrueCoords(fits_file)
@@ -92,9 +93,9 @@ def getPointing(merge_map, fits_file, roi=5):
 def checkTrialId(file, id):
   '''
   This function checks if a trial ID is already existing within a data file.
-  :param file: data file (str)
-  :param id: trial ID (str)
-  :return: True id the ID exists, False if it doesn't
+ :param file: data file (str)
+ :param id: trial ID (str)
+ :return: True id the ID exists, False if it doesn't
   '''
   with open(file=file) as f:
     df = pd.read_csv(f)
@@ -108,14 +109,14 @@ def checkTrialId(file, id):
 
 # --------------------------------- CLASS xml CONFIGURATION --------------------------------- !!!
 
-class ConfigureXml() :
+class ConfigureXml():
   '''
   This class handles the configuration of paths for the analysis.
   '''
-  def __init__(self, cfg) :
+  def __init__(self, cfg):
     self.__initPath(cfg)
 
-  def __initPath(self, cfg) :
+  def __initPath(self, cfg):
     self.__cfg = cfg
     self.__root = self.__cfg.dir.root['path']
     self.__workdir = self.__cfg.dir.workdir['path']
@@ -202,7 +203,7 @@ class ConfigureXml() :
 
 # --------------------------------- CLASS ANALYSIS --------------------------------- !!!
 
-class Analysis() :
+class Analysis():
   '''
   This class contains a mixture of ctools wrapper and pipeline methods. The former are used to easily access and set
   ctools while the latter handles all the analysis necessities: from handling the EBL absorption to degrading the IRFs,
@@ -384,6 +385,7 @@ class Analysis() :
       os.remove(table)
     with open(table, 'w+') as tab:
       tab.write('#bin,tmax_bin')
+      tab.write('\n0, 0.0')
 
     # spectra and models ---!
     for i in range(self.__Nt):
@@ -396,7 +398,7 @@ class Analysis() :
 
       # time slices table ---!
       with open(table, 'a') as tab:
-        tab.write('\n' + str(i) + ', ' + str(self.__time[i][0]))
+        tab.write('\n' + str(i+1) + ', ' + str(self.__time[i][0]))
 
       # ebl ---!
       if self.if_ebl:
@@ -426,9 +428,8 @@ class Analysis() :
     return
 
   # read template and return tbin_stop containing necessary exposure time coverage ---!
-  def loadTemplate(self) :
+  def loadTemplate(self):
     self.__getFitsData()
-
     self.__Nt = len(self.__time)
     self.__Ne = len(self.__energy)
 
@@ -440,14 +441,14 @@ class Analysis() :
     t[self.__Nt] = self.__time[self.__Nt - 1][0] + (self.__time[self.__Nt - 1][0] - t[self.__Nt - 1])
 
     # stop the second after higher tmax ---!
-    if self.tmax != None :
+    if self.tmax != None:
       tbin_stop = 1
-      for bin in range(len(t)) :
-        if t[bin] <= self.tmax :
+      for bin in range(len(t)):
+        if t[bin] <= self.tmax:
           tbin_stop += 1
-        else :
+        else:
           continue
-    else :
+    else:
       raise ValueError('Maximum exposure time (tmax) is larger than the template temporal evolution.')
 
     # energy grid ---!
@@ -463,8 +464,37 @@ class Analysis() :
     max_tbin = self.__Nt
     return tbin_stop, max_tbin
 
+  def getTimeBins(self, GTI):
+    self.__getFitsData()
+    self.__Nt = len(self.__time)
+    self.__Ne = len(self.__energy)
+
+    # time grid ---!
+    t = [0.0 for x in range(self.__Nt + 1)]
+    for i in range(self.__Nt - 1):
+      t[i + 1] = self.__time[i][0] + (self.__time[i + 1][0] - self.__time[i][0]) / 2
+    # tmax in last bin ---!
+    t[self.__Nt] = self.__time[self.__Nt - 1][0] + (self.__time[self.__Nt - 1][0] - t[self.__Nt - 1])
+
+    tbins = []
+    for i in range(len(t)):
+      if t[i] >= GTI[0] and t[i] <= GTI[1]:
+        if len(tbins)==0 and i !=0:
+          tbins.append(i-1)
+          print('lower')
+        tbins.append(i)
+        continue
+      if t[i] > GTI[1]:
+        tbins.append(i-1)
+        print('higher')
+        break
+
+    tbins = sorted(tbins)
+    tbins = self.__dropListDuplicates(tbins)
+    return tbins
+
   # ctobssim wrapper ---!
-  def eventSim(self) :
+  def eventSim(self):
     sim = ctools.ctobssim()
     sim["inmodel"] = self.model
     sim["outevents"] = self.output
@@ -504,19 +534,26 @@ class Analysis() :
         new_list.append(l)
     return new_list
 
+  # keep only the GTI rows plus a buffering margin ---!
   def __dropExceedingEvents(self, hdul, GTI):
     slice_list = []
-    for i, row in enumerate(hdul[1].data.field('TIME')):
-      if hdul[1].data.field('TIME')[i] > GTI[0] and hdul[1].data.field('TIME')[i] < GTI[1]:
+    times = hdul[1].data.field('TIME')
+    for i, t in enumerate(times):
+      if t > GTI[0]-100 and t < GTI[1]+100:
+        # if len(slice_list) == 0 and i != 0:
+        #   slice_list.append(i-1)
         slice_list.append(i)
+      # if i not in slice_list and i-1 in slice_list:
+      #   slice_list.append(i)
     return slice_list
 
   # create single photon list from obs list ---!
   def __singlePhotonList(self, sample, filename, GTI):
-    print('sample len:', len(sample))
+    #print('sample len:', len(sample))
     sample = sorted(sample)
+    print('******')
     for i, f in enumerate(sample):
-      #print(f)
+      print(f)
       with fits.open(f) as hdul:
         if i == 0:
           h1 = hdul[1].header
@@ -543,17 +580,18 @@ class Analysis() :
       #print(filename, len(hdul[1].data) - len(slice), len(hdul[1].data), len(slice))
       if len(slice) > 2:
         hdul[1].data = hdul[1].data[slice]
-        hdul.flush()
+      hdul.flush()
       # modify indexes and GTI ---!
       indexes = hdul[1].data.field(0)
-      GTI_new = []
+      # times = hdul[1].data.field('TIME')
+      # GTI_new = []
       for i, ind in enumerate(indexes):
         hdul[1].data.field(0)[i] = i + 1
       # find GTI in time array ---!
-      GTI_new.append(min(hdul[1].data.field('TIME'), key=lambda x: abs(x - GTI[0])))
-      GTI_new.append(min(hdul[1].data.field('TIME'), key=lambda x: abs(x - GTI[1])))
-      hdul[2].data[0][0] = GTI_new[0]
-      hdul[2].data[0][1] = GTI_new[1]
+      # GTI_new.append(min(times, key=lambda x: abs(x - GTI[0])))
+      # GTI_new.append(min(times, key=lambda x: abs(x - GTI[1])))
+      hdul[2].data[0][0] = GTI[0] #GTI_new[0]
+      hdul[2].data[0][1] = GTI[1] #GTI_new[1]
       hdul.flush()
     return
 
@@ -658,7 +696,7 @@ class Analysis() :
     return
 
   # cssrcdetect wrapper ---!
-  def runDetection(self) :
+  def runDetection(self):
     self.detectionXml = '%s' % self.input.replace('_skymap.fits', '_det%ssgm.xml' % self.sigma)
     self.detectionReg = '%s' % self.input.replace('_skymap.fits', '_det%ssgm.reg' % self.sigma)
 
@@ -1067,7 +1105,7 @@ class ManageXml():
 
   def __skipNode(self, cfg):
     '''
-    :retun true for skip node
+   :retun true for skip node
     '''
     src = self.__getSrcObj()
     if src.attrib[cfg.get('idAttribute')] in cfg.get('skip'):
@@ -1137,7 +1175,7 @@ class ManageXml():
 
   def loadSpectral(self, highest=None):
     indexList, prefList, pivotList = ([] for i in range(3))
-    if self.if_cut is True :
+    if self.if_cut is True:
       cutoffList = []
 
     for src in self.root.findall('source'):
@@ -1152,7 +1190,7 @@ class ManageXml():
           indexList.append(index)
           prefList.append(pref)
           pivotList.append(pivot)
-          if self.if_cut is True :
+          if self.if_cut is True:
             cutoff = float(src.find('spectrum/parameter[@name="CutoffEnergy"]').attrib['value']) * float(
                 src.find('spectrum/parameter[@name="CutoffEnergy"]').attrib['scale'])
             cutoffList.append(cutoff)
