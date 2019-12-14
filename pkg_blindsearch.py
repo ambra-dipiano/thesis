@@ -463,26 +463,16 @@ class Analysis():
     max_tbin = self.__Nt
     return tbin_stop, max_tbin
 
-  def getTimeBins(self, GTI):
-    self.__getFitsData()
-    self.__Nt = len(self.__time)
-    self.__Ne = len(self.__energy)
-
-    # time grid ---!
-    t = [0.0 for x in range(self.__Nt + 1)]
-    for i in range(self.__Nt - 1):
-      t[i + 1] = self.__time[i][0] + (self.__time[i + 1][0] - self.__time[i][0]) / 2
-    # tmax in last bin ---!
-    t[self.__Nt] = self.__time[self.__Nt - 1][0] + (self.__time[self.__Nt - 1][0] - t[self.__Nt - 1])
+  def getTimeBins(self, GTI, tgrid):
 
     tbins = []
-    for i in range(len(t)):
-      if t[i] >= GTI[0] and t[i] <= GTI[1]:
+    for i in range(len(tgrid)):
+      if tgrid[i] >= GTI[0] and tgrid[i] <= GTI[1]:
         if len(tbins)==0 and i !=0:
           tbins.append(i-1)
         tbins.append(i)
         continue
-      if t[i] > GTI[1]:
+      if tgrid[i] > GTI[1]:
         tbins.append(i-1)
         break
 
@@ -1243,8 +1233,8 @@ class ManageXml():
     return
 
   def modXml(self, overwrite=True):
+    print(self.__xml)
     self.__setModel()
-    #self.setTsTrue() if self.tscalc is True else None
     # source ---!
     i = 0
     for src in self.root.findall('source'):
@@ -1293,6 +1283,7 @@ class ManageXml():
     if not overwrite:
       self.__xml = self.__xml.replace('.xml', '_mod.xml')
     self.__saveXml()
+    print(self.__xml)
     return
 
   def prmsFreeFix(self):

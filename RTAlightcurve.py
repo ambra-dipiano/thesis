@@ -28,13 +28,13 @@ caldb = 'prod3b-v2'
 # caldb_degraded = caldb.replace('prod', 'degr')
 irf = 'South_z40_0.5h'
 
-sigma = 5  # detection acceptance (Gaussian)
+sigma = 3  # detection acceptance (Gaussian)
 texp = (10, 100)  # exposure times (s)
 tmin = 30  # slewing time (s)
 tmax = []
 for i in range(len(texp)):
   tmax.append(tmin + texp[i])
-ttotal = 2000 #1e6  # maximum tobs (4h at least) simulation total time (s)
+ttotal = 15000 #1e6  # maximum tobs (4h at least) simulation total time (s)
 add_hours = 7200  # +2h observation time added after first none detection (s)
 run_duration = 1200  # 20min observation run time for LST in RTA (s) ---!
 elow = 0.03  # simulation minimum energy (TeV)
@@ -185,23 +185,20 @@ for k in range(trials):
     GTI = [run_duration*n, run_duration*(n+1)]
     # tObj.t[0] = min(tgrid, key=lambda x: abs(x-GTI[0]))
     # tObj.t[0] = min(tgrid, key=lambda x: abs(x-GTI[1]))
-    tbins = tObj.getTimeBins(GTI=GTI)
-    print(tbins) if checks2 else None
+    tbins = tObj.getTimeBins(GTI=GTI, tgrid=tgrid)
+    print(tbins, 'in GTI', GTI) if checks2 else None
 
     # bins per each ph-list ---!
     for bin in tbins:
       # set grid ---!
-      if tgrid[bin] - tgrid[bin] <= run_duration:
-        tObj.t = [tgrid[bin], tgrid[bin + 1]]
-      else:
-        tObj.t = GTI
+      tObj.t = [tgrid[bin], tgrid[bin + 1]]
       # check GTI and total ---!
+      if tObj.t[0] < GTI[0]:
+        tObj.t[0] = GTI[0]
       if tObj.t[1] > GTI[1]:
         tObj.t[1] = GTI[1]
       if tObj.t[1] > ttotal:
         tObj.t[1] = ttotal
-      if tObj.t[0] < GTI[0]:
-        tObj.t[0] = GTI[0]
       # simulate ---!
       tObj.model = p.getDataDir() + 'run0406_ID000126_ebl_tbin%02d.xml' % bin
       tObj.output = event_bins[bin]
@@ -294,7 +291,6 @@ for k in range(trials):
       # --------------------------------- OBSERVATION LIST --------------------------------- !!!
 
       print('GTI stop per texp', GTI_final, 'at clocking', clocking, 'with ph list num', num) if checks2 else None
-      print(type(p.getSimDir()))
       run_name = p.getSimDir() + f + '.fits'
       event_runs = []
       # check num of ph list file and select the correct files ---!
@@ -369,6 +365,7 @@ for k in range(trials):
 
       # --------------------------------- MAX LIKELIHOOD --------------------------------- !!!
 
+      print('detection', tObj.output, os.path.isfile(tObj.output)) if checks2 else None
       likeXml = detectionXml.replace('_det%dsgm' % tObj.sigma, '_like%dsgm' % tObj.sigma)
       if os.path.isfile(likeXml):
         os.remove(likeXml)
@@ -378,6 +375,7 @@ for k in range(trials):
       tObj.maxLikelihood()
       print('likelihood', tObj.output) if checks2 else None
       likeObj = ManageXml(likeXml, cfgfile='/config_lc.xml')
+      likeObj.sigma = sigma
       if src_sort and Ndet > 0:
         highest_ts_src = likeObj.sortSrcTs()[0]
         print('!!! check ---- highest TS: ', highest_ts_src) if checks1 else None
@@ -501,16 +499,16 @@ for k in range(trials):
       row.append([IDbin, tObj.t[0], tObj.t[1], Ndet, Nsrc, ra_det[0], dec_det[0], ra_fit[0], dec_fit[0],
                   flux_ph[0], ts[0]])
       if os.path.isfile(csvName):
-        with open(csvName, 'a') as f:
-          w = csv.writer(f)
+        with open(csvName, 'a') as csv_file:
+          w = csv.writer(csv_file)
           w.writerows(row)
-          f.close()
+          csv_file.close()
       else:
-        with open(csvName, 'w+') as f:
-          f.write(header)
-          w = csv.writer(f)
+        with open(csvName, 'w+') as csv_file:
+          csv_file.write(header)
+          w = csv.writer(csv_file)
           w.writerows(row)
-          f.close()
+          csv_file.close()
 
     # --------------------------------- CLEAR SPACE --------------------------------- !!!
 
