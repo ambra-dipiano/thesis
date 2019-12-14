@@ -466,14 +466,19 @@ class Analysis():
   # get template bins within GTI ---!
   def getTimeBins(self, GTI, tgrid):
     tbins = []
+    print(tgrid)
     for i in range(len(tgrid)):
+      # if tgrid[i] >= GTI[0] and tgrid[i] <= GTI[1]:
+      #   if len(tbins)==0 and i !=0:
+      #     tbins.append(i-1)
+      #   tbins.append(i)
+      #   continue
+      # if tgrid[i] > GTI[1]:
+      #   tbins.append(i-1)
       if tgrid[i] >= GTI[0] and tgrid[i] <= GTI[1]:
-        if len(tbins)==0 and i !=0:
-          tbins.append(i-1)
         tbins.append(i)
         continue
-      if tgrid[i] > GTI[1]:
-        tbins.append(i-1)
+      if tgrid[i] >= GTI[1]:
         break
 
     tbins = sorted(tbins)
@@ -507,7 +512,6 @@ class Analysis():
   def obsList(self, obsname):
     xml = gammalib.GXml()
     obslist = xml.append('observation_list title="observation library"')
-
     for i in range(len(self.input)):
       obs = obslist.append('observation name="%s" id="%02d" instrument="CTA"' % (obsname, i))
       obs.append('parameter name="EventList" file="%s"' % self.input[i])
@@ -527,12 +531,8 @@ class Analysis():
     slice_list = []
     times = hdul[1].data.field('TIME')
     for i, t in enumerate(times):
-      if t > GTI[0]-100 and t < GTI[1]+100:
-        # if len(slice_list) == 0 and i != 0:
-        #   slice_list.append(i-1)
+      if t >= GTI[0] and t <= GTI[1]:
         slice_list.append(i)
-      # if i not in slice_list and i-1 in slice_list:
-      #   slice_list.append(i)
     return slice_list
 
   # create single photon list from obs list ---!
@@ -547,10 +547,8 @@ class Analysis():
           ext1 = hdul[1].data
           ext2 = hdul[2].data
           n += 1
-          print(len(ext1))
         elif n != 0 and len(hdul[1].data) > 0:
           ext1 = np.append(ext1, hdul[1].data)
-          print(len(hdul[1].data))
     # create output FITS file empty ---!
     hdu = fits.PrimaryHDU()
     hdul = fits.HDUList([hdu])
@@ -566,25 +564,23 @@ class Analysis():
     with fits.open(filename, mode='update') as hdul:
       # drop events exceeding GTI ---!
       slice = self.__dropExceedingEvents(hdul=hdul, GTI=GTI)
-      #print(filename, len(hdul[1].data) - len(slice), len(hdul[1].data), len(slice))
       if len(slice) > 2:
         hdul[1].data = hdul[1].data[slice]
       hdul.flush()
-      # modify indexes and GTI ---!
+      # sort times and modify indexes ---!
       indexes = hdul[1].data.field(0)
-      # times = hdul[1].data.field('TIME')
-      # GTI_new = []
+      times = hdul[1].data.field('TIME')
+      times = sorted(times)
       for i, ind in enumerate(indexes):
         hdul[1].data.field(0)[i] = i + 1
-      # find GTI in time array ---!
-      # GTI_new.append(min(times, key=lambda x: abs(x - GTI[0])))
-      # GTI_new.append(min(times, key=lambda x: abs(x - GTI[1])))
-      hdul[2].data[0][0] = GTI[0] #GTI_new[0]
-      hdul[2].data[0][1] = GTI[1] #GTI_new[1]
+        hdul[1].data.field('TIME')[i] = times[i]
+      # modify GTI ---!
+      hdul[2].data[0][0] = GTI[0]
+      hdul[2].data[0][1] = GTI[1]
       hdul.flush()
     return
 
-  # created a number of FITS table containing all events and GTIs ---!
+  # created one FITS table containing all events and GTIs ---!
   def appendEventsSinglePhList(self):
     GTI = []
     with fits.open(self.input[0]) as hdul:
@@ -592,9 +588,9 @@ class Analysis():
     with fits.open(self.input[-1]) as hdul:
       GTI.append(hdul[2].data[0][1])
     self.__singlePhotonList(sample=self.input, filename=self.output, GTI=GTI)
-    print('appended bkg GTI', GTI)
     return
 
+  # create one fits table appending source and bkg
   def appendBkg(self, phlist, bkg, GTI):
     with fits.open(bkg, mode='update') as hdul:
       # fix GTI ---!
@@ -606,6 +602,7 @@ class Analysis():
         hdul[1].data.field('TIME')[i] = t + GTI[0]
       hdul.flush()
     self.__singlePhotonList(sample=[phlist, bkg], filename=phlist, GTI=GTI)
+    return
 
   # created a number of FITS table containing all events and GTIs ---!
   def appendEventsMultiPhList(self, max_length=None, last=None):
@@ -613,7 +610,6 @@ class Analysis():
     sample = []
     singlefile = str(self.output)
     for j in range(int(last / max_length) + 1):
-      # print('j loop', j+1, 'start with n=', n, 'input len:', len(self.input), 'GTI start', max_length*j)
       for i, f in enumerate(self.input):
         with fits.open(f) as hdul:
           tfirst = hdul[2].data[0][0]
@@ -621,12 +617,10 @@ class Analysis():
           if (tfirst > max_length * (j) and tlast < max_length * (j + 1)) or (
               tfirst < max_length * (j) and tlast > max_length * (j)):
             sample.append(f)
-            # print('append')
           else:
             sample.append(f)
           if tlast > max_length * (j + 1) or last == max_length * (j + 1):
             sample.append(f)
-            # print(j+1, 'call')
             if n == 1:
               filename = singlefile.replace('.fits', '_n%03d.fits' % n)
             else:
@@ -638,14 +632,12 @@ class Analysis():
             if drop > 2:
               self.input = self.input[drop - 1:]
             sample = [f]
-            # print('j loop', j+1, 'end with n=', n)
             break
           if tlast > last - max_length or i == len(self.input) - 1:
             filename = filename.replace('_n%03d.fits' % (n - 1), '_n%03d.fits' % n)
             sample.append(f)
             sample = self.__dropListDuplicates(sample)
             self.__singlePhotonList(sample=sample, filename=filename, GTI=[max_length * (j), max_length * (j + 1)])
-            # print('j loop', j+1, 'end with n=', n)
             sample = [f]
             break
     return n, singlefile
@@ -1178,7 +1170,6 @@ class ManageXml():
     indexList, prefList, pivotList = ([] for i in range(3))
     if self.if_cut is True:
       cutoffList = []
-
     for src in self.root.findall('source'):
       if src.attrib['name'] != 'Background' and src.attrib['name'] != 'CTABackgroundModel':
         if highest == None:
@@ -1210,12 +1201,28 @@ class ManageXml():
               cutoff = float(src.find('spectrum/parameter[@name="CutoffEnergy"]').attrib['value']) * float(
                   src.find('spectrum/parameter[@name="CutoffEnergy"]').attrib['scale'])
               cutoffList.append(cutoff)
-
     if self.if_cut is False:
       self.spectral = [indexList, prefList, pivotList]
     else:
       self.spectral = [indexList, prefList, pivotList, cutoffList]
     return self.spectral
+
+  def loadBkgSpectral(self):
+    indexList, prefList, pivotList = ([] for i in range(3))
+    for src in self.root.findall('source'):
+      if src.attrib['name'] == 'Background' or src.attrib['name'] != 'CTABackgroundModel':
+        index = float(src.find('spectrum/parameter[@name="Index"]').attrib['value']) * float(
+            src.find('spectrum/parameter[@name="Index"]').attrib['scale'])
+        pref = float(src.find('spectrum/parameter[@name="Prefactor"]').attrib['value']) * float(
+            src.find('spectrum/parameter[@name="Prefactor"]').attrib['scale'])
+        pivot = float(src.find('spectrum/parameter[@name="PivotEnergy"]').attrib['value']) * float(
+            src.find('spectrum/parameter[@name="PivotEnergy"]').attrib['scale'])
+        indexList.append(index)
+        prefList.append(pref)
+        pivotList.append(pivot)
+
+    spectral = [indexList, prefList, pivotList]
+    return spectral
 
   def __saveXml(self):
     self.srcLib.write(self.__xml, encoding="UTF-8", xml_declaration=True,
@@ -1249,7 +1256,6 @@ class ManageXml():
     return
 
   def modXml(self, overwrite=True):
-    print(self.__xml)
     self.__setModel()
     # source ---!
     i = 0
@@ -1299,7 +1305,6 @@ class ManageXml():
     if not overwrite:
       self.__xml = self.__xml.replace('.xml', '_mod.xml')
     self.__saveXml()
-    print(self.__xml)
     return
 
   def prmsFreeFix(self):

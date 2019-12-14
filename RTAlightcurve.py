@@ -34,7 +34,7 @@ tmin = 30  # slewing time (s)
 tmax = []
 for i in range(len(texp)):
   tmax.append(tmin + texp[i])
-ttotal = 15000 #1e6  # maximum tobs (4h at least) simulation total time (s)
+ttotal = 3000 #1e6  # maximum tobs (4h at least) simulation total time (s)
 add_hours = 7200  # +2h observation time added after first none detection (s)
 run_duration = 1200  # 20min observation run time for LST in RTA (s) ---!
 elow = 0.03  # simulation minimum energy (TeV)
@@ -164,7 +164,7 @@ for k in range(trials):
   if irf_degrade:
     f.replace('ebl', 'irf')
 
-  # --------------------------------- SIMULATION SOURCE ONLY --------------------------------- !!!
+  # --------------------------------- SIMULATION SOURCE --------------------------------- !!!
 
   event_bins = []
   tObj.table = p.getDataDir() + tcsv
@@ -181,6 +181,8 @@ for k in range(trials):
   num_max = int(ttotal/run_duration)+1
   for n in range(num_max):  # inner loop ---!
     GTI = [run_duration*n, run_duration*(n+1)]
+    if GTI[0] >= ttotal:
+      break
     # tObj.t[0] = min(tgrid, key=lambda x: abs(x-GTI[0]))
     # tObj.t[0] = min(tgrid, key=lambda x: abs(x-GTI[1]))
     tbins = tObj.getTimeBins(GTI=GTI, tgrid=tgrid)
@@ -201,7 +203,7 @@ for k in range(trials):
       tObj.model = p.getDataDir() + 'run0406_ID000126_ebl_tbin%02d.xml' % bin
       tObj.output = event_bins[bin]
       print('simulating', event_bins[bin], 'in', tObj.t) if checks2 else None
-      tObj.seed = count
+      #tObj.seed = count
       tObj.eventSim()
 
     # --------------------------------- APPEND EVENTS IN PH-LIST --------------------------------- !!!
@@ -218,19 +220,20 @@ for k in range(trials):
 
     # --------------------------------- BACKGROUND SIMULATE AND APPEND TO SOURCE --------------------------------- !!!
 
-    bkg_event = p.getSimDir() + 'bkg%03d.fits' %(n+1)
-    print('background event', bkg_event) if checks2 else None
-    # simulate bkg ---!
-    tObj.model = model_bkg
-    tObj.t = GTI
-    tObj.seed = n+1
-    tObj.output = bkg_event
-    tObj.eventSim()
-    # append to source ---!
-    tObj.input = [phlist, bkg_event]
-    tObj.output = phlist
-    tObj.appendEventsSinglePhList()
-    print('final phlist', phlist) if checks2 else None
+    # bkg_event = p.getSimDir() + 'bkg%03d.fits' %(n+1)
+    # print('background event', bkg_event) if checks2 else None
+    # # simulate bkg ---!
+    # tObj.model = model_bkg
+    # tObj.t = [0, run_duration]
+    # # if last phlist change GTI stop to ttotal ---!
+    # if n==num_max-1:
+    #   tObj.t = [0, run_duration*(n+1)-ttotal]
+    # tObj.seed = n+1
+    # tObj.output = bkg_event
+    # tObj.eventSim()
+    # # append to source ---!
+    # tObj.appendBkg(phlist=phlist, bkg=bkg_event, GTI=GTI)
+    # print('final phlist', phlist) if checks2 else None
 
 
   # --------------------------------- LC TIME WINDOWS --------------------------------- !!!
@@ -335,7 +338,6 @@ for k in range(trials):
 
       # --------------------------------- SELECTION --------------------------------- !!!
 
-      print('selection times', tObj.t)
       event_selected = event_list.replace(p.getSimDir(), p.getSelectDir()).replace('obs_', 'texp%ds_' %texp[i])
       prefix = p.getSelectDir() + 'texp%ds_t%dt%d_' %(texp[i], tObj.t[0], tObj.t[1])
       # select events ---!
@@ -372,7 +374,7 @@ for k in range(trials):
       detObj.if_cut = if_cut
       detObj.modXml()
       detObj.prmsFreeFix()
-      print('detection', tObj.output, os.path.isfile(tObj.output)) if checks2 else None
+      print('detection', tObj.output) if checks2 else None
 
       # --------------------------------- CANDIDATES NUMBER --------------------------------- !!!
 
@@ -382,12 +384,9 @@ for k in range(trials):
 
       # --------------------------------- MAX LIKELIHOOD --------------------------------- !!!
 
-      print('detection', tObj.output, os.path.isfile(tObj.output)) if checks2 else None
       likeXml = detectionXml.replace('_det%dsgm' % tObj.sigma, '_like%dsgm' % tObj.sigma)
-      print(likeXml)
       if os.path.isfile(likeXml):
         os.remove(likeXml)
-      print('detection', os.path.isfile(detectionXml)) if checks2 else None
       tObj.input = event_selected
       tObj.model = detectionXml
       tObj.output = likeXml
@@ -420,7 +419,7 @@ for k in range(trials):
 
       # only first elem ---!
       ts.append(ts_list[0][0])
-      print('ts:', ts[0]) if checks1 else None
+      print('ts:', ts[0]) if checks2 else None
 
       # --------------------------------- Nsrc FOR TSV THRESHOLD --------------------------------- !!!
 
@@ -469,28 +468,20 @@ for k in range(trials):
       pref.append(pref_list[0][0])
       pivot.append(pivot_list[0][0])
 
-      # eventually cutoff ---!
-      if if_cut:
-        cutoff_list, cutoff = ([] for n in range(2))
-        cutoff_list.append(spectral[3]) if Ndet > 0 else cutoff_list.append([np.nan])
-        cutoff.append(cutoff_list[0][0])
-
       # --------------------------------- INTEGRATED FLUX --------------------------------- !!!
 
       flux_ph = []
-      norm_factor = 1
-      # if clocking > run_duration:
-      #   norm_factor = 1
-      # elif elow == emin and ehigh == emax:
-      #   norm_factor = (ehigh - elow)
-      # else:
-      #   norm_factor = (ehigh - elow) - (emax - emin)
+      # norm_factor = 1
+      if clocking > run_duration:
+        norm_factor = 1
+      elif elow == emin and ehigh == emax:
+        norm_factor = (ehigh - elow)
+      else:
+        norm_factor = (ehigh - elow) - (emax - emin)
       if Ndet > 0:
-        flux_ph.append(tObj.photonFluxPowerLaw(index[0], pref[0], pivot[0], norm_factor=norm_factor))  # E (MeV)
+        flux_ph.append(tObj.photonFluxPowerLaw(index[0], pref[0], pivot[0], norm_factor=norm_factor)) # E (MeV)
       else:
         flux_ph.append(np.nan)
-
-      # MISSING THE CUT-OFF OPTION ---!!!
 
       # --------------------------------- CLOSE LIKE XML --------------------------------- !!!
 
