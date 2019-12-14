@@ -463,8 +463,8 @@ class Analysis():
     max_tbin = self.__Nt
     return tbin_stop, max_tbin
 
+  # get template bins within GTI ---!
   def getTimeBins(self, GTI, tgrid):
-
     tbins = []
     for i in range(len(tgrid)):
       if tgrid[i] >= GTI[0] and tgrid[i] <= GTI[1]:
@@ -514,6 +514,7 @@ class Analysis():
     xml.save(self.output)
     return
 
+  # dopr duplicates in list ---!
   def __dropListDuplicates(self, list):
     new_list = []
     for l in list:
@@ -537,17 +538,19 @@ class Analysis():
   # create single photon list from obs list ---!
   def __singlePhotonList(self, sample, filename, GTI):
     sample = sorted(sample)
+    n = 0
     for i, f in enumerate(sample):
-      #print(f)
       with fits.open(f) as hdul:
-        if i == 0:
+        if n == 0 and len(hdul[1].data) > 0:
           h1 = hdul[1].header
           h2 = hdul[2].header
           ext1 = hdul[1].data
           ext2 = hdul[2].data
-        else:
-          if len(hdul[1].data) > 0:
-            ext1 = np.append(ext1, hdul[1].data)
+          n += 1
+          print(len(ext1))
+        elif n != 0 and len(hdul[1].data) > 0:
+          ext1 = np.append(ext1, hdul[1].data)
+          print(len(hdul[1].data))
     # create output FITS file empty ---!
     hdu = fits.PrimaryHDU()
     hdul = fits.HDUList([hdu])
@@ -589,7 +592,20 @@ class Analysis():
     with fits.open(self.input[-1]) as hdul:
       GTI.append(hdul[2].data[0][1])
     self.__singlePhotonList(sample=self.input, filename=self.output, GTI=GTI)
+    print('appended bkg GTI', GTI)
     return
+
+  def appendBkg(self, phlist, bkg, GTI):
+    with fits.open(bkg, mode='update') as hdul:
+      # fix GTI ---!
+      hdul[2].data[0][0] = GTI[0]
+      hdul[2].data[0][1] = GTI[1]
+      hdul.flush()
+      times = hdul[1].data.field('TIME')
+      for i, t, in enumerate(times):
+        hdul[1].data.field('TIME')[i] = t + GTI[0]
+      hdul.flush()
+    self.__singlePhotonList(sample=[phlist, bkg], filename=phlist, GTI=GTI)
 
   # created a number of FITS table containing all events and GTIs ---!
   def appendEventsMultiPhList(self, max_length=None, last=None):

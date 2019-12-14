@@ -28,7 +28,7 @@ caldb = 'prod3b-v2'
 # caldb_degraded = caldb.replace('prod', 'degr')
 irf = 'South_z40_0.5h'
 
-sigma = 3  # detection acceptance (Gaussian)
+sigma = 5  # detection acceptance (Gaussian)
 texp = (10, 100)  # exposure times (s)
 tmin = 30  # slewing time (s)
 tmax = []
@@ -73,6 +73,7 @@ merge_map = 'run0406_MergerID000126_skymap.fits'
 nominal_template = 'run0406_ID000126.fits'
 ebl_template = 'run0406_ID000126_ebl.fits'
 model_pl = 'run0406_ID000126.xml'
+model_bkg = 'CTAIrfBackground.xml'
 tcsv = 'time_slices.csv'
 
 # pointing with off-axis equal to max prob GW ---!
@@ -154,19 +155,16 @@ if reduce_flux != None:
 
 for k in range(trials):
   count += 1
-  tObj.seed = count
   clocking = tmin-min(texp)  # simulate flowing time (subsequent temporal windows of 1s)
   GTI_final = [run_duration for i in range(len(texp))]  # LST runs are of 20mins chunks ---!
   num = [1 for i in range(len(texp))]  # count on LST-like run chunks ---!
   print('\n\n!!! ************ STARTING TRIAL %d ************ !!!\n\n' % count) if checks1 else None
-  print('!!! check ---- seed=', tObj.seed) if checks2 else None
   # attach ID to fileroot ---!
   f = fileroot + 'ebl%06d' % (count)
   if irf_degrade:
     f.replace('ebl', 'irf')
-  print('!!! check ---- file=', f) if checks2 else None
 
-  # --------------------------------- SIMULATION --------------------------------- !!!
+  # --------------------------------- SIMULATION SOURCE ONLY --------------------------------- !!!
 
   event_bins = []
   tObj.table = p.getDataDir() + tcsv
@@ -203,6 +201,7 @@ for k in range(trials):
       tObj.model = p.getDataDir() + 'run0406_ID000126_ebl_tbin%02d.xml' % bin
       tObj.output = event_bins[bin]
       print('simulating', event_bins[bin], 'in', tObj.t) if checks2 else None
+      tObj.seed = count
       tObj.eventSim()
 
     # --------------------------------- APPEND EVENTS IN PH-LIST --------------------------------- !!!
@@ -216,6 +215,23 @@ for k in range(trials):
     tObj.output = phlist
     tObj.appendEventsSinglePhList()
     print('phlist', phlist) if checks2 else None
+
+    # --------------------------------- BACKGROUND SIMULATE AND APPEND TO SOURCE --------------------------------- !!!
+
+    bkg_event = p.getSimDir() + 'bkg%03d.fits' %(n+1)
+    print('background event', bkg_event) if checks2 else None
+    # simulate bkg ---!
+    tObj.model = model_bkg
+    tObj.t = GTI
+    tObj.seed = n+1
+    tObj.output = bkg_event
+    tObj.eventSim()
+    # append to source ---!
+    tObj.input = [phlist, bkg_event]
+    tObj.output = phlist
+    tObj.appendEventsSinglePhList()
+    print('final phlist', phlist) if checks2 else None
+
 
   # --------------------------------- LC TIME WINDOWS --------------------------------- !!!
 
@@ -344,6 +360,7 @@ for k in range(trials):
 
       tObj.corr_rad = corr_rad
       tObj.max_src = max_src
+      tObj.sigma = sigma
       detectionXml = skymap.replace('_skymap.fits', '_det%dsgm.xml' % sigma)
       if os.path.isfile(detectionXml):
         os.remove(detectionXml)
@@ -367,8 +384,10 @@ for k in range(trials):
 
       print('detection', tObj.output, os.path.isfile(tObj.output)) if checks2 else None
       likeXml = detectionXml.replace('_det%dsgm' % tObj.sigma, '_like%dsgm' % tObj.sigma)
+      print(likeXml)
       if os.path.isfile(likeXml):
         os.remove(likeXml)
+      print('detection', os.path.isfile(detectionXml)) if checks2 else None
       tObj.input = event_selected
       tObj.model = detectionXml
       tObj.output = likeXml
@@ -459,12 +478,13 @@ for k in range(trials):
       # --------------------------------- INTEGRATED FLUX --------------------------------- !!!
 
       flux_ph = []
-      if clocking > run_duration:
-        norm_factor = 1
-      elif elow == emin and ehigh == emax:
-        norm_factor = (ehigh - elow)
-      else:
-        norm_factor = (ehigh - elow) - (emax - emin)
+      norm_factor = 1
+      # if clocking > run_duration:
+      #   norm_factor = 1
+      # elif elow == emin and ehigh == emax:
+      #   norm_factor = (ehigh - elow)
+      # else:
+      #   norm_factor = (ehigh - elow) - (emax - emin)
       if Ndet > 0:
         flux_ph.append(tObj.photonFluxPowerLaw(index[0], pref[0], pivot[0], norm_factor=norm_factor))  # E (MeV)
       else:
