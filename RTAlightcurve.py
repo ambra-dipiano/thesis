@@ -34,7 +34,7 @@ tmin = 30  # slewing time (s)
 tmax = []
 for i in range(len(texp)):
   tmax.append(tmin + texp[i])
-ttotal = 2000 #1e6  # maximum tobs (4h at least) simulation total time (s)
+ttotal = 3000 #1e6  # maximum tobs (4h at least) simulation total time (s)
 add_hours = 1000 #7200  # +2h observation time added after first none detection (s)
 run_duration = 1200  # 20min observation run time for LST in RTA (s) ---!
 elow = 0.03  # simulation minimum energy (TeV)
@@ -50,7 +50,7 @@ ts_threshold = 25  # TS threshold for reliable detection
 reduce_flux = None  # flux will be devided by factor reduce_flux, if nominal then set to None
 
 # conditions control ---!
-checks1 = False  # prints info
+checks1 = True  # prints info
 checks2 = False  # prints more info
 if_ebl = True  # uses the EBL absorbed template
 if_cut = False  # adds a cut-off parameter to the source model
