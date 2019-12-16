@@ -4,6 +4,7 @@
 
 # IMPORTS ---!
 from pkg_blindsearch import *
+from module_plot import *
 import numpy as np
 import csv
 import os
@@ -29,7 +30,7 @@ caldb = 'prod3b-v2'
 irf = 'South_z40_0.5h'
 
 sigma = 5  # detection acceptance (Gaussian)
-texp = (10, 100)  # exposure times (s)
+texp = (10, 100, 250, 500)  # exposure times (s)
 tmin = 30  # slewing time (s)
 tmax = []
 for i in range(len(texp)):
@@ -182,7 +183,8 @@ for k in range(trials):
       event = event.replace('_tbin', '_flux%s_tbin' % str(reduce_flux))
     event_bins.append(event)
     tObj.output = event
-    tObj.eventSim()
+    if not os.path.isfile(event):
+      tObj.eventSim()
 
   # --------------------------------- APPEND EVENTS IN PH-LIST --------------------------------- !!!
 
@@ -192,10 +194,11 @@ for k in range(trials):
   tObj.input = event_bins
   tObj.output = event_all
   if run_duration == ttotal:
-    tObj.appendEvents()
+    tObj.appendEventsSinglePhList()
     phlist = event_all
+    num_max = 1
   else:
-    num_max, phlist = tObj.appendEvents(max_length=run_duration, last=ttotal, remove_old=True)
+    num_max, phlist = tObj.appendEventsMultiPhList(max_length=run_duration, last=ttotal)
     print('phlist root name', phlist) if checks2 else None
 
   #breakpoint()
@@ -333,6 +336,7 @@ for k in range(trials):
       tObj.input = skymap
       tObj.output = detectionXml
       tObj.runDetection()
+      #showSkymap(skymap=skymap, reg=detectionXml.replace('.xml', '.reg'), show=False)
       print('detection', tObj.output) if checks2 else None
       detObj = ManageXml(detectionXml, cfgfile='/config_lc.xml')
       detObj.sigma = sigma
@@ -440,12 +444,13 @@ for k in range(trials):
       # --------------------------------- INTEGRATED FLUX --------------------------------- !!!
 
       flux_ph = []
-      if clocking > run_duration:
-        norm_factor = 1
-      elif elow == emin and ehigh == emax:
-        norm_factor = (ehigh - elow)
-      else:
-        norm_factor = (ehigh - elow) - (emax - emin)
+      norm_factor = 1
+      # if clocking > run_duration:
+      #   norm_factor = 1
+      # elif elow == emin and ehigh == emax:
+      #   norm_factor = (ehigh - elow)
+      # else:
+      #   norm_factor = (ehigh - elow) - (emax - emin)
       if Ndet > 0:
         flux_ph.append(tObj.photonFluxPowerLaw(index[0], pref[0], pivot[0], norm_factor=norm_factor))  # E (MeV)
       else:
@@ -494,7 +499,10 @@ for k in range(trials):
     # --------------------------------- CLEAR SPACE --------------------------------- !!!
 
       os.system('rm ' + p.getSelectDir() + '*ebl%06d*' % count)
-      os.system('rm ' + p.getDetDir() + '*ebl%06d*' % count)
+      os.system('rm ' + p.getDetDir() + '*ebl%06d*fits' % count)
+      os.system('rm ' + p.getDetDir() + '*ebl%06d*xml' % count)
+      os.system('rm ' + p.getDetDir() + '*ebl%06d*reg' % count)
+      os.system('rm ' + p.getDetDir() + '*ebl%06d*log' % count)
 
   if int(count) != 1:
     os.system('rm ' + p.getSimDir() + '*ebl%06d*' % count)

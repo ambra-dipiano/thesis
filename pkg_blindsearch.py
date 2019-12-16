@@ -462,6 +462,22 @@ class Analysis() :
       self.__extractSpec()
     return tbin_stop
 
+  # get template bins within GTI ---!
+  def getTimeBins(self, GTI, tgrid):
+    tbins = []
+    print(tgrid)
+    for i in range(len(tgrid)):
+      if tgrid[i] >= GTI[0] and tgrid[i] <= GTI[1]:
+        tbins.append(i)
+        continue
+      if tgrid[i] >= GTI[1]:
+        break
+
+    tbins = sorted(tbins)
+    tbins = self.__dropListDuplicates(tbins)
+    return tbins
+
+
   # ctobssim wrapper ---!
   def eventSim(self) :
     sim = ctools.ctobssim()
@@ -496,25 +512,38 @@ class Analysis() :
     xml.save(self.output)
     return
 
+  # dopr duplicates in list ---!
+  def __dropListDuplicates(self, list):
+    new_list = []
+    for l in list:
+      if l not in new_list:
+        new_list.append(l)
+    return new_list
+
+  # keep only the GTI rows plus a buffering margin ---!
   def __dropExceedingEvents(self, hdul, GTI):
     slice_list = []
-    for i, row in enumerate(hdul[1].data.field('TIME')):
-      if hdul[1].data.field('TIME')[i] > GTI[0] and hdul[1].data.field('TIME')[i] < GTI[1]:
+    times = hdul[1].data.field('TIME')
+    for i, t in enumerate(times):
+      if t >= GTI[0] and t <= GTI[1]:
         slice_list.append(i)
     return slice_list
 
   # create single photon list from obs list ---!
-  def __singlePhotonList(self, sample, filename, GTI):
+  def __singlePhotonList(self, sample, filename, GTI, shift_time=False):
     print('GTI', GTI)
+    sample = sorted(sample)
+    n = 0
     for i, f in enumerate(sample):
       print(f)
       with fits.open(f) as hdul:
-        if i == 0:
+        if n == 0 and len(hdul[1].data) > 0:
           h1 = hdul[1].header
           h2 = hdul[2].header
           ext1 = hdul[1].data
           ext2 = hdul[2].data
-        else:
+          n += 1
+        elif n != 0 and len(hdul[1].data) > 0:
           ext1 = np.append(ext1, hdul[1].data)
     # create output FITS file empty ---!
     hdu = fits.PrimaryHDU()
@@ -531,62 +560,90 @@ class Analysis() :
     with fits.open(filename, mode='update') as hdul:
       # drop events exceeding GTI ---!
       slice = self.__dropExceedingEvents(hdul=hdul, GTI=GTI)
-      hdul[1].data = hdul[1].data[slice]
+      if len(slice) > 2:
+        hdul[1].data = hdul[1].data[slice]
       hdul.flush()
-      # modify indexes and GTI ---!
+      # sort times and modify indexes ---!
       indexes = hdul[1].data.field(0)
+      # if shift_time:
+      #   times = hdul[1].data.field('TIME')
+      #   times = sorted(times)
       GTI_new = []
       for i, ind in enumerate(indexes):
         hdul[1].data.field(0)[i] = i + 1
-      # find GTI in time array
+        # if shift_time:
+        #   hdul[1].data.field('TIME')[i] = times[i]
+      # modify GTI ---!
       GTI_new.append(min(hdul[1].data.field('TIME'), key=lambda x: abs(x - GTI[0])))
       GTI_new.append(min(hdul[1].data.field('TIME'), key=lambda x: abs(x - GTI[1])))
       hdul[2].data[0][0] = GTI_new[0]
       hdul[2].data[0][1] = GTI_new[1]
+      # hdul[2].data[0][0] = GTI[0]
+      # hdul[2].data[0][1] = GTI[1]
       hdul.flush()
     return
 
+  # created one FITS table containing all events and GTIs ---!
+  def appendEventsSinglePhList(self):
+    GTI = []
+    with fits.open(self.input[0]) as hdul:
+      GTI.append(hdul[2].data[0][0])
+    with fits.open(self.input[-1]) as hdul:
+      GTI.append(hdul[2].data[0][1])
+    self.__singlePhotonList(sample=self.input, filename=self.output, GTI=GTI)
+    return
+
+  # create one fits table appending source and bkg
+  def appendBkg(self, phlist, bkg, GTI):
+    with fits.open(bkg, mode='update') as hdul:
+      # fix GTI ---!
+      hdul[2].data[0][0] = GTI[0]
+      hdul[2].data[0][1] = GTI[1]
+      hdul.flush()
+      times = hdul[1].data.field('TIME')
+      for i, t, in enumerate(times):
+        hdul[1].data.field('TIME')[i] = t + GTI[0]
+      hdul.flush()
+    self.__singlePhotonList(sample=[phlist, bkg], filename=phlist, GTI=GTI)
+    return
+
   # created a number of FITS table containing all events and GTIs ---!
-  def appendEvents(self, max_length=None, last=None, remove_old=True):
-    # remove old ---!
+  def appendEventsMultiPhList(self, max_length=None, last=None):
     n = 1
-    if os.path.isfile(self.output) and remove_old:
-      os.remove(self.output)
-    # collect events ---!
-    if max_length == None:
-      GTI = []
-      with fits.open(self.input[0]) as hdul:
-        GTI.append(hdul[2].data[0][0])
-      with fits.open(self.input[-1]) as hdul:
-        GTI.append(hdul[2].data[0][1])
-      self.__singlePhotonList(sample=self.input, filename=self.output, GTI=GTI)
-      return
-    else:
-      sample = []
-      singlefile = str(self.output)
+    sample = []
+    singlefile = str(self.output)
+    for j in range(int(last / max_length) + 1):
       for i, f in enumerate(self.input):
         with fits.open(f) as hdul:
-          tlast = hdul[2].data[0][1]
           tfirst = hdul[2].data[0][0]
-          if (tlast < max_length*n and tlast != max_length*n):
+          tlast = hdul[2].data[0][1]
+          if (tfirst >= max_length * (j) and tlast <= max_length * (j + 1)) or \
+              (tfirst <= max_length * (j) and tlast > max_length * (j)):
             sample.append(f)
-          elif (tlast > max_length*n or tlast == max_length*n) and i != len(self.input)-1:
+          elif tlast >= max_length * (j + 1): # or last == max_length * (j + 1):
             sample.append(f)
             if n == 1:
               filename = singlefile.replace('.fits', '_n%03d.fits' % n)
             else:
-              filename = filename.replace('_n%03d.fits' %(n-1), '_n%03d.fits' %n)
-            print('call', filename)
-            self.__singlePhotonList(sample=sample, filename=filename, GTI=[max_length*(n-1), max_length*n])
+              filename = filename.replace('_n%03d.fits' % (n - 1), '_n%03d.fits' % n)
+            sample = self.__dropListDuplicates(sample)
+            print('call 1', filename)
+            self.__singlePhotonList(sample=sample, filename=filename, GTI=[max_length * (j), max_length * (j + 1)])
             n += 1
+            drop = len(sample) - 1
+            if drop > 2:
+              self.input = self.input[drop - 1:]
             sample = [f]
-          if (tfirst > max_length*(n-1) and tfirst < last) and i == len(self.input)-1:
-            filename = filename.replace('_n%03d.fits' %(n-1), '_n%03d.fits' %n)
-            sample.append(f)
-            print('call', filename)
-            self.__singlePhotonList(sample=sample, filename=filename, GTI=[max_length*(n-1), max_length*n])
-
-      return n, singlefile
+            break
+          # if tlast > last - max_length or i == len(self.input) - 1:
+          #   filename = filename.replace('_n%03d.fits' % (n), '_n%03d.fits' % (n+1))
+          #   sample.append(f)
+          #   sample = self.__dropListDuplicates(sample)
+          #   print('call 2', filename)
+          #   self.__singlePhotonList(sample=sample, filename=filename, GTI=[max_length * (j), max_length * (j + 1)])
+          #   sample = [f]
+          #   break
+    return n, singlefile
 
   # ctselect wrapper ---!
   def eventSelect(self, prefix=None):
@@ -1162,7 +1219,7 @@ class ManageXml():
 
   def __setModel(self):
     if self.default_model is True:
-      Att_Prefactor = {'name': 'Prefactor', 'scale': '1e-16', 'value': '5.7', 'min': '1e-07', 'max': '1e3', 'free': '1'}
+      Att_Prefactor = {'name': 'Prefactor', 'scale': '1e-16', 'value': '5.7', 'min': '1e-07', 'max': '1e7', 'free': '1'}
       Att_Index = {'name': 'Index', 'scale': '-1', 'value': '2.48', 'min': '0', 'max': '5.0', 'free': '1'}
       Att_PivotEn = {'name': 'PivotEnergy', 'scale': '1e6', 'value': '0.3', 'min': '1e-07', 'max': '1000.0', 'free': '0'}
       Bkg_Prefactor = {'name': 'Prefactor', 'scale': '1', 'value': '1.0', 'min': '1e-03', 'max': '1e+3.0', 'free': '1'}
