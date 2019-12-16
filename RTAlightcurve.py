@@ -35,7 +35,7 @@ tmax = []
 for i in range(len(texp)):
   tmax.append(tmin + texp[i])
 ttotal = 3000 #1e6  # maximum tobs (4h at least) simulation total time (s)
-add_hours = 1000 #7200  # +2h observation time added after first none detection (s)
+add_hours = 7200 #7200  # +2h observation time added after first none detection (s)
 run_duration = 1200  # 20min observation run time for LST in RTA (s) ---!
 elow = 0.03  # simulation minimum energy (TeV)
 ehigh = 150.0  # simulation maximum energy (TeV)
@@ -182,8 +182,7 @@ for k in range(trials):
       event = event.replace('_tbin', '_flux%s_tbin' % str(reduce_flux))
     event_bins.append(event)
     tObj.output = event
-    if not os.path.isfile(event):
-      tObj.eventSim()
+    tObj.eventSim()
 
   # --------------------------------- APPEND EVENTS IN PH-LIST --------------------------------- !!!
 

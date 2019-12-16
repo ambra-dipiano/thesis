@@ -307,7 +307,10 @@ class Analysis() :
         self.__time[i] = self.tmax
         bin = i+1
         break
-    sliceObj = slice(0, bin)
+    if bin < self.__Nt:
+      sliceObj = slice(0, bin + 1)
+    else:
+      sliceObj = slice(0, bin)
     return self.__time[sliceObj]
 
   # compute the EBL absorption ---!
@@ -502,7 +505,9 @@ class Analysis() :
 
   # create single photon list from obs list ---!
   def __singlePhotonList(self, sample, filename, GTI):
+    print('GTI', GTI)
     for i, f in enumerate(sample):
+      print(f)
       with fits.open(f) as hdul:
         if i == 0:
           h1 = hdul[1].header
@@ -571,12 +576,14 @@ class Analysis() :
               filename = singlefile.replace('.fits', '_n%03d.fits' % n)
             else:
               filename = filename.replace('_n%03d.fits' %(n-1), '_n%03d.fits' %n)
+            print('call', filename)
             self.__singlePhotonList(sample=sample, filename=filename, GTI=[max_length*(n-1), max_length*n])
             n += 1
             sample = [f]
           if (tfirst > max_length*(n-1) and tfirst < last) and i == len(self.input)-1:
             filename = filename.replace('_n%03d.fits' %(n-1), '_n%03d.fits' %n)
             sample.append(f)
+            print('call', filename)
             self.__singlePhotonList(sample=sample, filename=filename, GTI=[max_length*(n-1), max_length*n])
 
       return n, singlefile
@@ -1155,7 +1162,7 @@ class ManageXml():
 
   def __setModel(self):
     if self.default_model is True:
-      Att_Prefactor = {'name': 'Prefactor', 'scale': '1e-16', 'value': '5.7', 'min': '1e-07', 'max': '1e7', 'free': '1'}
+      Att_Prefactor = {'name': 'Prefactor', 'scale': '1e-16', 'value': '5.7', 'min': '1e-07', 'max': '1e3', 'free': '1'}
       Att_Index = {'name': 'Index', 'scale': '-1', 'value': '2.48', 'min': '0', 'max': '5.0', 'free': '1'}
       Att_PivotEn = {'name': 'PivotEnergy', 'scale': '1e6', 'value': '0.3', 'min': '1e-07', 'max': '1000.0', 'free': '0'}
       Bkg_Prefactor = {'name': 'Prefactor', 'scale': '1', 'value': '1.0', 'min': '1e-03', 'max': '1e+3.0', 'free': '1'}
