@@ -56,7 +56,7 @@ if_ebl = True  # uses the EBL absorbed template
 if_cut = False  # adds a cut-off parameter to the source model
 ebl_fits = False  # generate the EBL absorbed template
 extract_spec = True  # generates spectral tables and obs definition models
-irf_degrade = False  # use degraded irf
+irf_degrade = True  # use degraded irf
 compute_degr = False  # compute irf degradation
 src_sort = True  # sorts scandidates from highest TS to lowest
 skip_exist = False  # skips the step if ID exists in csv (issue: if True than add+2h will start anew from last csv tbin)
@@ -246,6 +246,8 @@ for k in range(trials):
       tbin = clocking / current_twindows[i]  # temporal bin number of this analysis
       IDbin = 'tbin%09d' % tbin
       csvName = p.getCsvDir() + fileroot + 'ID%06d_%ds.csv' % (count, texp[index])
+      if irf_degrade:
+        csvName = csvName.replace('.csv', '_degraded.csv')
       if os.path.isfile(csvName):
         skip = checkTrialId(csvName, IDbin)
       else:
@@ -298,7 +300,7 @@ for k in range(trials):
       for bin in bins:
         event_bins.append(p.getSimDir() + f + '_tbin%02d.fits' %bin)
 
-      print('event bins', event_bins)
+      print('event bins', event_bins) if checks2 else None
       # actual computation of obs list ---!
       event_list = phlist.replace('run0406_ebl', 'obs_t%dt%d_ebl' %(tObj.t[0], tObj.t[1])).replace('.fits', '.xml')
       if os.path.isfile(event_list):
@@ -410,7 +412,7 @@ for k in range(trials):
         is_detection[index] = False
         # add 2hrs of obs time ---!
         tlast[index] = tObj.t[1] + add_hours  # +2h ---!
-        print('+2h tlast = ', tlast[index], ' with texp = ', texp[index])
+        print('+2h tlast = ', tlast[index], ' with texp = ', texp[index], 'at clocking', clocking)
         # only 4hrs of simulation avialable, if tlast exceeds them then reset to ttotal ---!
         if tlast[index] > ttotal:
           tlast[index] = ttotal
