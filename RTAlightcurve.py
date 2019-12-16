@@ -45,7 +45,6 @@ emax = 150.0  # selection maximum energy (TeV)
 roi = 5  # region of interest for simulation and selection (deg)
 wbin = 0.02  # skymap bin width (deg)
 corr_rad = 0.1  # Gaussian
-confidence = (0.68, 0.95, 0.9973)  # confidence interval for asymmetrical errors (%)
 max_src = 5  # max candidates
 ts_threshold = 25  # TS threshold for reliable detection
 reduce_flux = None  # flux will be devided by factor reduce_flux, if nominal then set to None
@@ -188,18 +187,18 @@ for k in range(trials):
 
   # --------------------------------- APPEND EVENTS IN PH-LIST --------------------------------- !!!
 
-  event_all = p.getSimDir() + f + '.fits'
-  if reduce_flux != None:
-    event_all = event_all.replace('.fits', '_flux%s.fits' % str(reduce_flux))
-  tObj.input = event_bins
-  tObj.output = event_all
-  if run_duration == ttotal:
-    tObj.appendEventsSinglePhList()
-    phlist = event_all
-    num_max = 1
-  else:
-    num_max, phlist = tObj.appendEventsMultiPhList(max_length=run_duration, last=ttotal)
-    print('phlist root name', phlist) if checks2 else None
+  # event_all = p.getSimDir() + f + '.fits'
+  # if reduce_flux != None:
+  #   event_all = event_all.replace('.fits', '_flux%s.fits' % str(reduce_flux))
+  # tObj.input = event_bins
+  # tObj.output = event_all
+  # if run_duration == ttotal:
+  #   tObj.appendEventsSinglePhList()
+  #   phlist = event_all
+  #   num_max = 1
+  # else:
+  #   num_max, phlist = tObj.appendEventsMultiPhList(max_length=run_duration, last=ttotal)
+  #   print('phlist root name', phlist) if checks2 else None
 
   #breakpoint()
 
@@ -270,31 +269,38 @@ for k in range(trials):
 
       # --------------------------------- OBSERVATION LIST --------------------------------- !!!
 
-      # check num of ph list file and select the correct files ---!
-      if run_duration != ttotal:
-        if (tObj.t[0] < GTIf[index] or tObj.t[0] == GTIf[index]) and (tObj.t[1] == GTIf[index] or tObj.t[1] < GTIf[index]):
-          # if num[index] > num_max and num[index] != num_max:
-          #   break
-          event_bins = [phlist.replace('.fits', '_n%03d.fits' %num[index])]
-        elif (tObj.t[0] < GTIf[index] or tObj.t[0] == GTIf[index]) and (tObj.t[1] == GTIf[index] or tObj.t[1] > GTIf[index]):
-          # if num[index] > num_max and num[index] != num_max:
-          #   break
-          event_bins = [phlist.replace('.fits', '_n%03d.fits' %num[index])]
-          if num[index]+1 < num_max or num[index]+1 == num_max:
-            event_bins.append(phlist.replace('.fits', '_n%03d.fits' %(num[index]+1)))
-          GTIf[index] += run_duration
-          num[index] += 1
-        else:
-          # if num[index]+1 > num_max and num[index]+1 != num_max:
-          #   break
-          event_bins = [phlist.replace('.fits', '_n%03d.fits' %(num[index]+1))]
-          GTIf[index] += run_duration
-          num[index] += 1
-      else:
-        event_bins = [phlist]
+      # # check num of ph list file and select the correct files ---!
+      # if run_duration != ttotal:
+      #   if (tObj.t[0] < GTIf[index] or tObj.t[0] == GTIf[index]) and (tObj.t[1] == GTIf[index] or tObj.t[1] < GTIf[index]):
+      #     # if num[index] > num_max and num[index] != num_max:
+      #     #   break
+      #     event_bins = [phlist.replace('.fits', '_n%03d.fits' %num[index])]
+      #   elif (tObj.t[0] < GTIf[index] or tObj.t[0] == GTIf[index]) and (tObj.t[1] == GTIf[index] or tObj.t[1] > GTIf[index]):
+      #     # if num[index] > num_max and num[index] != num_max:
+      #     #   break
+      #     event_bins = [phlist.replace('.fits', '_n%03d.fits' %num[index])]
+      #     if num[index]+1 < num_max or num[index]+1 == num_max:
+      #       event_bins.append(phlist.replace('.fits', '_n%03d.fits' %(num[index]+1)))
+      #     GTIf[index] += run_duration
+      #     num[index] += 1
+      #   else:
+      #     # if num[index]+1 > num_max and num[index]+1 != num_max:
+      #     #   break
+      #     event_bins = [phlist.replace('.fits', '_n%03d.fits' %(num[index]+1))]
+      #     GTIf[index] += run_duration
+      #     num[index] += 1
+      # else:
+      #   event_bins = [phlist]
 
+      phlist = p.getSelectDir() + f + '.fits'
+      bins = tObj.getTimeBins(GTI=tObj.t, tgrid=tgrid)
+      event_bins = []
+      for bin in bins:
+        event_bins.append(p.getSimDir() + f + '_tbin%02d.fits' %bin)
+
+      print('event bins', event_bins)
       # actual computation of obs list ---!
-      event_list = phlist.replace(p.getSimDir(), p.getSelectDir()).replace('run0406_ebl', 'obs_t%dt%d_ebl' %(tObj.t[0], tObj.t[1])).replace('.fits', '.xml')
+      event_list = phlist.replace('run0406_ebl', 'obs_t%dt%d_ebl' %(tObj.t[0], tObj.t[1])).replace('.fits', '.xml')
       if os.path.isfile(event_list):
         os.remove(event_list)
       tObj.input = event_bins
@@ -307,7 +313,7 @@ for k in range(trials):
       # --------------------------------- SELECTION --------------------------------- !!!
 
       event_selected = event_list.replace(p.getSimDir(), p.getSelectDir()).replace('obs_', 'texp%ds_' %texp[i])
-      prefix = p.getSelectDir() + 'texp%ds_t%dt%d_' %(texp[i], tObj.t[0], tObj.t[1])
+      prefix = p.getSelectDir() + 'texp%ds_' %texp[i]
       # select events ---!
       if os.path.isfile(event_selected):
         os.remove(event_selected)
@@ -485,24 +491,21 @@ for k in range(trials):
       row.append([IDbin, tObj.t[0], tObj.t[1], Ndet, Nsrc, ra_det[0], dec_det[0], ra_fit[0], dec_fit[0],
                   flux_ph[0], ts[0]])
       if os.path.isfile(csvName):
-        with open(csvName, 'a') as f:
-          w = csv.writer(f)
+        with open(csvName, 'a') as csv_file:
+          w = csv.writer(csv_file)
           w.writerows(row)
-          f.close()
+          csv_file.close()
       else:
-        with open(csvName, 'w+') as f:
-          f.write(header)
-          w = csv.writer(f)
+        with open(csvName, 'w+') as csv_file:
+          csv_file.write(header)
+          w = csv.writer(csv_file)
           w.writerows(row)
-          f.close()
+          csv_file.close()
 
     # --------------------------------- CLEAR SPACE --------------------------------- !!!
 
       os.system('rm ' + p.getSelectDir() + '*ebl%06d*' % count)
-      os.system('rm ' + p.getDetDir() + '*ebl%06d*fits' % count)
-      os.system('rm ' + p.getDetDir() + '*ebl%06d*xml' % count)
-      os.system('rm ' + p.getDetDir() + '*ebl%06d*reg' % count)
-      os.system('rm ' + p.getDetDir() + '*ebl%06d*log' % count)
+      os.system('rm ' + p.getDetDir() + '*ebl%06d*' % count)
 
   if int(count) != 1:
     os.system('rm ' + p.getSimDir() + '*ebl%06d*' % count)

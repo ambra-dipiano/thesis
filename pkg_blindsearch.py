@@ -465,12 +465,15 @@ class Analysis() :
   # get template bins within GTI ---!
   def getTimeBins(self, GTI, tgrid):
     tbins = []
-    print(tgrid)
     for i in range(len(tgrid)):
-      if tgrid[i] >= GTI[0] and tgrid[i] <= GTI[1]:
+      if tgrid[i] <= GTI[0] and tgrid[i+1] >= GTI[0]:
+        tbins.append(i)
+        continue
+      if tgrid[i] >= GTI[0] and tgrid[i+1] <= GTI[1]:
         tbins.append(i)
         continue
       if tgrid[i] >= GTI[1]:
+        tbins.append(i)
         break
 
     tbins = sorted(tbins)
