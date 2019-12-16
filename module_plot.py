@@ -12,6 +12,11 @@ from matplotlib import rc
 import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.patches import Rectangle
+from astropy import units as u
+from astropy.wcs import WCS
+from astropy.io import fits
+from astropy.utils.data import get_pkg_data_filename
+
 
 # WIP ---!
 def handleReg(reg, col='black') :
@@ -41,15 +46,9 @@ def showSkymap(skymap, reg='none', col='black', suffix='none', title='none', sho
   :return:
   '''
 
-  # info data ---!
-  hdulist = fits.open(skymap)
-  #print(hdulist.info()) if show == True else None
-
-  # get data ---!
-  data = hdulist[0].data
-  #print('\n shape:', data.shape, '\n type:', data.dtype.name) if show == True else None
-
-  hdulist.close()
+  with fits.open(skymap) as hdul:
+    wcs = WCS(hdul[0].header)
+    data = hdul[0].data
 
   # PLOT ---!
   #plt.rc('text', usetex=True)
@@ -57,7 +56,7 @@ def showSkymap(skymap, reg='none', col='black', suffix='none', title='none', sho
 
   # handle region ---!
   if reg != 'none' :
-    r = pyregion.open(reg).as_imagecoord(hdulist[0].header)
+    r = pyregion.open(reg).as_imagecoord(hdul[0].header)
     for i in range(len(r)) :
       r[i].attr[1]['color'] = col
       patch_list, text_list = r.get_mpl_patches_texts()
@@ -66,11 +65,12 @@ def showSkymap(skymap, reg='none', col='black', suffix='none', title='none', sho
       for t in text_list:
         ax.add_artist(t)
 
+
+  plt.subplot(projection=wcs)
   plt.imshow(data, cmap='jet', norm=SymLogNorm(1), interpolation='gaussian')
-  plt.xlabel('npix')
-  plt.ylabel('npix')
-  # plt.xlabel('R.A. (deg)')
-  # plt.ylabel('Dec (deg)')
+  plt.grid(color='white', ls='solid')
+  plt.xlabel('R.A. (deg)')
+  plt.ylabel('Dec (deg)')
   plt.title('skymap')  if title == 'none' else plt.title(title)
   plt.colorbar().set_label('cts')
 
@@ -79,7 +79,6 @@ def showSkymap(skymap, reg='none', col='black', suffix='none', title='none', sho
     plt.savefig(skymap.replace('.fits', '_%s.png' % suffix))
   else :
     plt.savefig(skymap.replace('.fits', '.png'))
-
 
   # show fig ---!
   plt.show() if show == True else None
