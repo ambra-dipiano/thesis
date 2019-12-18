@@ -125,7 +125,7 @@ tObj.if_ebl = if_ebl
 tObj.template = template
 # load template ---!
 tObj.extract_spec = extract_spec
-tbin_stop = tObj.loadTemplate()
+tbin_stop, num_max = tObj.loadTemplate()
 
 # --------------------------------- REDUCE TEMPLATE FLUX  --------------------------------- !!!
 
