@@ -35,7 +35,7 @@ tmin = 30  # slewing time (s)
 tmax = []
 for i in range(len(texp)):
   tmax.append(tmin + texp[i])
-ttotal = 1e6 #1e6  # maximum tobs (4h at least) simulation total time (s)
+ttotal = 2e4 #1e6  # maximum tobs (4h at least) simulation total time (s)
 add_hours = 7200 #7200  # +2h observation time added after first none detection (s)
 run_duration = 1200  # 20min observation run time for LST in RTA (s) ---!
 elow = 0.03  # simulation minimum energy (TeV)
@@ -50,13 +50,13 @@ ts_threshold = 25  # TS threshold for reliable detection
 reduce_flux = None  # flux will be devided by factor reduce_flux, if nominal then set to None
 
 # conditions control ---!
-checks1 = True  # prints info
+checks1 = False  # prints info
 checks2 = False  # prints more info
 if_ebl = True  # uses the EBL absorbed template
 if_cut = False  # adds a cut-off parameter to the source model
 ebl_fits = False  # generate the EBL absorbed template
 extract_spec = True  # generates spectral tables and obs definition models
-irf_degrade = True  # use degraded irf
+irf_degrade = False  # use degraded irf
 compute_degr = False  # compute irf degradation
 src_sort = True  # sorts scandidates from highest TS to lowest
 skip_exist = False  # skips the step if ID exists in csv (issue: if True than add+2h will start anew from last csv tbin)
@@ -64,7 +64,7 @@ debug = False  # prints logfiles on terminal
 if_log = True  # saves logfiles
 
 # path configuration ---!
-cfg = xmlConfig(cfgfile='/config_lc.xml')
+cfg = xmlConfig()
 p = ConfigureXml(cfg)
 # files ---!
 fileroot = 'run0406_'
@@ -101,11 +101,12 @@ print('!!! *** !!! blind detection confidence:', sigma, ' sigmas')
 print('!!! *** !!! detection confidence ts threshold:', ts_threshold)
 print('!!! *** !!! total observation time:', ttotal, ' s')
 print('!!! *** !!! additional observation time:', add_hours, ' s')
+print('!!! *** !!! delay time:', tmin, ' s')
 
 # --------------------------------- INITIALIZE --------------------------------- !!!
 
 # setup trials obj ---!
-tObj = Analysis(cfgfile='/config_lc.xml')
+tObj = Analysis()
 tObj.nthreads = nthreads
 tObj.pointing = pointing
 tObj.roi = roi
@@ -182,8 +183,9 @@ for k in range(trials):
       event = event.replace('_tbin', '_flux%s_tbin' % str(reduce_flux))
     event_bins.append(event)
     tObj.output = event
-    if not os.path.isfile(event):
-      tObj.eventSim()
+    if os.path.isfile(event):
+      os.remove(event)
+    tObj.eventSim()
 
   # --------------------------------- APPEND EVENTS IN PH-LIST --------------------------------- !!!
 
@@ -346,7 +348,7 @@ for k in range(trials):
       tObj.runDetection()
       #showSkymap(skymap=skymap, reg=detectionXml.replace('.xml', '.reg'), show=False)
       print('detection', tObj.output) if checks2 else None
-      detObj = ManageXml(detectionXml, cfgfile='/config_lc.xml')
+      detObj = ManageXml(detectionXml)
       detObj.sigma = sigma
       detObj.if_cut = if_cut
       detObj.modXml()
@@ -368,7 +370,7 @@ for k in range(trials):
       tObj.output = likeXml
       tObj.maxLikelihood()
       print('likelihood', tObj.output) if checks2 else None
-      likeObj = ManageXml(likeXml, cfgfile='/config_lc.xml')
+      likeObj = ManageXml(likeXml)
       if src_sort and Ndet > 0:
         highest_ts_src = likeObj.sortSrcTs()[0]
         print('!!! check ---- highest TS: ', highest_ts_src) if checks1 else None
