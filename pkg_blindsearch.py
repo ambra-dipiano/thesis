@@ -18,7 +18,7 @@ import re
 import subprocess
 from lxml import etree as ET
 import matplotlib
-matplotlib.rcsetup.validate_backend('agg')
+#matplotlib.rcsetup.validate_backend('agg')
 import matplotlib.pyplot as plt
 import seaborn as sns
 
