@@ -28,7 +28,7 @@ sigma = 5  # detection acceptance (Gaussian)
 texp = [1, 5, 10, 100]  # exposure times (s)
 texp.sort()
 tint = len(texp)
-tmin = 30  # slewing time (s)
+tmin = 50  # slewing time (s)
 tmax = []
 for i in range(tint):
   tmax.append(tmin + texp[i])
@@ -45,8 +45,8 @@ ts_threshold = 9  # TS threshold for reliable detection
 reduce_flux = None  # flux will be devided by factor reduce_flux, if nominal then set to None ---!
 
 # conditions control ---!
-checks = True  # prints checks info ---!
-if_ebl = True  # uses the EBL absorbed template ---!
+checks = False  # prints checks info ---!
+if_ebl = False  # uses the EBL absorbed template ---!
 if_cut = False  # adds a cut-off parameter to the source model ---!
 ebl_fits = False  # generate the EBL absorbed template ---!
 extract_spec = True  # generates spectral tables and obs definition models ---!
