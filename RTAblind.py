@@ -25,13 +25,14 @@ caldb = 'prod3b-v2'
 irf = 'South_z40_0.5h'
 
 sigma = 5  # detection acceptance (Gaussian)
-texp = [1, 5, 10, 100]  # exposure times (s)
+texp = [10, 100]  # exposure times (s)
 texp.sort()
 tint = len(texp)
-tmin = 50  # slewing time (s)
-tmax = []
+tdelay = 30  # slewing time (s)
+tmin = [90, 30]  # start of bin to select (s)
+tmax = []  # end of bin to select (s)
 for i in range(tint):
-  tmax.append(tmin + texp[i])
+  tmax.append(tmin[i] + texp[i])
 elow = 0.03  # simulation minimum energy (TeV)
 ehigh = 150.0  # simulation maximum energy (TeV)
 emin = 0.03  # selection minimum energy (TeV)
@@ -201,7 +202,8 @@ for k in range(trials):
   tObj.e = [emin, emax]
   for i in range(tint):
     print('!!! ************ STARTING TEXP %d ************ !!!\n\n' % texp[i])
-    tObj.t = [tmin, tmax[i]]
+    #tObj.t = [tmin, tmax[i]]
+    tObj.t = [tmin[i], tmax[i]]
     event_selected = event_list.replace(p.getSimDir(), p.getSelectDir()).replace('obs_', 'texp%ds_' % texp[i])
     prefix = p.getSelectDir() + 'texp%ds_' % texp[i]
     if os.path.isfile(event_selected):
