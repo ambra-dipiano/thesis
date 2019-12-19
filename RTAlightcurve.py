@@ -31,11 +31,11 @@ irf = 'South_z40_0.5h'
 
 sigma = 5  # detection acceptance (Gaussian)
 texp = (10, 100)  # exposure times (s)
-tmin = 30  # slewing time (s)
+tdelay = 30  # slewing time (s)
 tmax = []
 for i in range(len(texp)):
-  tmax.append(tmin + texp[i])
-ttotal = 2e4 #1e6  # maximum tobs (4h at least) simulation total time (s)
+  tmax.append(tdelay + texp[i])
+ttotal = 1e4 #1e6  # maximum tobs (4h at least) simulation total time (s)
 add_hours = 7200 #7200  # +2h observation time added after first none detection (s)
 run_duration = 1200  # 20min observation run time for LST in RTA (s) ---!
 elow = 0.03  # simulation minimum energy (TeV)
@@ -50,8 +50,8 @@ ts_threshold = 25  # TS threshold for reliable detection
 reduce_flux = None  # flux will be devided by factor reduce_flux, if nominal then set to None
 
 # conditions control ---!
-checks1 = False  # prints info
-checks2 = False  # prints more info
+checks1 = True  # prints info
+checks2 = True  # prints more info
 if_ebl = True  # uses the EBL absorbed template
 if_cut = False  # adds a cut-off parameter to the source model
 ebl_fits = False  # generate the EBL absorbed template
@@ -101,7 +101,7 @@ print('!!! *** !!! blind detection confidence:', sigma, ' sigmas')
 print('!!! *** !!! detection confidence ts threshold:', ts_threshold)
 print('!!! *** !!! total observation time:', ttotal, ' s')
 print('!!! *** !!! additional observation time:', add_hours, ' s')
-print('!!! *** !!! delay time:', tmin, ' s')
+print('!!! *** !!! delay time:', tdelay, ' s')
 
 # --------------------------------- INITIALIZE --------------------------------- !!!
 
@@ -154,7 +154,7 @@ if reduce_flux != None:
 for k in range(trials):
   count += 1
   tObj.seed = count
-  clocking = tmin-min(texp)  # simulate flowing time (subsequent temporal windows of 1s)
+  clocking = tdelay-min(texp)  # simulate flowing time (subsequent temporal windows of 1s)
   GTIf = [run_duration for i in range(len(texp))]  # LST runs are of 20mins chunks ---!
   num = [1 for i in range(len(texp))]  # count on LST-like run chunks ---!
   print('\n\n!!! ************ STARTING TRIAL %d ************ !!!\n\n' % count) if checks1 else None
@@ -207,7 +207,7 @@ for k in range(trials):
   # --------------------------------- 2° LOOP :: tbins --------------------------------- !!!
 
   tObj.e = [emin, emax]
-  twindows = [int((ttotal-tmin) / texp[i]) for i in range(len(texp))]  # number of temporal windows per exposure time in total time ---!
+  twindows = [int((ttotal-tdelay) / texp[i]) for i in range(len(texp))]  # number of temporal windows per exposure time in total time ---!
   tlast = [ttotal+tmax[i] for i in range(len(texp))]  # maximum observation time from last detection (not exceeding ttotal) ---!
   for i, t in enumerate(tlast):
     if t > ttotal:
@@ -260,42 +260,37 @@ for k in range(trials):
       # --------------------------------- SELECTION TIME --------------------------------- !!!
 
       # if first tbin of tepx then don't add clocking time to selection edges ---!
-      if clocking < tmin:
+      if clocking < tdelay:
         continue
-      elif clocking == tmin:
-        tObj.t = [tmin, tmax[index]]
-      elif clocking > tmin and texp[index] == min(texp):
+      elif clocking == tdelay:
+        tObj.t = [tdelay, tmax[index]]
+      elif clocking > tdelay and texp[index] == min(texp):
         tObj.t = [clocking, texp[index]+clocking]
-      elif clocking > tmin and texp[index] != min(texp):
-        tObj.t = [tmin + clocking, tmax[index] + clocking]
+      elif clocking > tdelay and texp[index] != min(texp):
+        tObj.t = [tdelay + clocking, tmax[index] + clocking]
       if tObj.t[1] > ttotal:
         tObj.t[1] = ttotal
 
       # --------------------------------- OBSERVATION LIST --------------------------------- !!!
 
-      # # check num of ph list file and select the correct files ---!
+      # using runs ---!
       # if run_duration != ttotal:
       #   if (tObj.t[0] < GTIf[index] or tObj.t[0] == GTIf[index]) and (tObj.t[1] == GTIf[index] or tObj.t[1] < GTIf[index]):
-      #     # if num[index] > num_max and num[index] != num_max:
-      #     #   break
       #     event_bins = [phlist.replace('.fits', '_n%03d.fits' %num[index])]
       #   elif (tObj.t[0] < GTIf[index] or tObj.t[0] == GTIf[index]) and (tObj.t[1] == GTIf[index] or tObj.t[1] > GTIf[index]):
-      #     # if num[index] > num_max and num[index] != num_max:
-      #     #   break
       #     event_bins = [phlist.replace('.fits', '_n%03d.fits' %num[index])]
       #     if num[index]+1 < num_max or num[index]+1 == num_max:
       #       event_bins.append(phlist.replace('.fits', '_n%03d.fits' %(num[index]+1)))
       #     GTIf[index] += run_duration
       #     num[index] += 1
       #   else:
-      #     # if num[index]+1 > num_max and num[index]+1 != num_max:
-      #     #   break
       #     event_bins = [phlist.replace('.fits', '_n%03d.fits' %(num[index]+1))]
       #     GTIf[index] += run_duration
       #     num[index] += 1
       # else:
       #   event_bins = [phlist]
 
+      # using tbins ---!
       phlist = p.getSelectDir() + f + '.fits'
       bins = tObj.getTimeBins(GTI=tObj.t, tgrid=tgrid)
       event_bins = []
