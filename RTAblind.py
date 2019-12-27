@@ -40,8 +40,8 @@ roi = 5  # region of interest for simulation and selection (deg)
 wbin = 0.02  # skymap bin width (deg)
 corr_rad = 0.1  # Gaussian
 confidence = (0.68, 0.95, 0.9973)  # confidence interval for asymmetrical errors (%)
-max_src = 10  # max candidates
-ts_threshold = 9  # TS threshold for reliable detection
+max_src = 5  # max candidates
+ts_threshold = 25  # TS threshold for reliable detection
 reduce_flux = None  # flux will be devided by factor reduce_flux, if nominal then set to None ---!
 
 # conditions control ---!
@@ -50,7 +50,7 @@ if_ebl = True  # uses the EBL absorbed template ---!
 if_cut = False  # adds a cut-off parameter to the source model ---!
 ebl_fits = False  # generate the EBL absorbed template ---!
 extract_spec = True  # generates spectral tables and obs definition models ---!
-irf_degrade = False  # use degraded irf ---!
+irf_degrade = True  # use degraded irf ---!
 src_sort = False  # sorts scandidates from highest TS to lowest ---!
 skip_exist = False  # skip trial if already existing in data file ---!
 debug = False  # prints logfiles on terminal ---!

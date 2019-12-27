@@ -60,8 +60,8 @@ src_sort = True  # sorts scandidates from highest TS to lowest
 skip_exist = False  # skips the step if ID exists in csv (issue: if True than add+2h will start anew from last csv tbin)
 debug = False  # prints logfiles on terminal
 if_log = True  # saves logfiles
-checks1 = False  # prints info
-checks2 = False  # prints more info
+checks1 = True  # prints info
+checks2 = True  # prints more info
 
 # path configuration ---!
 cfg = xmlConfig(cfgfile='/config_lc.xml')
@@ -137,7 +137,9 @@ tObj.template = template
 print('!!! check ---- template=', tObj.template) if checks2 else None
 # load template ---!
 tObj.extract_spec = extract_spec
-tbin_stop = tObj.loadTemplate()
+tbin_stop, max_tbin = tObj.loadTemplate()
+if tbin_stop > max_tbin:
+  tbin_stop = max_tbin
 print('!!! check ---- tbin_stop=', tbin_stop) if checks2 else None
 print('!!! check ---- caldb:', tObj.caldb) if checks2 else None
 
@@ -212,6 +214,8 @@ for k in range(trials):
   is_detection = [True for i in range(len(texp))]  # controls which avoid forwarding of tlast for subsequent non-detections ---!
   # looping through all light-curve time intervals ---!
   for j in range(int(max(twindows))):
+    if j == 2:
+      breakpoint()
     clocking += min(texp)  # passing time second by second ---!
     print(clocking, 'clock', tlast, is_detection) if checks1 else None
 
@@ -501,5 +505,6 @@ for k in range(trials):
     os.system('rm ' + p.getSimDir() + '*ebl%06d*' % count)
 
 print('\n\n!!! ================== END ================== !!!\n\n')
+
 
 

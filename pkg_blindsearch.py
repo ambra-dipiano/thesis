@@ -241,7 +241,7 @@ class Analysis() :
     self.seed = 1  # MC seed ---!
     self.coord_sys = 'CEL'  # coordinate system <CEL|GAL> ---!
     self.sky_subtraction = 'IRF'  # skymap subtraction type <NONE|IRF|RING> ---!
-    self.bkgType = 'irf'  # background model <Irf|Aeff|Racc> ---!
+    self.bkg_type = 'irf'  # background model <Irf|Aeff|Racc> ---!
     self.src_type = 'POINT'  # source model type ---!
     self.src_name = 'Src001'  # name of source of interest ---!
     self.exclrad = 0.5  # radius around candidate to exclude from further search ---!
@@ -250,7 +250,7 @@ class Analysis() :
     self.sgmrange = [0, 10]  # range of gaussian sigmas ---!
     self.confidence = 0.95  # confidence level (%) ---!
     self.eref = 1  # energy reference for flux computation ---!
-    self.sensType = 'Differential'  # sensitivity type <Integral|Differential> ---!
+    self.sens_type = 'Differential'  # sensitivity type <Integral|Differential> ---!
     self.nthreads = 1
     # ebl specifics ---!
     self.z = 0.1  # redshift value ---!
@@ -307,7 +307,10 @@ class Analysis() :
         self.__time[i] = self.tmax
         bin = i+1
         break
-    sliceObj = slice(0, bin)
+    if bin < self.__Nt:
+      sliceObj = slice(0, bin + 1)
+    else:
+      sliceObj = slice(0, bin)
     return self.__time[sliceObj]
 
   # compute the EBL absorption ---!
@@ -457,7 +460,8 @@ class Analysis() :
     # extract spectrum if required ---!
     if self.extract_spec:
       self.__extractSpec()
-    return tbin_stop
+    max_tbin = self.__Nt
+    return tbin_stop, max_tbin
 
   # ctobssim wrapper ---!
   def eventSim(self) :
@@ -498,6 +502,8 @@ class Analysis() :
     for i, row in enumerate(hdul[1].data.field('TIME')):
       if hdul[1].data.field('TIME')[i] > GTI[0] and hdul[1].data.field('TIME')[i] < GTI[1]:
         slice_list.append(i)
+    if len(slice_list) > 10:
+      slice_list = slice_list[:-10]
     return slice_list
 
   # create single photon list from obs list ---!
@@ -534,6 +540,7 @@ class Analysis() :
       for i, ind in enumerate(indexes):
         hdul[1].data.field(0)[i] = i + 1
       # find GTI in time array
+      print(filename, len(hdul[1].data) - (len(hdul[1].data)-len(slice)))
       GTI_new.append(min(hdul[1].data.field('TIME'), key=lambda x: abs(x - GTI[0])))
       GTI_new.append(min(hdul[1].data.field('TIME'), key=lambda x: abs(x - GTI[1])))
       hdul[2].data[0][0] = GTI_new[0]
@@ -559,25 +566,30 @@ class Analysis() :
     else:
       sample = []
       singlefile = str(self.output)
-      for i, f in enumerate(self.input):
-        with fits.open(f) as hdul:
-          tlast = hdul[2].data[0][1]
-          tfirst = hdul[2].data[0][0]
-          if (tlast < max_length*n and tlast != max_length*n):
-            sample.append(f)
-          elif (tlast > max_length*n or tlast == max_length*n) and i != len(self.input)-1:
-            sample.append(f)
-            if n == 1:
-              filename = singlefile.replace('.fits', '_n%03d.fits' % n)
-            else:
+      for j in range(int(last/max_length)+1):
+        for i, f in enumerate(self.input):
+          with fits.open(f) as hdul:
+            tlast = hdul[2].data[0][1]
+            tfirst = hdul[2].data[0][0]
+            if (tlast < max_length*n and tlast != max_length*n):
+              sample.append(f)
+            elif (tlast > max_length*n or tlast == max_length*n) and i != len(self.input)-1:
+              sample.append(f)
+              if n == 1:
+                filename = singlefile.replace('.fits', '_n%03d.fits' % n)
+              else:
+                filename = filename.replace('_n%03d.fits' %(n-1), '_n%03d.fits' %n)
+              if os.path.isfile(filename) and remove_old:
+                os.remove(filename)
+                self.__singlePhotonList(sample=sample, filename=filename, GTI=[max_length*(n-1), max_length*n])
+              n += 1
+              sample = [f]
+            if (tfirst > max_length*(n-1) and tfirst < last) and i == len(self.input)-1:
               filename = filename.replace('_n%03d.fits' %(n-1), '_n%03d.fits' %n)
-            self.__singlePhotonList(sample=sample, filename=filename, GTI=[max_length*(n-1), max_length*n])
-            n += 1
-            sample = [f]
-          if (tfirst > max_length*(n-1) and tfirst < last) and i == len(self.input)-1:
-            filename = filename.replace('_n%03d.fits' %(n-1), '_n%03d.fits' %n)
-            sample.append(f)
-            self.__singlePhotonList(sample=sample, filename=filename, GTI=[max_length*(n-1), max_length*n])
+              sample.append(f)
+              if os.path.isfile(filename) and remove_old:
+                os.remove(filename)
+                self.__singlePhotonList(sample=sample, filename=filename, GTI=[max_length*(n-1), max_length*n])
 
       return n, singlefile
 
@@ -637,7 +649,7 @@ class Analysis() :
     detection['outmodel'] = self.output
     detection['outds9file'] = self.detectionReg
     detection['srcmodel'] = self.src_type.upper()
-    detection['bkgmodel'] = self.bkgType.upper()
+    detection['bkgmodel'] = self.bkg_type.upper()
     detection['threshold'] = int(self.sigma)
     detection['maxsrcs'] = self.max_src
     detection['exclrad'] = self.exclrad
@@ -660,7 +672,7 @@ class Analysis() :
     like['caldb'] = self.caldb
     like['irf'] = self.irf
     like['refit'] = True
-    like['max_iter'] = 500
+    like['max_iter'] = 50
     like['fix_spat_for_ts'] = False
     like["nthreads"] = self.nthreads
     like['logfile'] = self.output.replace('.xml', '.log')
@@ -918,7 +930,7 @@ class Analysis() :
       sens['npix'] = nbin
       sens['binsz'] = wbin
     sens['sigma'] = self.sigma
-    sens['type'] = self.sensType.capitalize()
+    sens['type'] = self.sens_type.capitalize()
     sens["nthreads"] = self.nthreads
     sens['logfile'] = self.output.replace('.csv', '.log')
     sens['debug'] = self.debug
@@ -1025,7 +1037,7 @@ class ManageXml():
     self.sigma = 5
     self.default_model = True
     self.instr = 'CTA'
-    self.bkgType = 'Irf'
+    self.bkg_type = 'Irf'
     self.srcAtt = []
     self.bkgAtt = []
     self.tscalc = True
@@ -1210,9 +1222,9 @@ class ManageXml():
       else:
         # set bkg attributes ---!
         src.set('instrument', '%s' % self.instr.upper()) if self.instr.capitalize() != 'None' else None
-        if self.bkgType.capitalize() == 'Aeff' or self.bkgType.capitalize() == 'Irf':
-          src.set('type', 'CTA%sBackground' % self.bkgType.capitalize())
-        if self.bkgType.capitalize() == 'Racc':
+        if self.bkg_type.capitalize() == 'Aeff' or self.bkg_type.capitalize() == 'Irf':
+          src.set('type', 'CTA%sBackground' % self.bkg_type.capitalize())
+        if self.bkg_type.capitalize() == 'Racc':
           src.set('type', 'RadialAcceptance')
         # remove spectral component ---!
         rm = src.find('spectrum')
@@ -1351,3 +1363,4 @@ class Graphics():
     plt.show() if self.show else None
     plt.close()
     return
+
