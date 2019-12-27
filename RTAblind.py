@@ -45,13 +45,13 @@ ts_threshold = 25  # TS threshold for reliable detection
 reduce_flux = None  # flux will be devided by factor reduce_flux, if nominal then set to None ---!
 
 # conditions control ---!
-checks = True  # prints checks info ---!
+checks = False  # prints checks info ---!
 if_ebl = True  # uses the EBL absorbed template ---!
 if_cut = False  # adds a cut-off parameter to the source model ---!
 ebl_fits = False  # generate the EBL absorbed template ---!
-extract_spec = True  # generates spectral tables and obs definition models ---!
+extract_spec = False  # generates spectral tables and obs definition models ---!
 irf_degrade = True  # use degraded irf ---!
-src_sort = False  # sorts scandidates from highest TS to lowest ---!
+src_sort = True  # sorts scandidates from highest TS to lowest ---!
 skip_exist = False  # skip trial if already existing in data file ---!
 debug = False  # prints logfiles on terminal ---!
 if_log = True  # saves logfiles ---!
@@ -125,7 +125,10 @@ tObj.if_ebl = if_ebl
 tObj.template = template
 # load template ---!
 tObj.extract_spec = extract_spec
-tbin_stop = tObj.loadTemplate()
+if extract_spec:
+  tbin_stop, num_max = tObj.loadTemplate()
+else:
+  tbin_stop = tObj.getTimeBinStop()
 
 # --------------------------------- REDUCE TEMPLATE FLUX  --------------------------------- !!!
 
@@ -200,7 +203,7 @@ for k in range(trials):
 
   tObj.e = [emin, emax]
   for i in range(tint):
-    print('!!! ************ STARTING TEXP %d ************ !!!\n\n' % texp[i])
+    print('!!! ************ STARTING TEXP %d ************ !!!\n\n' % texp[i]) if checks is True else None
     tObj.t = [tmin, tmax[i]]
     event_selected = event_list.replace(p.getSimDir(), p.getSelectDir()).replace('obs_', 'texp%ds_' % texp[i])
     prefix = p.getSelectDir() + 'texp%ds_' % texp[i]
@@ -366,10 +369,9 @@ for k in range(trials):
   # --------------------------------- CLEAR SPACE --------------------------------- !!!
 
   print('!!! check ---- ', count, ') trial done...') if checks is True else None
-  if int(count) != 1:
-    os.system('rm ' + p.getSimDir() + '*run*%06d*' % count)
-    os.system('rm ' + p.getSelectDir() + '*run*%06d*' % count)
-    os.system('rm ' + p.getDetDir() + '*run*%06d*' % count)
+  os.system('rm ' + p.getSimDir() + '*run*%06d*' % count)
+  os.system('rm ' + p.getSelectDir() + '*run*%06d*' % count)
+  os.system('rm ' + p.getDetDir() + '*run*%06d*' % count)
 
 print('\n\n!!! ================== END ================== !!!\n\n')
 

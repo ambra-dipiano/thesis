@@ -20,7 +20,7 @@ from lxml import etree as ET
 import matplotlib
 matplotlib.rcsetup.validate_backend('agg')
 import matplotlib.pyplot as plt
-import seaborn as sns
+#import seaborn as sns
 
 def xmlConfig(cfgfile='/config.xml') :
   '''
@@ -462,6 +462,32 @@ class Analysis() :
       self.__extractSpec()
     max_tbin = self.__Nt
     return tbin_stop, max_tbin
+
+  # get tbin_stop without loading the template ---!
+  def getTimeBinStop(self) :
+    self.__getFitsData()
+
+    self.__Nt = len(self.__time)
+    self.__Ne = len(self.__energy)
+
+    # time grid ---!
+    t = [0.0 for x in range(self.__Nt + 1)]
+    for i in range(self.__Nt - 1):
+      t[i + 1] = self.__time[i][0] + (self.__time[i + 1][0] - self.__time[i][0]) / 2
+    # tmax in last bin ---!
+    t[self.__Nt] = self.__time[self.__Nt - 1][0] + (self.__time[self.__Nt - 1][0] - t[self.__Nt - 1])
+
+    # stop the second after higher tmax ---!
+    if self.tmax != None :
+      tbin_stop = 1
+      for bin in range(len(t)) :
+        if t[bin] <= self.tmax :
+          tbin_stop += 1
+        else :
+          continue
+    else :
+      raise ValueError('Maximum exposure time (tmax) is larger than the template temporal evolution.')
+    return tbin_stop
 
   # ctobssim wrapper ---!
   def eventSim(self) :
@@ -1269,6 +1295,8 @@ class ManageXml():
     for src in self.root.findall("*[@ts]"):
       from_highest.append(src.attrib['name'])
     self.__saveXml()
+    if len(from_highest) == 0:
+      from_highest = [None]
     return from_highest
 
   def closeXml(self):
