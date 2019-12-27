@@ -52,7 +52,7 @@ ebl_fits = False  # generate the EBL absorbed template ---!
 extract_spec = False  # generates spectral tables and obs definition models ---!
 irf_degrade = False  # use degraded irf ---!
 src_sort = True  # sorts scandidates from highest TS to lowest ---!
-skip_exist = False  # skip trial if already existing in data file ---!
+skip_exist = True  # skip trial if already existing in data file ---!
 debug = False  # prints logfiles on terminal ---!
 if_log = True  # saves logfiles ---!
 

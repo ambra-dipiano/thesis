@@ -1284,6 +1284,8 @@ class ManageXml():
     for src in self.root.findall("*[@ts]"):
       from_highest.append(src.attrib['name'])
     self.__saveXml()
+    if len(from_highest) == 0:
+      from_highest = [None]
     return from_highest
 
   def closeXml(self):
