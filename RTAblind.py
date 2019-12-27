@@ -25,13 +25,13 @@ caldb = 'prod3b-v2'
 irf = 'South_z40_0.5h'
 
 sigma = 5  # detection acceptance (Gaussian)
-texp = [1, 5, 10, 100]  # exposure times (s)
+texp = [10, 100]  # exposure times (s)
 texp.sort()
 tint = len(texp)
-tmin = 30  # slewing time (s)
-tmax = []
+tmin = [90, 50]  # start of bin to select (s)
+tmax = []  # end of bin to select (s)
 for i in range(tint):
-  tmax.append(tmin + texp[i])
+  tmax.append(tmin[i] + texp[i])
 elow = 0.03  # simulation minimum energy (TeV)
 ehigh = 150.0  # simulation maximum energy (TeV)
 emin = 0.03  # selection minimum energy (TeV)
@@ -204,7 +204,7 @@ for k in range(trials):
   tObj.e = [emin, emax]
   for i in range(tint):
     print('!!! ************ STARTING TEXP %d ************ !!!\n\n' % texp[i]) if checks is True else None
-    tObj.t = [tmin, tmax[i]]
+    tObj.t = [tmin[i], tmax[i]]
     event_selected = event_list.replace(p.getSimDir(), p.getSelectDir()).replace('obs_', 'texp%ds_' % texp[i])
     prefix = p.getSelectDir() + 'texp%ds_' % texp[i]
     if os.path.isfile(event_selected):
@@ -317,13 +317,13 @@ for k in range(trials):
 
     # --------------------------------- INTEGRATED FLUX --------------------------------- !!!
 
-    flux_ph, flux_en = ([] for j in range(2))
+    flux_ph = []
     if Ndet > 0:
       flux_ph.append(tObj.photonFluxPowerLaw(index[0], pref[0], pivot[0]))  # E (MeV)
-      flux_en.append(tObj.energyFluxPowerLaw(index[0], pref[0], pivot[0]))  # E (erg)
+
     else:
       flux_ph.append(np.nan)
-      flux_en.append(np.nan)
+
 
     # MISSING THE CUT-OFF OPTION ---!!!
 
@@ -348,11 +348,10 @@ for k in range(trials):
       print('!!! *** check ra_fit:', ra_fit[0])
       print('!!! *** check dec_fit:', dec_fit[0])
       print('!!! *** check flux_ph:', flux_ph[0])
-      # print('!!! *** check flux_en:', flux_en[i][0])
       print('!!! *** check ts:', ts[0])
 
     row.append([ID, texp[i], sigma, Ndet, Nsrc, ra_det[0], dec_det[0], ra_fit[0], dec_fit[0],
-                flux_ph[0], flux_en[0], ts[0]])
+                flux_ph[0], ts[0]])
     print('!!! check row: seed %d --- texp' %i, texp[i], 's =====', row) if checks is True else None
     if os.path.isfile(csvName):
       with open(csvName, 'a') as f:
