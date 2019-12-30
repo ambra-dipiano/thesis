@@ -49,7 +49,7 @@ checks = False  # prints checks info ---!
 if_ebl = True  # uses the EBL absorbed template ---!
 if_cut = False  # adds a cut-off parameter to the source model ---!
 ebl_fits = False  # generate the EBL absorbed template ---!
-extract_spec = True  # generates spectral tables and obs definition models ---!
+extract_spec = False  # generates spectral tables and obs definition models ---!
 irf_degrade = True  # use degraded irf ---!
 src_sort = True  # sorts scandidates from highest TS to lowest ---!
 skip_exist = False  # skip trial if already existing in data file ---!
@@ -134,7 +134,8 @@ else:
 
 if reduce_flux != None:
   tObj.factor = reduce_flux
-  tObj.makeFainter()
+  if extract_spec:
+    tObj.makeFainter()
   print('!!! check ---- reduce flux by factor %s' %str(reduce_flux)) if checks is True else None
 
 # --------------------------------- 1° LOOP :: trials  --------------------------------- !!!

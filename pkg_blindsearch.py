@@ -982,9 +982,9 @@ class Analysis() :
     # new files with relative suffix ---!
     for i in range(len(spec_files)):
       if self.if_ebl:
-        new_file = spec_files[i].replace('spec_ebl_tbin', 'spec_ebl_flux%02d_tbin' %self.factor)
+        new_file = spec_files[i].replace('spec_ebl_tbin', 'spec_ebl_flux%d_tbin' %self.factor)
       else:
-        new_file = spec_files[i].replace('spec_tbin', 'spec_flux%02d_tbin' %self.factor)
+        new_file = spec_files[i].replace('spec_tbin', 'spec_flux%d_tbin' %self.factor)
       if os.path.isfile(new_file):
         os.remove(new_file)
       # modify by a given factor ---!
@@ -1011,17 +1011,17 @@ class Analysis() :
     # replace ---!
     for i in range(len(xml_files)):
       if self.if_ebl:
-        new_file = xml_files[i].replace('ID000126_ebl_tbin', 'ID000126_ebl_flux02%d_tbin' %self.factor)
+        new_file = xml_files[i].replace('ID000126_ebl_tbin', 'ID000126_ebl_flux%d_tbin' %self.factor)
       else:
-        new_file = xml_files[i].replace('ID000126_tbin', 'ID000126_flux02%d_tbin' %self.factor)
+        new_file = xml_files[i].replace('ID000126_tbin', 'ID000126_flux%d_tbin' %self.factor)
       if os.path.isfile(new_file):
         os.remove(new_file)
       with open(xml_files[i], 'r') as input, open(new_file, 'w+') as output:
         content = input.read()
         if self.if_ebl:
-          content = content.replace('spec_ebl_tbin', 'spec_ebl_flux02%d_tbin' %self.factor)
+          content = content.replace('spec_ebl_tbin', 'spec_ebl_flux%d_tbin' %self.factor)
         else:
-          content = content.replace('spec_tbin', 'spec_flux02%d_tbin' %self.factor)
+          content = content.replace('spec_tbin', 'spec_flux%d_tbin' %self.factor)
         output.write(content)
     return
 
