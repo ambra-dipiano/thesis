@@ -42,14 +42,14 @@ corr_rad = 0.1  # Gaussian
 confidence = (0.68, 0.95, 0.9973)  # confidence interval for asymmetrical errors (%)
 max_src = 5  # max candidates
 ts_threshold = 25  # TS threshold for reliable detection
-reduce_flux = None  # flux will be devided by factor reduce_flux, if nominal then set to None ---!
+reduce_flux = 2  # flux will be devided by factor reduce_flux, if nominal then set to None ---!
 
 # conditions control ---!
 checks = False  # prints checks info ---!
 if_ebl = True  # uses the EBL absorbed template ---!
 if_cut = False  # adds a cut-off parameter to the source model ---!
 ebl_fits = False  # generate the EBL absorbed template ---!
-extract_spec = False  # generates spectral tables and obs definition models ---!
+extract_spec = True  # generates spectral tables and obs definition models ---!
 irf_degrade = True  # use degraded irf ---!
 src_sort = True  # sorts scandidates from highest TS to lowest ---!
 skip_exist = False  # skip trial if already existing in data file ---!
@@ -333,7 +333,7 @@ for k in range(trials):
 
     # --------------------------------- RESULTS TABLE (csv) --------------------------------- !!!
 
-    header = '#trial,texp,sigma,Ndet,Nsrc,RA_det,DEC_det,RA_fit,DEC_fit,flux_ph,flux_erg,TS\n'
+    header = '#trial,texp,sigma,Ndet,Nsrc,RA_det,DEC_det,RA_fit,DEC_fit,flux_ph,TS\n'
     ID = 'ID%06d' % count
     csvName = p.getCsvDir() + fileroot + '%ds_chunk%02d.csv' % (texp[i], chunk)
 
