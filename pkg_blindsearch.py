@@ -814,7 +814,7 @@ class Analysis() :
     return
 
   # change permission to 777 and ask for password if user id not in idlist param ---!
-  def __openPermission(self, path, idlist=(0,1126)):
+  def __openPermission(self, path, idlist=(0,1126,1006)):
     if os.geteuid() in idlist:
       subprocess.run(['chmod', '-R', '777', path], check=True)
     else:
@@ -822,7 +822,7 @@ class Analysis() :
     return
 
   # change permission to 755 and ask for password if user id not in idlist param ---!
-  def __closePermission(self, path, idlist=(0,1126)):
+  def __closePermission(self, path, idlist=(0,1126,1006)):
     if os.geteuid() in idlist:
       subprocess.run(['chmod', '-R', '755', path], check=True)
     else:
