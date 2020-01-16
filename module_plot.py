@@ -660,8 +660,8 @@ def showButterfly_v02(diagram, spectrum, axisLim='auto', suffix='none', title='n
   return
 
 # V01 ---!
-def degradedIRF_3d(x, y, z, xlabel='x', ylabel='y', zlabel='z', title=None, c=['b'], zscale='linear',
-                   fontsize=14, zlim=(0,1), alpha=[1], label=None, savefig=None, show=True) :
+def degradedIRF_3d(x, y, z, xlabel='x', ylabel='y', zlabel='z', title=None, c=('b'), zscale='linear',
+                   fontsize=14, zlim=(0,1), alpha=(1), label=None, savefig=None, show=True) :
 
   fig = plt.figure(figsize=(12, 6))
   plt.rc('text', usetex=True)
@@ -689,7 +689,7 @@ def degradedIRF_3d(x, y, z, xlabel='x', ylabel='y', zlabel='z', title=None, c=['
 
 # V01 ---!
 def interp_ebl(x, y, savefig, kind='linear', xlabel='x', ylabel='y', title='title',
-               label=['y', 'y2'], fontsize=12, show=True) :
+               label=('y', 'y2'), fontsize=12, show=True) :
 
   fig = plt.figure()
   plt.rc('text', usetex=True)
@@ -710,7 +710,7 @@ def interp_ebl(x, y, savefig, kind='linear', xlabel='x', ylabel='y', title='titl
   return
 
 # SENSITIVITY ---!
-def showSensitivity(x, y, savefig, xlabel='x', ylabel='y', label=['y'], title='none', fontsize=12, marker=['.'], show=True) :
+def showSensitivity(x, y, savefig, xlabel='x', ylabel='y', label=('y'), title='none', fontsize=12, marker=('.'), show=True) :
 
   fig = plt.figure()
   plt.rc('text', usetex=True)
@@ -729,3 +729,47 @@ def showSensitivity(x, y, savefig, xlabel='x', ylabel='y', label=['y'], title='n
   plt.show() if show==True else None
 
   return
+
+#
+def plotLightCurve(flux, t1, uplims, t2, xerr, yerr, filename, temp_t, temp_f, c1=('b'), c2=('r'), lf=('flux'),
+                   lup=('upper limit'), alpha=0.5, fontsize=20, figsize=(20, 16), rotation=0,
+                   ylim=None, xlim=None, interp=False):
+
+  fig = plt.figure(figsize=figsize)
+  plt.rc('text', usetex=True)
+  sns.set()
+
+  ax = plt.subplot(111, yscale='log', xscale='log')
+  plt.xticks(fontsize=fontsize)  # rotation=90
+  plt.yticks(fontsize=fontsize)  # rotation=90
+  # template ---!
+  plt.plot(temp_t[20:50], temp_f[20:50], '-g', lw=5, label='expected (30GeV-150TeV)', alpha=1)
+  # detections ---!
+  for i, f in enumerate(flux):
+    plt.errorbar(t1[i], f, xerr=np.array([xerr[i] for i in range(len(t1[i]))]),
+                 # yerr=np.array([yerr[i] for i in range(len(t1[i]))]),
+                 marker='o', c=c1[i], alpha=alpha, label=lf[i], ls='none', ms=10)
+    plt.fill_between(t1[i][0],
+                     f[0] - np.array([yerr[i] for i in range(len(t1[i]))]),
+                     f[0] + np.array([yerr[i] for i in range(len(t1[i]))]),
+                     alpha=0.3, color=c1[i], interpolate=True)
+    plt.axvline(t1[i][0][-1], ls='-.', lw=2, c=c1[i])
+    plt.text(t1[i][0][-1] + 100, 7e-9 - 1e-9 * (i + 1), '%d s' % t1[i][0][-1], color=c1[i], fontsize=fontsize)
+  # upper limits ---!
+  for i, u in enumerate(uplims):
+    if len(u[0]) > 1:
+      plt.errorbar(t2[i], u, xerr=np.array([xerr[i] for i in range(len(t2[i]))]),
+                   marker='v', c=c2[i], alpha=alpha, label=lup[i], ls='none', uplims=True)
+      plt.axhline(np.mean(u), ls='-.', lw=2, c=c2[i])
+      plateau = float(np.mean(uplims[i][0])) * 1e9
+      plt.text(30, float(np.mean(uplims[i][0])) * 1.1, '%0.2fe-9 ph/cm$^2$/s' % plateau,
+               color=c2[i], fontsize=fontsize + 5)
+
+  plt.plot(temp_t[20:50], temp_f[20:50], '-g', lw=5, label='expected (30GeV-150TeV)', alpha=1)
+  plt.ylabel('Flux (ph/cm$^2$/s)', fontsize=fontsize)
+  plt.xlabel('time (s)', fontsize=fontsize)
+  plt.legend(fontsize=fontsize)
+  plt.xlim(xlim) if not xlim else None
+  plt.ylim(ylim) if not ylim else None
+  plt.show()
+  fig.savefig(filename)
