@@ -31,7 +31,7 @@ irf = 'South_z40_0.5h'
 
 sigma = 5  # detection acceptance (Gaussian)
 texp = (10, 100)  # exposure times (s)
-tdelay = 30  # slewing time (s)
+tdelay = 50  # slewing time (s)
 tmax = []
 for i in range(len(texp)):
   tmax.append(tdelay + texp[i])
@@ -39,9 +39,9 @@ ttotal = 1e4 #1e6  # maximum tobs (4h at least) simulation total time (s)
 add_hours = 7200 #7200  # +2h observation time added after first none detection (s)
 run_duration = 1200  # 20min observation run time for LST in RTA (s) ---!
 elow = 0.03  # simulation minimum energy (TeV)
-ehigh = 10.0  # simulation maximum energy (TeV)
+ehigh = 150.0  # simulation maximum energy (TeV)
 emin = 0.03  # selection minimum energy (TeV)
-emax = 10.0  # selection maximum energy (TeV)
+emax = 150.0  # selection maximum energy (TeV)
 roi = 5  # region of interest for simulation and selection (deg)
 wbin = 0.02  # skymap bin width (deg)
 corr_rad = 0.1  # Gaussian
@@ -50,7 +50,7 @@ ts_threshold = 25  # TS threshold for reliable detection
 reduce_flux = None  # flux will be devided by factor reduce_flux, if nominal then set to None
 
 # conditions control ---!
-checks1 = True  # prints info
+checks1 = False  # prints info
 checks2 = False  # prints more info
 if_ebl = True  # uses the EBL absorbed template
 if_cut = False  # adds a cut-off parameter to the source model
@@ -66,7 +66,7 @@ if_log = True  # saves logfiles
 # path configuration ---!
 cfg = xmlConfig()
 p = ConfigureXml(cfg)
-# files ---!
+# files ---!, emax*1e6
 fileroot = 'run0406_'
 ebl_table = p.getRootDir() + '/ebl_tables/gilmore_tau_fiducial.csv'
 merge_map = 'run0406_MergerID000126_skymap.fits'
@@ -247,7 +247,7 @@ for k in range(trials):
 
       tbin = clocking / current_twindows[i]  # temporal bin number of this analysis
       IDbin = 'tbin%09d' % tbin
-      csvName = p.getCsvDir() + fileroot + 'ID%06d_%ds.csv' % (count, texp[index])
+      csvName = p.getCsvDir() + 'tesi_tdel%d_deg%s_E%dTeV_%ds.csv' % (tdelay, str(irf_degrade), emax*1e6, texp[index])
       if irf_degrade:
         csvName = csvName.replace('.csv', '_degraded.csv')
       if os.path.isfile(csvName):
@@ -469,7 +469,7 @@ for k in range(trials):
 
       # --------------------------------- RESULTS TABLE (csv) --------------------------------- !!!
 
-      header = '#tbin,tinit,tend,Ndet,Nsrc,RA_det,DEC_det,RA_fit,DEC_fit,flux_ph,TS\n'
+      header = '#tbin,tinit,tend,Ndet,Nsrc,RA_det,DEC_det,RA_fit,DEC_fit,flux_ph,flux_ph_err,TS\n'
       ID = 'ID%06d' % count
       IDbin = 'tbin%09d' % tbin
 
@@ -484,11 +484,12 @@ for k in range(trials):
         print('!!! *** check ra_fit:', ra_fit[0])
         print('!!! *** check dec_fit:', dec_fit[0])
         print('!!! *** check flux_ph:', flux_ph[0])
+        print('!!! *** check flux_ph_err:', flux_ph_err[0])
         print('!!! *** check ts:', ts[0])
         print('!!! *** ---------------------------')
 
       row.append([IDbin, tObj.t[0], tObj.t[1], Ndet, Nsrc, ra_det[0], dec_det[0], ra_fit[0], dec_fit[0],
-                  flux_ph[0], ts[0]])
+                  flux_ph[0], flux_ph_err[0], ts[0]])
       if os.path.isfile(csvName):
         with open(csvName, 'a') as csv_file:
           w = csv.writer(csv_file)
@@ -501,10 +502,11 @@ for k in range(trials):
           w.writerows(row)
           csv_file.close()
 
-    # --------------------------------- CLEAR SPACE --------------------------------- !!!
+      # --------------------------------- CLEAR SPACE --------------------------------- !!!
 
-      os.system('rm ' + p.getSelectDir() + '*ebl%06d*' % count)
-      os.system('rm ' + p.getDetDir() + '*ebl%06d*' % count)
+      if tObj.t[0] > tmax[index]:
+        os.system('rm ' + p.getSelectDir() + '*ebl%06d*' % count)
+        os.system('rm ' + p.getDetDir() + '*ebl%06d*' % count)
 
   if int(count) != 1:
     os.system('rm ' + p.getSimDir() + '*ebl%06d*' % count)
