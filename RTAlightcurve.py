@@ -25,9 +25,9 @@ os.environ['OPENBLAS_NUM_THREADS'] = str(nthreads)
 os.environ['MKL_NUM_THREADS'] = str(nthreads)
 
 # ctools/cscripts parameters ---!
-caldb = 'prod3b'
+caldb = 'prod3b-v2'
 # caldb_degraded = caldb.replace('prod', 'degr')
-irf = 'South_z40_average_100s'
+irf = 'South_z40_0.5h'
 
 sigma = 5  # detection acceptance (Gaussian)
 texp = (10, 100)  # exposure times (s)
