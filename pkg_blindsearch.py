@@ -1216,7 +1216,7 @@ class ManageXml():
     return self.spectral
 
   def loadPrefError(self, highest=None):
-    err_list = ([] for i in range(2))
+    err_list = []
     for src in self.root.findall('source'):
       if highest == None:
         if src.attrib['name'] != 'Background' and src.attrib['name'] != 'CTABackgroundModel':
