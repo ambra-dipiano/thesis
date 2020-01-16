@@ -25,9 +25,9 @@ os.environ['OPENBLAS_NUM_THREADS'] = str(nthreads)
 os.environ['MKL_NUM_THREADS'] = str(nthreads)
 
 # ctools/cscripts parameters ---!
-caldb = 'prod3b-v2'
+caldb = 'prod3b'
 # caldb_degraded = caldb.replace('prod', 'degr')
-irf = 'South_z40_0.5h'
+irf = 'South_z40_average_100s'
 
 sigma = 5  # detection acceptance (Gaussian)
 texp = (10, 100)  # exposure times (s)
@@ -39,9 +39,9 @@ ttotal = 1e4 #1e6  # maximum tobs (4h at least) simulation total time (s)
 add_hours = 7200 #7200  # +2h observation time added after first none detection (s)
 run_duration = 1200  # 20min observation run time for LST in RTA (s) ---!
 elow = 0.03  # simulation minimum energy (TeV)
-ehigh = 150.0  # simulation maximum energy (TeV)
+ehigh = 10.0  # simulation maximum energy (TeV)
 emin = 0.03  # selection minimum energy (TeV)
-emax = 150.0  # selection maximum energy (TeV)
+emax = 10.0  # selection maximum energy (TeV)
 roi = 5  # region of interest for simulation and selection (deg)
 wbin = 0.02  # skymap bin width (deg)
 corr_rad = 0.1  # Gaussian
@@ -51,7 +51,7 @@ reduce_flux = None  # flux will be devided by factor reduce_flux, if nominal the
 
 # conditions control ---!
 checks1 = True  # prints info
-checks2 = True  # prints more info
+checks2 = False  # prints more info
 if_ebl = True  # uses the EBL absorbed template
 if_cut = False  # adds a cut-off parameter to the source model
 ebl_fits = False  # generate the EBL absorbed template
@@ -101,7 +101,7 @@ print('!!! *** !!! blind detection confidence:', sigma, ' sigmas')
 print('!!! *** !!! detection confidence ts threshold:', ts_threshold)
 print('!!! *** !!! total observation time:', ttotal, ' s')
 print('!!! *** !!! additional observation time:', add_hours, ' s')
-print('!!! *** !!! delay time:', tdelay, ' s')
+print('!!! *** !!! delay time:', tdelay, ' s\n')
 
 # --------------------------------- INITIALIZE --------------------------------- !!!
 
@@ -429,16 +429,20 @@ for k in range(trials):
       # --------------------------------- BEST FIT SPECTRAL --------------------------------- !!!
 
       pref_list, pref, index_list, index, pivot_list, pivot = ([] for n in range(6))
+      pref_err_list, pref_err = ([] for n in range(2))
       likeObj.if_cut = if_cut
       spectral = likeObj.loadSpectral()
       index_list.append(spectral[0]) if Ndet > 0 else index_list.append([np.nan])
       pref_list.append(spectral[1]) if Ndet > 0 else pref_list.append([np.nan])
       pivot_list.append(spectral[2]) if Ndet > 0 else pivot_list.append([np.nan])
+      error = likeObj.loadPrefError()
+      pref_err_list.append(error) if Ndet > 0 else pref_err_list.append([np.nan])
 
       # only first elem ---!
       index.append(index_list[0][0])
       pref.append(pref_list[0][0])
       pivot.append(pivot_list[0][0])
+      pref_err.append(pref_err_list[0][0])
 
       # eventually cutoff ---!
       if if_cut:
@@ -448,18 +452,14 @@ for k in range(trials):
 
       # --------------------------------- INTEGRATED FLUX --------------------------------- !!!
 
-      flux_ph = []
+      flux_ph, flux_ph_err = ([] for n in range(2))
       norm_factor = 1
-      # if clocking > run_duration:
-      #   norm_factor = 1
-      # elif elow == emin and ehigh == emax:
-      #   norm_factor = (ehigh - elow)
-      # else:
-      #   norm_factor = (ehigh - elow) - (emax - emin)
       if Ndet > 0:
         flux_ph.append(tObj.photonFluxPowerLaw(index[0], pref[0], pivot[0], norm_factor=norm_factor))  # E (MeV)
+        flux_ph_err.append(tObj.photonFluxPowerLaw(index[0], pref_err[0], pivot[0], norm_factor=norm_factor))  # E (MeV)
       else:
         flux_ph.append(np.nan)
+        flux_ph_err.append(np.nan)
 
       # MISSING THE CUT-OFF OPTION ---!!!
 
