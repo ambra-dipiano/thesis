@@ -1220,13 +1220,16 @@ class ManageXml():
     for src in self.root.findall('source'):
       if highest == None:
         if src.attrib['name'] != 'Background' and src.attrib['name'] != 'CTABackgroundModel':
-          err = src.find('spectrum/parameter[@name="Prefactor"]').attrib['error']
+          err = float(src.find('spectrum/parameter[@name="Prefactor"]').attrib['error']) * float(
+              src.find('spectrum/parameter[@name="Prefactor"]').attrib['scale'])
           err_list.append(err)
       else:
         if src.attrib['name'] == highest:
-          err = src.find('spectrum/parameter[@name="Prefactor"]').attrib['error']
+          err = float(src.find('spectrum/parameter[@name="Prefactor"]').attrib['error']) * float(
+              src.find('spectrum/parameter[@name="Prefactor"]').attrib['scale'])
           err_list.append(err)
-    return self.pos
+    self.err = err_list
+    return self.err
 
   def __saveXml(self):
     self.src_lib.write(self.__xml, encoding="UTF-8", xml_declaration=True,
