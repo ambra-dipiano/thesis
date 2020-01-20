@@ -21,7 +21,7 @@ from scipy.ndimage.filters import gaussian_filter
 extra = Rectangle((0, 0), 1, 1, fc="w", fill=False, edgecolor='none', linewidth=0)
 extra2 = Line2D([0], [0], ls='-.', color='k', lw='1')
 
-def hist1d_flux(x, mean, nbin=20, hist=True, fontsize=12, color='b',
+def hist1d(x, mean, nbin=20, hist=True, fontsize=12, color='b',
                  alpha=0.5, title='gaussian fit', ax_thresh=0.2, xlabel='x', ylabel='y', leglabel='data',
                  filename='hist1d_gauss.png', show=True):
 
