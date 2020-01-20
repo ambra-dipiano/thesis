@@ -19,7 +19,7 @@ from astropy.utils.data import get_pkg_data_filename
 
 
 # WIP ---!
-def handleReg(reg, col='black') :
+def handleReg(reg, col='black'):
   '''
   Changes attributes of region
   :param reg: filename (str)
@@ -57,7 +57,7 @@ def showSkymap(skymap, reg='none', col='black', suffix='none', title='none', sho
   # handle region ---!
   if reg != 'none' :
     r = pyregion.open(reg).as_imagecoord(hdul[0].header)
-    for i in range(len(r)) :
+    for i in range(len(r)):
       r[i].attr[1]['color'] = col
       patch_list, text_list = r.get_mpl_patches_texts()
       for p in patch_list:
@@ -139,7 +139,7 @@ def showResmap(resmap, reg='none', col='black', suffix='none', title='none', sho
 
   return
  
-def showResiduals(residuals, scaleY='log', title='none', show=True):
+def showResiduals(residuals, scaleY='log', title='none', figsize=(10,8), show=True):
   '''
   :param
   residuals = residuals fits file (str)
@@ -168,7 +168,7 @@ def showResiduals(residuals, scaleY='log', title='none', show=True):
   en_bins = Emax - 0.5 * (Emax - Emin)
 
   # PLOT ---!
-  plt.figure(figsize=(10,8))
+  plt.figure(figsize=figsize)
   plt.rc('text', usetex=True)
 
   if scaleY.lower() == 'lin' :
@@ -255,7 +255,7 @@ def showButterfly(diagram, flux_pnts=0.0, fluxEn_pnts=0.0, suffix='none', title=
 
   return
  
-def showSpectrum(spectrum, title='none', show=True) :
+def showSpectrum(spectrum, title='none', figsize=(8,15), show=True):
   '''
   :param spectrum: spectrum fits file (str)
   show = if calling image show (bool)
@@ -281,7 +281,7 @@ def showSpectrum(spectrum, title='none', show=True) :
   en_err = (en_up - en_down) / 2
 
   # PLOT ---!
-  fig = plt.figure(figsize=(8,15))
+  fig = plt.figure(figsize=figsize)
   plt.rc('text', usetex=True)
 
   ax1 = plt.subplot(311, xscale='log')
@@ -372,7 +372,7 @@ def showLightcurve(lightcurve, axisLim ='auto', title='none', show = True):
   etul_pnts = []
 
   # list flux point or upper limit ---!
-  for el in range(len(data)) :
+  for el in range(len(data)):
     if TS[el] > 9 and 2.0*e_prefact[el] < prefact[el] :
     #if TS[el] > 9 :
       pnts.append(prefact[el])
@@ -444,7 +444,7 @@ def showLightcurve_v02(lightcurve, axisLim ='auto', title='none', ax_scale='lin'
   ax2 = plt.subplot(212, yscale='log') if ax_scale == 'log' else None
 
 
-  for i in range(len(lightcurve)) :
+  for i in range(len(lightcurve)):
     hdulist = fits.open(lightcurve)
     #print(hdulist.info())
 
@@ -480,7 +480,7 @@ def showLightcurve_v02(lightcurve, axisLim ='auto', title='none', ax_scale='lin'
     etul_pnts = []
 
     # list flux point or upper limit ---!
-    for el in range(len(data)) :
+    for el in range(len(data)):
       if TS[el] > 9 and 2.0*e_prefact[el] < prefact[el] :
         pnts.append(prefact[el])
         e_pnts.append(e_prefact[el])
@@ -661,24 +661,27 @@ def showButterfly_v02(diagram, spectrum, axisLim='auto', suffix='none', title='n
 
 # V01 ---!
 def degradedIRF_3d(x, y, z, xlabel='x', ylabel='y', zlabel='z', title=None, c=('b'), zscale='linear',
-                   fontsize=14, zlim=(0,1), alpha=(1), label=None, savefig=None, show=True) :
+                   fontsize=14, figsize=(12,6), rotation=0, zlim=(0,1), alpha=(1), label=None, savefig=None, show=True):
 
-  fig = plt.figure(figsize=(12, 6))
+  fig = plt.figure(figsize=figsize)
   plt.rc('text', usetex=True)
   sns.set_style("whitegrid", {'axes.grid': False})
   ax = fig.add_subplot(111, projection='3d', zscale=zscale)
+  plt.xticks(fontsize=fontsize, rotation=rotation)
+  plt.yticks(fontsize=fontsize, rotation=rotation)
+  plt.zticks(fontsize=fontsize, rotation=rotation)
 
   curve = []
-  for i in range(len(z)) :
+  for i in range(len(z)):
     ax.plot_surface(x, y, z[i], alpha=alpha[i], color=c[i], label=label[i])
     curve.append(Rectangle((0, 0), 1, 1, fc=c[i], fill=True))
 
   ax.set_zlim(zlim)
-  ax.set_xlabel(xlabel, fontsize=fontsize)
-  ax.set_ylabel(ylabel, fontsize=fontsize)
-  ax.set_zlabel(zlabel, fontsize=fontsize, labelpad=12)
+  ax.set_xlabel(xlabel, fontsize=fontsize, labelpad=fontsize)
+  ax.set_ylabel(ylabel, fontsize=fontsize, labelpad=fontsize)
+  ax.set_zlabel(zlabel, fontsize=fontsize, labelpad=fontsize)
   ax.set_title(title, fontsize=fontsize) if title != None else None
-  ax.legend(curve, label, loc=0) if label != None else None
+  ax.legend(curve, label, loc=0, fontsize=fontsize) if label != None else None
 
   plt.tight_layout()
   fig.savefig(savefig) if savefig != None else None
@@ -689,7 +692,7 @@ def degradedIRF_3d(x, y, z, xlabel='x', ylabel='y', zlabel='z', title=None, c=('
 
 # V01 ---!
 def interp_ebl(x, y, savefig, kind='linear', xlabel='x', ylabel='y', title='title',
-               label=('y', 'y2'), fontsize=12, show=True) :
+               label=('y', 'y2'), fontsize=12, show=True):
 
   fig = plt.figure()
   plt.rc('text', usetex=True)
@@ -710,14 +713,14 @@ def interp_ebl(x, y, savefig, kind='linear', xlabel='x', ylabel='y', title='titl
   return
 
 # SENSITIVITY ---!
-def showSensitivity(x, y, savefig, xlabel='x', ylabel='y', label=('y'), title='none', fontsize=12, marker=('.'), show=True) :
+def showSensitivity(x, y, savefig, xlabel='x', ylabel='y', label=('y'), title='none', fontsize=12, marker=('.'), show=True):
 
   fig = plt.figure()
   plt.rc('text', usetex=True)
   sns.set()
 
   ax = plt.subplot(111, xscale='log', yscale='log')
-  for i in range(len(y)) :
+  for i in range(len(y)):
     ax.plot(x[i], y[i], marker=marker[i], label=label[i])
   ax.set_ylabel(ylabel, fontsize=fontsize)
   ax.set_xlabel(xlabel, fontsize=fontsize)
@@ -740,8 +743,8 @@ def plotLightCurve(flux, t1, uplims, t2, xerr, yerr, filename, temp_t, temp_f, c
   sns.set()
 
   ax = plt.subplot(111, yscale='log', xscale='log')
-  plt.xticks(fontsize=fontsize)  # rotation=90
-  plt.yticks(fontsize=fontsize)  # rotation=90
+  plt.xticks(fontsize=fontsize, rotation=rotation)
+  plt.yticks(fontsize=fontsize, rotation=rotation)
   # template ---!
   plt.plot(temp_t[20:50], temp_f[20:50], '-g', lw=5, label='expected (30GeV-150TeV)', alpha=1)
   # detections ---!
