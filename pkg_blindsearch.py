@@ -466,13 +466,16 @@ class Analysis() :
   def getTimeBins(self, GTI, tgrid):
     tbins = []
     for i in range(len(tgrid)):
-      if tgrid[i] <= GTI[0]+10 and tgrid[i+1] >= GTI[0]-10:
+      # if tgrid[i] <= GTI[0]+10 and tgrid[i+1] >= GTI[0]-10:
+      if tgrid[i] <= GTI[0] and tgrid[i+1] >= GTI[0]:
         tbins.append(i)
         continue
-      if tgrid[i] >= GTI[0]-10 and tgrid[i+1] <= GTI[1]+10:
+      # if tgrid[i] >= GTI[0]-10 and tgrid[i+1] <= GTI[1]+10:
+      if tgrid[i] >= GTI[0] and tgrid[i+1] <= GTI[1]:
         tbins.append(i)
         continue
-      if tgrid[i] >= GTI[1]-10:
+      # if tgrid[i] >= GTI[1]-10:
+      if tgrid[i] >= GTI[1]:
         tbins.append(i)
         break
 
@@ -1264,7 +1267,6 @@ class ManageXml():
 
   def modXml(self, overwrite=True):
     self.__setModel()
-    #self.setTsTrue() if self.tscalc is True else None
     # source ---!
     i = 0
     for src in self.root.findall('source'):
@@ -1330,6 +1332,7 @@ class ManageXml():
         for free in self.__cfg.xml.bkg.free:
           src.find('*/parameter[@name="%s"]' % free['prm']).set('free', '1') if free['prm'] != None else None
 
+    #self.setTsTrue() if self.tscalc is True else None
     self.__saveXml()
     return
 

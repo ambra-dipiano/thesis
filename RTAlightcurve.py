@@ -12,10 +12,6 @@ import sys
 
 # --------------------------------- SETUP --------------------------------- !!!
 
-# initialize global count ---!
-# chunk = int(sys.argv[1])  # global count
-# trials = int(sys.argv[2])  # number of trials
-# count = int(sys.argv[3])  # starting count
 # compact initialisation ---!
 trials = 1  # trials
 count = 0  # starting count
@@ -35,7 +31,7 @@ tdelay = 50  # slewing time (s)
 tmax = []
 for i in range(len(texp)):
   tmax.append(tdelay + texp[i])
-ttotal = 1e4 #1e6  # maximum tobs (4h at least) simulation total time (s)
+ttotal = 190 #1e6  # maximum tobs (4h at least) simulation total time (s)
 add_hours = 7200 #7200  # +2h observation time added after first none detection (s)
 run_duration = 1200  # 20min observation run time for LST in RTA (s) ---!
 elow = 0.03  # simulation minimum energy (TeV)
@@ -202,8 +198,6 @@ for k in range(trials):
   #   num_max, phlist = tObj.appendEventsMultiPhList(max_length=run_duration, last=ttotal)
   #   print('phlist root name', phlist) if checks2 else None
 
-  #breakpoint()
-
   # --------------------------------- 2° LOOP :: tbins --------------------------------- !!!
 
   tObj.e = [emin, emax]
@@ -221,7 +215,7 @@ for k in range(trials):
     # --------------------------------- CLOCKING BREAK --------------------------------- !!!
 
     # check tlast, if globally reached then stop current trial ---!
-    if clocking > max(tlast):
+    if clocking >= max(tlast):#-min(texp):
       print('end analysis trial', count, ' at clocking', tlast)
       break
     current_twindows = []
@@ -247,7 +241,7 @@ for k in range(trials):
 
       tbin = clocking / current_twindows[i]  # temporal bin number of this analysis
       IDbin = 'tbin%09d' % tbin
-      csvName = p.getCsvDir() + 'tesi_tdel%d_deg%s_E%dTeV_%ds.csv' % (tdelay, str(irf_degrade), emax*1e6, texp[index])
+      csvName = p.getCsvDir() + 'tesi_tdel%d_deg%s_%ds.csv' % (tdelay, str(irf_degrade), texp[index])
       if irf_degrade:
         csvName = csvName.replace('.csv', '_degraded.csv')
       if os.path.isfile(csvName):
@@ -504,9 +498,8 @@ for k in range(trials):
 
       # --------------------------------- CLEAR SPACE --------------------------------- !!!
 
-      if tObj.t[0] > tmax[index]:
-        os.system('rm ' + p.getSelectDir() + '*ebl%06d*' % count)
-        os.system('rm ' + p.getDetDir() + '*ebl%06d*' % count)
+      # os.system('rm ' + p.getSelectDir() + '*ebl%06d*' % count)
+      # os.system('rm ' + p.getDetDir() + '*ebl%06d*' % count)
 
   if int(count) != 1:
     os.system('rm ' + p.getSimDir() + '*ebl%06d*' % count)
