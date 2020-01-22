@@ -29,7 +29,7 @@ texp = [10, 100]  # exposure times (s)
 texp.sort()
 tint = len(texp)
 tdelay = 30  # slewing time (s)
-tmin = [90, 50]  # start of bin to select (s)
+tmin = [tdelay for i in range(tint)]  # start of bin to select (s)
 tmax = []  # end of bin to select (s)
 for i in range(tint):
   tmax.append(tmin[i] + texp[i])
