@@ -23,6 +23,7 @@ nominal = True
 degraded = True
 compute = True
 plot = True
+sens_type = 'Integral'
 
 caldb = []
 if nominal:
@@ -36,9 +37,9 @@ if degraded:
     irfObj.irf = irf
     irfObj.caldb = caldb_nom
     irfObj.factor = 2
-    irfObj.degradeIrf()
+    #irfObj.degradeIrf()
 e = [0.03, 150.0]
-texp = [10, 100, 250]
+texp = [1, 5, 10, 100]
 pointing = (33.057, -51.841) # pointing direction RA/DEC (deg)
 
 # INITIALIZE ---!
@@ -67,10 +68,16 @@ if compute:
       nObj.maxLikelihood()
       print('max like')
       # NOMINAL SENS ---!
+      nObj.sens_type = sens_type
       nObj.model = results
       nObj.output = output
       nObj.src_name = 'GRB'
-      nObj.eventSens(bins=20)
+      if sens_type.capitalize() == 'Integral':
+        print('integral')
+        nObj.eventSens(bins=0)
+      else:
+        print('differential')
+        nObj.eventSens(bins=20)
       print('sens')
 
 # ------------------------------------- PLOT --------------------------------------- !!!
@@ -78,15 +85,20 @@ if compute:
 if plot:
   csv = [[], []]
   savefig1, savefig2, savefig3 = [], [], []
+  list_sens_nom, list_flux_nom, list_sens_deg, list_flux_deg = [], [], [], []
   for i in range(len(caldb)):
     for j in range(len(texp)):
       csv[i].append(outpath + 'texp%ds_' %texp[j] + caldb[i] + '_crab_sens.csv')
       pngroot = caldb[i] + '_texp%ds' %texp[j]
-      savefig1.append(pngpath + pngroot + '_sensdiff.png')
-      savefig2.append(pngpath + pngroot + '_sensdiff_phflux.png')
-      savefig3.append(pngpath + pngroot + '_sensdiff_ratio.png')
+      if sens_type.capitalize() != 'Integral':
+        savefig1.append(pngpath + pngroot + '_sensDiff.png')
+        savefig2.append(pngpath + pngroot + '_sensDiff_phflux.png')
+        savefig3.append(pngpath + pngroot + '_sensDiff_ratio.png')
+      else:
+        savefig1.append(pngpath + pngroot + '_sensInt.png')
+        savefig2.append(pngpath + pngroot + '_sensInt_phflux.png')
+        savefig3.append(pngpath + pngroot + '_sensInt_ratio.png')
 
-  print(savefig1, savefig2, savefig3)
   for j in range(len(texp)):
     title = caldb_nom + ': ' + irf.replace('_', '\_') + ' with texp=%ds' %texp[j]
     # nominal
@@ -103,9 +115,9 @@ if plot:
 
     # check ---!
     print('texp%ds: nominal, degraded' %texp[j])
-    print('min:', sens_nom.min(), sens_deg.min())
-    print('max:', sens_nom.max(), sens_deg.max())
-    print('bin5:', sens_nom[5], sens_deg[5])
+    # print('min:', sens_nom.min(), sens_deg.min())
+    # print('max:', sens_nom.max(), sens_deg.max())
+    # print('bin5:', sens_nom[5], sens_deg[5])
     print('ratios:', sens_nom/sens_deg)
 
     showSensitivity([10**energy_nom, 10**energy_deg], [sens_nom, sens_deg], savefig=savefig1[j], marker=['+', 'x'],
@@ -127,3 +139,31 @@ if plot:
     # plt.ylim(0., 1.)
     # plt.show()
     plt.savefig(savefig3[j])
+
+    if sens_type.capitalize() == 'Integral':
+      x = [1, 5, 10, 100]
+      y1 = [[6.358567480537711e-11, 2.1582881778139934e-11, 1.3048873052454111e-11, 2.7600318180325007e-12]]
+      y2 = [[6.902673455761295e-09, 2.3429740362872147e-09, 1.4165472006464716e-09, 2.9962091973864583e-10]]
+      y1.append([3.45734663098577e-11, 1.3048873052446157e-11,7.910828789733936e-12, 1.6811190279480429e-12])
+      y2.append([3.753193606911769e-09, 1.4165472006456084e-09, 8.587762584435284e-10, 1.824973270427709e-10])
+      l = ['degraded', 'nominal']
+      # sens ---!
+      plt.figure()
+      ax = plt.subplot(111, xscale='log')
+      plt.title(caldb_nom + ': ' + irf.replace('_', '\_'))
+      plt.xlabel('exposure time (s)')
+      plt.ylabel('E$^2$F sensitivity (erg/cm$^2$/s)')
+      for i in range(len(y1)):
+        plt.plot(x, y1[i], label=l[i])
+        plt.scatter(x, y1[i])
+      plt.savefig(pngpath + caldb_nom + '_sensInt_texp.png')
+      # flux ---!
+      plt.figure()
+      ax = plt.subplot(111, xscale='log')
+      plt.title(caldb_nom + ': ' + irf.replace('_', '\_'))
+      plt.xlabel('exposure time (s)')
+      plt.ylabel('ph flux (ph/cm$^2$/s)')
+      for i in range(len(y2)):
+        plt.plot(x, y2[i], label=l[i])
+        plt.scatter(x, y2[i])
+      plt.savefig(pngpath + caldb_nom + '_fluxInt_texp.png')

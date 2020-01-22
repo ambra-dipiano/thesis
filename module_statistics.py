@@ -21,18 +21,46 @@ from scipy.ndimage.filters import gaussian_filter
 extra = Rectangle((0, 0), 1, 1, fc="w", fill=False, edgecolor='none', linewidth=0)
 extra2 = Line2D([0], [0], ls='-.', color='k', lw='1')
 
+def hist1d(x, mean, nbin=20, hist=True, fontsize=12, color='b',
+                 alpha=0.5, title='gaussian fit', ax_thresh=0.2, xlabel='x', ylabel='y', leglabel='data',
+                 filename='hist1d_gauss.png', show=True):
+
+  fig = plt.figure()
+  plt.rc('text', usetex=True)
+  sns.set()
+
+  ax = plt.subplot(111)
+  # plt.plot([],[], color='none', label='wbin=%.2fdeg' %width)
+  for index, el in enumerate(x):
+    if el[0] is list():
+      el=el[0]
+    sns.distplot(el, bins=nbin, kde=False, hist=hist,
+                 fit=norm, norm_hist=True, fit_kws={"color": color[index]},
+                 color=color[index], hist_kws={'alpha':alpha}, label=leglabel[index])
+    plt.axvline(mean[index], c=color[index], ls='--', lw=2,
+                label='mean $\\approx$ %.3Edeg' %mean[index]) if mean != None else None
+  plt.title(title, fontsize=fontsize)
+  plt.xlabel(xlabel, fontsize=fontsize)
+  plt.ylabel(ylabel, fontsize=fontsize)
+  plt.legend(fontsize=fontsize)
+
+  plt.tight_layout()
+  fig.savefig(filename)
+  # show fig ---!
+  plt.show() if show == True else None
+  plt.close()
+  return fig, ax
+
 
 # HIST 1D GAUSSIAN DISTRIBUTION ---!
 def hist1d_gauss(x, mean, loc=0, threshold=1, nbin=20, width=None, hist=True, fontsize=12, color='b',
                  alpha=0.5, title='gaussian fit', ax_thresh=0.2, xlabel='x', ylabel='y', leglabel='data',
-                 filename='hist1d_gauss.png', show=False):
+                 filename='hist1d_gauss.png', show=True):
 
-  if width == None:
-    width = threshold/nbin
   if nbin == None:
+    if width == None:
+      print('Error: set either nbin or width')
     nbin = int(threshold/width)
-  if nbin == None and width == None:
-    print('Error: set either nbin or width')
 
   fig = plt.figure()
   plt.rc('text', usetex=True)
@@ -65,7 +93,7 @@ def hist1d_gauss(x, mean, loc=0, threshold=1, nbin=20, width=None, hist=True, fo
 # HIST 1D RAYLEIGH DISTRIBUTION ---!
 def hist1d_rayleigh(x, mean, rayleigh_prms={'loc':0, 'scale':[1]}, threshold=1, nbin=None, width=None, hist=True,
                     fontsize=12, color='b', alpha=0.5, title='rayleigh fit', ax_thresh=0.2, xlabel='x', ylabel='y',
-                    leglabel='data', filename='hist1d_rayleigh.png', show=False):
+                    leglabel='data', filename='hist1d_rayleigh.png', show=True):
 
   if width == None:
     width = threshold/nbin
@@ -522,17 +550,23 @@ def chi2_reduced(x, trials, df=1, nbin=None, width=None, var=True):
     print('Error: set either nbin or width')
 
   h, edges = np.histogram(x, bins=int(nbin), density=False, range=(0., max(x)))
-  # yerr = np.sqrt(h)/trials
+  yerr = np.sqrt(h)/trials
   h = h/trials
   cbin = (edges[1:] + edges[:-1])/2
   p = (1 - stats.chi2.pdf(cbin, df=df))/2
+  #p = stats.chi2.pdf(cbin, df=df)/2
+  #err = yerr/h
+
+  print('values', h, '\nerrors', yerr, '\nerror perc', err)
 
   with np.errstate(invalid='raise'):
     if var:
       chi2 = 2*np.sum((h[1:] - p[1:])**2/h[1:])
+      #chi2 = np.sum((h[1:] - p[1:])**2/err[1:])
     else:
-      chi2 = 2*np.sum((h[1:] - p[1:])**2/p[1:])
-      h[1:] = np.array(h[1:])
+      chi2 = 2*np.sum((h[1:] - p[1:])**2/h[1:])
+      #chi2 = np.sum((h[1:] - p[1:])**2/err[1:])
+    h[1:] = np.array(h[1:])
     N = np.count_nonzero(h[1:])
     chi2r = chi2 / (N - 1)
   return chi2, chi2r

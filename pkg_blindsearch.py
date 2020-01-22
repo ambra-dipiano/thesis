@@ -18,9 +18,9 @@ import re
 import subprocess
 from lxml import etree as ET
 import matplotlib
-matplotlib.rcsetup.validate_backend('agg')
+#matplotlib.rcsetup.validate_backend('agg')
 import matplotlib.pyplot as plt
-#import seaborn as sns
+import seaborn as sns
 
 def xmlConfig(cfgfile='/config.xml') :
   '''
@@ -460,34 +460,29 @@ class Analysis() :
     # extract spectrum if required ---!
     if self.extract_spec:
       self.__extractSpec()
-    max_tbin = self.__Nt
-    return tbin_stop, max_tbin
-
-  # get tbin_stop without loading the template ---!
-  def getTimeBinStop(self) :
-    self.__getFitsData()
-
-    self.__Nt = len(self.__time)
-    self.__Ne = len(self.__energy)
-
-    # time grid ---!
-    t = [0.0 for x in range(self.__Nt + 1)]
-    for i in range(self.__Nt - 1):
-      t[i + 1] = self.__time[i][0] + (self.__time[i + 1][0] - self.__time[i][0]) / 2
-    # tmax in last bin ---!
-    t[self.__Nt] = self.__time[self.__Nt - 1][0] + (self.__time[self.__Nt - 1][0] - t[self.__Nt - 1])
-
-    # stop the second after higher tmax ---!
-    if self.tmax != None :
-      tbin_stop = 1
-      for bin in range(len(t)) :
-        if t[bin] <= self.tmax :
-          tbin_stop += 1
-        else :
-          continue
-    else :
-      raise ValueError('Maximum exposure time (tmax) is larger than the template temporal evolution.')
     return tbin_stop
+
+  # get template bins within GTI ---!
+  def getTimeBins(self, GTI, tgrid):
+    tbins = []
+    for i in range(len(tgrid)):
+      # if tgrid[i] <= GTI[0]+10 and tgrid[i+1] >= GTI[0]-10:
+      if tgrid[i] <= GTI[0] and tgrid[i+1] >= GTI[0]:
+        tbins.append(i)
+        continue
+      # if tgrid[i] >= GTI[0]-10 and tgrid[i+1] <= GTI[1]+10:
+      if tgrid[i] >= GTI[0] and tgrid[i+1] <= GTI[1]:
+        tbins.append(i)
+        continue
+      # if tgrid[i] >= GTI[1]-10:
+      if tgrid[i] >= GTI[1]:
+        tbins.append(i)
+        break
+
+    tbins = sorted(tbins)
+    tbins = self.__dropListDuplicates(tbins)
+    return tbins
+
 
   # ctobssim wrapper ---!
   def eventSim(self) :
@@ -523,25 +518,38 @@ class Analysis() :
     xml.save(self.output)
     return
 
+  # dopr duplicates in list ---!
+  def __dropListDuplicates(self, list):
+    new_list = []
+    for l in list:
+      if l not in new_list:
+        new_list.append(l)
+    return new_list
+
+  # keep only the GTI rows plus a buffering margin ---!
   def __dropExceedingEvents(self, hdul, GTI):
     slice_list = []
-    for i, row in enumerate(hdul[1].data.field('TIME')):
-      if hdul[1].data.field('TIME')[i] > GTI[0] and hdul[1].data.field('TIME')[i] < GTI[1]:
+    times = hdul[1].data.field('TIME')
+    for i, t in enumerate(times):
+      if t >= GTI[0] and t <= GTI[1]:
         slice_list.append(i)
-    if len(slice_list) > 10:
-      slice_list = slice_list[:-10]
     return slice_list
 
   # create single photon list from obs list ---!
-  def __singlePhotonList(self, sample, filename, GTI):
+  def __singlePhotonList(self, sample, filename, GTI, shift_time=False):
+    print('GTI', GTI)
+    sample = sorted(sample)
+    n = 0
     for i, f in enumerate(sample):
+      print(f)
       with fits.open(f) as hdul:
-        if i == 0:
+        if n == 0 and len(hdul[1].data) > 0:
           h1 = hdul[1].header
           h2 = hdul[2].header
           ext1 = hdul[1].data
           ext2 = hdul[2].data
-        else:
+          n += 1
+        elif n != 0 and len(hdul[1].data) > 0:
           ext1 = np.append(ext1, hdul[1].data)
     # create output FITS file empty ---!
     hdu = fits.PrimaryHDU()
@@ -558,66 +566,90 @@ class Analysis() :
     with fits.open(filename, mode='update') as hdul:
       # drop events exceeding GTI ---!
       slice = self.__dropExceedingEvents(hdul=hdul, GTI=GTI)
-      hdul[1].data = hdul[1].data[slice]
+      if len(slice) > 2:
+        hdul[1].data = hdul[1].data[slice]
       hdul.flush()
-      # modify indexes and GTI ---!
+      # sort times and modify indexes ---!
       indexes = hdul[1].data.field(0)
+      # if shift_time:
+      #   times = hdul[1].data.field('TIME')
+      #   times = sorted(times)
       GTI_new = []
       for i, ind in enumerate(indexes):
         hdul[1].data.field(0)[i] = i + 1
-      # find GTI in time array
-      print(filename, len(hdul[1].data) - (len(hdul[1].data)-len(slice)))
+        # if shift_time:
+        #   hdul[1].data.field('TIME')[i] = times[i]
+      # modify GTI ---!
       GTI_new.append(min(hdul[1].data.field('TIME'), key=lambda x: abs(x - GTI[0])))
       GTI_new.append(min(hdul[1].data.field('TIME'), key=lambda x: abs(x - GTI[1])))
       hdul[2].data[0][0] = GTI_new[0]
       hdul[2].data[0][1] = GTI_new[1]
+      # hdul[2].data[0][0] = GTI[0]
+      # hdul[2].data[0][1] = GTI[1]
       hdul.flush()
     return
 
-  # created a number of FITS table containing all events and GTIs ---!
-  def appendEvents(self, max_length=None, last=None, remove_old=True):
-    # remove old ---!
-    n = 1
-    if os.path.isfile(self.output) and remove_old:
-      os.remove(self.output)
-    # collect events ---!
-    if max_length == None:
-      GTI = []
-      with fits.open(self.input[0]) as hdul:
-        GTI.append(hdul[2].data[0][0])
-      with fits.open(self.input[-1]) as hdul:
-        GTI.append(hdul[2].data[0][1])
-      self.__singlePhotonList(sample=self.input, filename=self.output, GTI=GTI)
-      return
-    else:
-      sample = []
-      singlefile = str(self.output)
-      for j in range(int(last/max_length)+1):
-        for i, f in enumerate(self.input):
-          with fits.open(f) as hdul:
-            tlast = hdul[2].data[0][1]
-            tfirst = hdul[2].data[0][0]
-            if (tlast < max_length*n and tlast != max_length*n):
-              sample.append(f)
-            elif (tlast > max_length*n or tlast == max_length*n) and i != len(self.input)-1:
-              sample.append(f)
-              if n == 1:
-                filename = singlefile.replace('.fits', '_n%03d.fits' % n)
-              else:
-                filename = filename.replace('_n%03d.fits' %(n-1), '_n%03d.fits' %n)
-              if os.path.isfile(filename) and remove_old:
-                os.remove(filename)
-                self.__singlePhotonList(sample=sample, filename=filename, GTI=[max_length*(n-1), max_length*n])
-              n += 1
-              sample = [f]
-            if (tfirst > max_length*(n-1) and tfirst < last) and i == len(self.input)-1:
-              filename = filename.replace('_n%03d.fits' %(n-1), '_n%03d.fits' %n)
-              sample.append(f)
-              if os.path.isfile(filename) and remove_old:
-                os.remove(filename)
-                self.__singlePhotonList(sample=sample, filename=filename, GTI=[max_length*(n-1), max_length*n])
+  # created one FITS table containing all events and GTIs ---!
+  def appendEventsSinglePhList(self):
+    GTI = []
+    with fits.open(self.input[0]) as hdul:
+      GTI.append(hdul[2].data[0][0])
+    with fits.open(self.input[-1]) as hdul:
+      GTI.append(hdul[2].data[0][1])
+    self.__singlePhotonList(sample=self.input, filename=self.output, GTI=GTI)
+    return
 
-      return n, singlefile
+  # create one fits table appending source and bkg
+  def appendBkg(self, phlist, bkg, GTI):
+    with fits.open(bkg, mode='update') as hdul:
+      # fix GTI ---!
+      hdul[2].data[0][0] = GTI[0]
+      hdul[2].data[0][1] = GTI[1]
+      hdul.flush()
+      times = hdul[1].data.field('TIME')
+      for i, t, in enumerate(times):
+        hdul[1].data.field('TIME')[i] = t + GTI[0]
+      hdul.flush()
+    self.__singlePhotonList(sample=[phlist, bkg], filename=phlist, GTI=GTI)
+    return
+
+  # created a number of FITS table containing all events and GTIs ---!
+  def appendEventsMultiPhList(self, max_length=None, last=None):
+    n = 1
+    sample = []
+    singlefile = str(self.output)
+    for j in range(int(last / max_length) + 1):
+      for i, f in enumerate(self.input):
+        with fits.open(f) as hdul:
+          tfirst = hdul[2].data[0][0]
+          tlast = hdul[2].data[0][1]
+          if (tfirst >= max_length * (j) and tlast <= max_length * (j + 1)) or \
+              (tfirst <= max_length * (j) and tlast > max_length * (j)):
+            sample.append(f)
+          elif tlast >= max_length * (j + 1): # or last == max_length * (j + 1):
+            sample.append(f)
+            if n == 1:
+              filename = singlefile.replace('.fits', '_n%03d.fits' % n)
+            else:
+              filename = filename.replace('_n%03d.fits' % (n - 1), '_n%03d.fits' % n)
+            sample = self.__dropListDuplicates(sample)
+            print('call 1', filename)
+            self.__singlePhotonList(sample=sample, filename=filename, GTI=[max_length * (j), max_length * (j + 1)])
+            n += 1
+            drop = len(sample) - 1
+            if drop > 2:
+              self.input = self.input[drop - 1:]
+            sample = [f]
+            break
+          # if tlast > last - max_length or i == len(self.input) - 1:
+          #   filename = filename.replace('_n%03d.fits' % (n), '_n%03d.fits' % (n+1))
+          #   sample.append(f)
+          #   sample = self.__dropListDuplicates(sample)
+          #   print('call 2', filename)
+          #   self.__singlePhotonList(sample=sample, filename=filename, GTI=[max_length * (j), max_length * (j + 1)])
+          #   sample = [f]
+          #   break
+    return n, singlefile
 
   # ctselect wrapper ---!
   def eventSelect(self, prefix=None):
@@ -698,7 +730,7 @@ class Analysis() :
     like['caldb'] = self.caldb
     like['irf'] = self.irf
     like['refit'] = True
-    like['max_iter'] = 50
+    like['max_iter'] = 500
     like['fix_spat_for_ts'] = False
     like["nthreads"] = self.nthreads
     like['logfile'] = self.output.replace('.xml', '.log')
@@ -814,7 +846,7 @@ class Analysis() :
     return
 
   # change permission to 777 and ask for password if user id not in idlist param ---!
-  def __openPermission(self, path, idlist=(0,1126,1006)):
+  def __openPermission(self, path, idlist=(0,1126)):
     if os.geteuid() in idlist:
       subprocess.run(['chmod', '-R', '777', path], check=True)
     else:
@@ -822,7 +854,7 @@ class Analysis() :
     return
 
   # change permission to 755 and ask for password if user id not in idlist param ---!
-  def __closePermission(self, path, idlist=(0,1126,1006)):
+  def __closePermission(self, path, idlist=(0,1126)):
     if os.geteuid() in idlist:
       subprocess.run(['chmod', '-R', '755', path], check=True)
     else:
@@ -1054,9 +1086,9 @@ class ManageXml():
     self.__cfg = xmlConfig(cfgfile)
     self.__p = ConfigureXml(self.__cfg)
     self.file = open(self.__xml)
-    self.srcLib = ET.parse(self.file)
-    self.root = self.srcLib.getroot()
-    self.tsvList = []
+    self.src_lib = ET.parse(self.file)
+    self.root = self.src_lib.getroot()
+    self.tsv_list = []
     self.pos = []
     self.err = []
     self.spectral = []
@@ -1064,15 +1096,17 @@ class ManageXml():
     self.default_model = True
     self.instr = 'CTA'
     self.bkg_type = 'Irf'
-    self.srcAtt = []
-    self.bkgAtt = []
+    self.src_att = []
+    self.bkg_att = []
     self.tscalc = True
     self.if_cut = False
 
+  # get source element ---!
   def __getSrcObj(self):
     src = self.root.findall('source')
     return src
 
+  # skip node listed in skip element or filters ---!
   def __skipNode(self, cfg):
     '''
     :retun true for skip node
@@ -1094,59 +1128,62 @@ class ManageXml():
 
     return True
 
+  # get TS values ---!
   def loadTs(self, highest=None):
     for src in self.root.findall('source'):
       if highest == None:
         if src.attrib['name'] != 'Background' and src.attrib['name'] != 'CTABackgroundModel':
           tsv = src.attrib['ts']
-          self.tsvList.append(tsv)
+          self.tsv_list.append(tsv)
       else:
         if src.attrib['name'] == highest:
           tsv = src.attrib['ts']
-          self.tsvList.append(tsv)
+          self.tsv_list.append(tsv)
+    return self.tsv_list
 
-    return self.tsvList
-
+  # get RA/DEC values ---!
   def loadRaDec(self, highest=None):
-    posRaList, posDecList = ([] for i in range(2))
+    ra_list, dec_list = ([] for i in range(2))
     for src in self.root.findall('source'):
       if highest == None:
         if src.attrib['name'] != 'Background' and src.attrib['name'] != 'CTABackgroundModel':
           ra = src.find('spatialModel/parameter[@name="RA"]').attrib['value']
           dec = src.find('spatialModel/parameter[@name="DEC"]').attrib['value']
-          posRaList.append(ra)
-          posDecList.append(dec)
+          ra_list.append(ra)
+          dec_list.append(dec)
       else:
         if src.attrib['name'] == highest:
           ra = src.find('spatialModel/parameter[@name="RA"]').attrib['value']
           dec = src.find('spatialModel/parameter[@name="DEC"]').attrib['value']
-          posRaList.append(ra)
-          posDecList.append(dec)
-    self.pos = [posRaList, posDecList]
+          ra_list.append(ra)
+          dec_list.append(dec)
+    self.pos = [ra_list, dec_list]
     return self.pos
 
+  # get Gaussian sigma values ---!
   def loadConfInt(self, highest=None):
-    raList, decList = ([] for i in range(2))
+    ra_list, dec_list = ([] for i in range(2))
     for src in self.root.findall('source'):
       if highest == None:
         if src.attrib['name'] != 'Background' and src.attrib['name'] != 'CTABackgroundModel':
           ra = src.find('spatialModel/parameter[@name="RA"]').attrib['value']
           dec = src.find('spatialModel/parameter[@name="DEC"]').attrib['value']
-          raList.append(ra)
-          decList.append(dec)
+          ra_list.append(ra)
+          dec_list.append(dec)
       else:
         if src.attrib['name'] == highest:
           ra = src.find('spatialModel/parameter[@name="RA"]').attrib['value']
           dec = src.find('spatialModel/parameter[@name="DEC"]').attrib['value']
-          raList.append(ra)
-          decList.append(dec)
-    self.err = [raList, decList]
+          ra_list.append(ra)
+          dec_list.append(dec)
+    self.err = [ra_list, dec_list]
     return self.err
 
+  # get spectral parameter values ---1
   def loadSpectral(self, highest=None):
-    indexList, prefList, pivotList = ([] for i in range(3))
+    index_list, pref_list, pivot_list = ([] for i in range(3))
     if self.if_cut is True :
-      cutoffList = []
+      cutoff_list = []
 
     for src in self.root.findall('source'):
       if src.attrib['name'] != 'Background' and src.attrib['name'] != 'CTABackgroundModel':
@@ -1157,13 +1194,13 @@ class ManageXml():
               src.find('spectrum/parameter[@name="Prefactor"]').attrib['scale'])
           pivot = float(src.find('spectrum/parameter[@name="PivotEnergy"]').attrib['value']) * float(
               src.find('spectrum/parameter[@name="PivotEnergy"]').attrib['scale'])
-          indexList.append(index)
-          prefList.append(pref)
-          pivotList.append(pivot)
+          index_list.append(index)
+          pref_list.append(pref)
+          pivot_list.append(pivot)
           if self.if_cut is True :
             cutoff = float(src.find('spectrum/parameter[@name="CutoffEnergy"]').attrib['value']) * float(
                 src.find('spectrum/parameter[@name="CutoffEnergy"]').attrib['scale'])
-            cutoffList.append(cutoff)
+            cutoff_list.append(cutoff)
         else:
           if src.attrib['name'] == highest:
             index = float(src.find('spectrum/parameter[@name="Index"]').attrib['value']) * float(
@@ -1172,44 +1209,64 @@ class ManageXml():
                 src.find('spectrum/parameter[@name="Prefactor"]').attrib['scale'])
             pivot = float(src.find('spectrum/parameter[@name="PivotEnergy"]').attrib['value']) * float(
                 src.find('spectrum/parameter[@name="PivotEnergy"]').attrib['scale'])
-            indexList.append(index)
-            prefList.append(pref)
-            pivotList.append(pivot)
+            index_list.append(index)
+            pref_list.append(pref)
+            pivot_list.append(pivot)
             if self.if_cut is True:
               cutoff = float(src.find('spectrum/parameter[@name="CutoffEnergy"]').attrib['value']) * float(
                   src.find('spectrum/parameter[@name="CutoffEnergy"]').attrib['scale'])
-              cutoffList.append(cutoff)
+              cutoff_list.append(cutoff)
 
     if self.if_cut is False:
-      self.spectral = [indexList, prefList, pivotList]
+      self.spectral = [index_list, pref_list, pivot_list]
     else:
-      self.spectral = [indexList, prefList, pivotList, cutoffList]
+      self.spectral = [index_list, pref_list, pivot_list, cutoff_list]
     return self.spectral
 
+  # get prefact error values ---!
+  def loadPrefError(self, highest=None):
+    err_list = []
+    for src in self.root.findall('source'):
+      if highest == None:
+        if src.attrib['name'] != 'Background' and src.attrib['name'] != 'CTABackgroundModel':
+          err = float(src.find('spectrum/parameter[@name="Prefactor"]').attrib['error']) * float(
+              src.find('spectrum/parameter[@name="Prefactor"]').attrib['scale'])
+          err_list.append(err)
+      else:
+        if src.attrib['name'] == highest:
+          err = float(src.find('spectrum/parameter[@name="Prefactor"]').attrib['error']) * float(
+              src.find('spectrum/parameter[@name="Prefactor"]').attrib['scale'])
+          err_list.append(err)
+    self.err = err_list
+    return self.err
+
+  # save xml files ---!
   def __saveXml(self):
-    self.srcLib.write(self.__xml, encoding="UTF-8", xml_declaration=True,
+    self.src_lib.write(self.__xml, encoding="UTF-8", xml_declaration=True,
                       standalone=False, pretty_print=True)
     return
 
+  # set a default spectral model and bkg ---!
   def __setModel(self):
     if self.default_model is True:
-      Att_Prefactor = {'name': 'Prefactor', 'scale': '1e-16', 'value': '5.7', 'min': '1e-07', 'max': '1e7', 'free': '1'}
-      Att_Index = {'name': 'Index', 'scale': '-1', 'value': '2.48', 'min': '0', 'max': '5.0', 'free': '1'}
-      Att_PivotEn = {'name': 'PivotEnergy', 'scale': '1e6', 'value': '0.3', 'min': '1e-07', 'max': '1000.0', 'free': '0'}
-      Bkg_Prefactor = {'name': 'Prefactor', 'scale': '1', 'value': '1.0', 'min': '1e-03', 'max': '1e+3.0', 'free': '1'}
-      Bkg_Index = {'name': 'Index', 'scale': '1.0', 'value': '0.0', 'min': '-5', 'max': '+5.0', 'free': '1'}
-      Bkg_PivotEn = {'name': 'PivotEnergy', 'scale': '1e6', 'value': '1.0', 'min': '0.01', 'max': '1000.0', 'free': '0'}
+      att_prefactor = {'name': 'Prefactor', 'scale': '1e-16', 'value': '5.7', 'min': '1e-07', 'max': '1e7', 'free': '1'}
+      att_index = {'name': 'Index', 'scale': '-1', 'value': '2.48', 'min': '0', 'max': '5.0', 'free': '1'}
+      att_pivot = {'name': 'PivotEnergy', 'scale': '1e6', 'value': '0.3', 'min': '1e-07', 'max': '1000.0', 'free': '0'}
+      bkg_prefactor = {'name': 'Prefactor', 'scale': '1', 'value': '1.0', 'min': '1e-03', 'max': '1e+3.0', 'free': '1'}
+      bkg_index = {'name': 'Index', 'scale': '1.0', 'value': '0.0', 'min': '-5', 'max': '+5.0', 'free': '1'}
+      bkg_pivot = {'name': 'PivotEnergy', 'scale': '1e6', 'value': '1.0', 'min': '0.01', 'max': '1000.0', 'free': '0'}
 
-      self.srcAtt = [Att_Prefactor, Att_Index, Att_PivotEn]
-      self.bkgAtt = [Bkg_Prefactor, Bkg_Index, Bkg_PivotEn]
+      self.src_att = [att_prefactor, att_index, att_pivot]
+      self.bkg_att = [bkg_prefactor, bkg_index, bkg_pivot]
       if self.if_cut is True:
-        Att_CutOff = {'name': 'CutoffEnergy', 'scale': '1e6', 'value': '1.0', 'min': '0.01', 'max': '1000.0', 'free': '1'}
-        self.srcAtt.append(Att_CutOff)
+        att_cutoff = {'name': 'CutoffEnergy', 'scale': '1e6', 'value': '1.0', 'min': '0.01', 'max': '1000.0', 'free': '1'}
+        self.src_att.append(att_cutoff)
 
-      return self.srcAtt, self.bkgAtt
+      return self.src_att, self.bkg_att
     else:
       pass
 
+  # set tscalc to 1 ---!
   def setTsTrue(self):
     for src in self.root.findall('source'):
       if src.attrib['name'] != 'Background' and src.attrib['name'] != 'CTABackgroundModel':
@@ -1217,9 +1274,9 @@ class ManageXml():
     self.__saveXml()
     return
 
+  # modeify the spectral component of candidate list ---!
   def modXml(self, overwrite=True):
     self.__setModel()
-    #self.setTsTrue() if self.tscalc is True else None
     # source ---!
     i = 0
     for src in self.root.findall('source'):
@@ -1238,11 +1295,11 @@ class ManageXml():
         spc.tail = '\n\t\t'.replace('\t', ' ' * 2)
         src.insert(0, spc)
         # new spectral params ---!
-        for j in range(len(self.srcAtt)):
-          prm = ET.SubElement(spc, 'parameter', attrib=self.srcAtt[j])
+        for j in range(len(self.src_att)):
+          prm = ET.SubElement(spc, 'parameter', attrib=self.src_att[j])
           if prm.attrib['name'] == 'Prefactor' and i > 1:
             prm.set('value', str(float(prm.attrib['value']) / 2 ** (i - 1)))
-          prm.tail = '\n\t\t\t'.replace('\t', ' ' * 2) if j < len(self.srcAtt) else '\n\t\t'.replace('\t', ' ' * 2)
+          prm.tail = '\n\t\t\t'.replace('\t', ' ' * 2) if j < len(self.src_att) else '\n\t\t'.replace('\t', ' ' * 2)
           spc.insert(j, prm)
       # background ---!
       else:
@@ -1260,9 +1317,9 @@ class ManageXml():
         spc.text = '\n\t\t\t'.replace('\t', ' ' * 2)
         spc.tail = '\n\t'.replace('\t', ' ' * 2)
         # new bkg params ---!
-        for j in range(len(self.bkgAtt)):
-          prm = ET.SubElement(spc, 'parameter', attrib=self.bkgAtt[j])
-          prm.tail = '\n\t\t\t'.replace('\t', ' ' * 2) if j < len(self.bkgAtt) else '\n\t\t'.replace('\t', ' ' * 2)
+        for j in range(len(self.bkg_att)):
+          prm = ET.SubElement(spc, 'parameter', attrib=self.bkg_att[j])
+          prm.tail = '\n\t\t\t'.replace('\t', ' ' * 2) if j < len(self.bkg_att) else '\n\t\t'.replace('\t', ' ' * 2)
 
     # instead of override original xml, save to a new one with suffix "_mod" ---!
     if not overwrite:
@@ -1270,6 +1327,7 @@ class ManageXml():
     self.__saveXml()
     return
 
+  # free and fix parameters for max like computation ---!
   def prmsFreeFix(self):
     for src in self.root.findall('source'):
       if src.attrib['name'] != 'Background' and src.attrib['name'] != 'CTABackgroundModel':
@@ -1285,9 +1343,11 @@ class ManageXml():
         for free in self.__cfg.xml.bkg.free:
           src.find('*/parameter[@name="%s"]' % free['prm']).set('free', '1') if free['prm'] != None else None
 
+    #self.setTsTrue() if self.tscalc is True else None
     self.__saveXml()
     return
 
+  # sort candidates by their ts value ---!
   def sortSrcTs(self):
     src = self.root.findall("*[@ts]")
     self.root[:-1] = sorted(src, key=lambda el: (el.tag, el.attrib['ts']), reverse=True)
@@ -1295,15 +1355,15 @@ class ManageXml():
     for src in self.root.findall("*[@ts]"):
       from_highest.append(src.attrib['name'])
     self.__saveXml()
-    if len(from_highest) == 0:
-      from_highest = [None]
     return from_highest
 
+  # close xml ---!
   def closeXml(self):
     self.file.close()
     return
 
-# --------------------------------- CLASS PIPELINE GRAPHICS --------------------------------- !!!
+# --------------------------------- CLASS GRAPHICS --------------------------------- !!!
+
 class Graphics():
   '''
   This class handles all the graphic methods connected to the analysis pipeline. Each public field (self.field)
@@ -1391,4 +1451,3 @@ class Graphics():
     plt.show() if self.show else None
     plt.close()
     return
-

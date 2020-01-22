@@ -28,7 +28,8 @@ sigma = 5  # detection acceptance (Gaussian)
 texp = [1, 5, 10, 100]  # exposure times (s)
 texp.sort()
 tint = len(texp)
-tmin = [0, 0, 0, 0]  # start of bin to select (s)
+tdelay = 30  # slewing time (s)
+tmin = [tdelay for i in range(tint)]  # start of bin to select (s)
 tmax = []  # end of bin to select (s)
 for i in range(tint):
   tmax.append(tmin[i] + texp[i])
@@ -42,16 +43,16 @@ corr_rad = 0.1  # Gaussian
 confidence = (0.68, 0.95, 0.9973)  # confidence interval for asymmetrical errors (%)
 max_src = 5  # max candidates
 ts_threshold = 25  # TS threshold for reliable detection
-reduce_flux = 3  # flux will be devided by factor reduce_flux, if nominal then set to None ---!
+reduce_flux = None  # flux will be devided by factor reduce_flux, if nominal then set to None ---!
 
 # conditions control ---!
 checks = False  # prints checks info ---!
-if_ebl = False  # uses the EBL absorbed template ---!
+if_ebl = True  # uses the EBL absorbed template ---!
 if_cut = False  # adds a cut-off parameter to the source model ---!
 ebl_fits = False  # generate the EBL absorbed template ---!
 extract_spec = False # generates spectral tables and obs definition models ---!
 irf_degrade = False  # use degraded irf ---!
-src_sort = False  # sorts scandidates from highest TS to lowest ---!
+src_sort = True  # sorts scandidates from highest TS to lowest ---!
 skip_exist = False  # skip trial if already existing in data file ---!
 debug = False  # prints logfiles on terminal ---!
 if_log = True  # saves logfiles ---!
@@ -321,10 +322,8 @@ for k in range(trials):
     flux_ph = []
     if Ndet > 0:
       flux_ph.append(tObj.photonFluxPowerLaw(index[0], pref[0], pivot[0]))  # E (MeV)
-
     else:
       flux_ph.append(np.nan)
-
 
     # MISSING THE CUT-OFF OPTION ---!!!
 
@@ -369,9 +368,10 @@ for k in range(trials):
   # --------------------------------- CLEAR SPACE --------------------------------- !!!
 
   print('!!! check ---- ', count, ') trial done...') if checks is True else None
-  os.system('rm ' + p.getSimDir() + '*run*%06d*' % count)
-  os.system('rm ' + p.getSelectDir() + '*run*%06d*' % count)
-  os.system('rm ' + p.getDetDir() + '*run*%06d*' % count)
+  if int(count) != 1:
+    os.system('rm ' + p.getSimDir() + '*run*%06d*' % count)
+    os.system('rm ' + p.getSelectDir() + '*run*%06d*' % count)
+    os.system('rm ' + p.getDetDir() + '*run*%06d*' % count)
 
 print('\n\n!!! ================== END ================== !!!\n\n')
 
