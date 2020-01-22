@@ -59,10 +59,14 @@ sns.set()
 
 # FLUX SPECTRA ---!
 f=[]
+f8=[]
 for i in range(Nt):
     f.append(0.0)
+    f8.append(0.0)
     for j in range(Ne):
         f[i]=f[i]+spectra[i][j]*(en[j+1]-en[j])
+        if en[j] <= SST[1] and en[j] >= SST[0]:
+            f8[i]=f8[i]+spectra[i][j]*(en[j+1]-en[j])
         
 # FLUX EBL ---!
 f2=[]
@@ -89,7 +93,7 @@ for i in range(Nt):
         if en[j] < LST[0]:
             f6[i]=f6[i]+ebl[i][j]*(en[j+1]-en[j])
         if en[j] <= SST[1] and en[j] >= SST[0]:
-            f5[i]=f5[i]+ebl[i][j]*(en[j+1]-en[j])
+            f7[i]=f7[i]+ebl[i][j]*(en[j+1]-en[j])
           
 # some t spectra ---!
 fig1=plt.figure(3)
@@ -101,9 +105,9 @@ for i in range(3):
         x.append(energy[j][0])
         y.append(spectra[i*20+5][j])
         z.append(ebl[i*20+5][j])
-    plt.loglog(x,y, '-', label='%0.2fs-%0.2fs' %(time[i*20+5][0], time[i*20+6][0]))
-    plt.loglog(x,z, '-.', label='" " EBL adsorbed')
-    plt.title('spectra run0406_ID000126')
+    plt.loglog(x, y, '-', label='%0.2fs-%0.2fs' %(time[i*20+5][0], time[i*20+6][0]))
+    plt.loglog(x, z, '-.', label='" " EBL adsorbed')
+    plt.title('template')
     plt.xlabel('E (GeV)')
     plt.ylabel('d$\Phi$/dE (ph/cm$^2$/s/GeV)')
 plt.axvline(30, c='k', ls='--')
@@ -117,13 +121,17 @@ plt.show()
 # lightcurves ---!
 fig2=plt.figure(2)
 ax = plt.subplot(111, yscale='log')
-plt.plot(time,f, label='no EBL')
-plt.plot(time,f2, label='+EBL')
-plt.plot(time,f4, c='r', label='CTA+EBL')
+plt.plot(time, f, label='no EBL')
+plt.plot(time, f2, ls=':', label='+EBL')
+plt.plot(time, f4, label='CTA+EBL')
+plt.plot(time, f8, label='SST')
+plt.plot(time, f7, ls=':', label='SST+EBL')
 plt.title('template')
 plt.xlabel('time (s)')
 plt.ylabel('F (ph/cm2/s)')
 plt.legend()
+#plt.ylim([1e-11, 1e-14])
+#plt.xlim([2e3, 1e4])
 plt.tight_layout()
 fig2.savefig(png + 'template_lightcurve.png')
 plt.show()
