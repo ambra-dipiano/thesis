@@ -1101,10 +1101,12 @@ class ManageXml():
     self.tscalc = True
     self.if_cut = False
 
+  # get source element ---!
   def __getSrcObj(self):
     src = self.root.findall('source')
     return src
 
+  # skip node listed in skip element or filters ---!
   def __skipNode(self, cfg):
     '''
     :retun true for skip node
@@ -1126,6 +1128,7 @@ class ManageXml():
 
     return True
 
+  # get TS values ---!
   def loadTs(self, highest=None):
     for src in self.root.findall('source'):
       if highest == None:
@@ -1136,9 +1139,9 @@ class ManageXml():
         if src.attrib['name'] == highest:
           tsv = src.attrib['ts']
           self.tsv_list.append(tsv)
-
     return self.tsv_list
 
+  # get RA/DEC values ---!
   def loadRaDec(self, highest=None):
     ra_list, dec_list = ([] for i in range(2))
     for src in self.root.findall('source'):
@@ -1157,6 +1160,7 @@ class ManageXml():
     self.pos = [ra_list, dec_list]
     return self.pos
 
+  # get Gaussian sigma values ---!
   def loadConfInt(self, highest=None):
     ra_list, dec_list = ([] for i in range(2))
     for src in self.root.findall('source'):
@@ -1175,6 +1179,7 @@ class ManageXml():
     self.err = [ra_list, dec_list]
     return self.err
 
+  # get spectral parameter values ---1
   def loadSpectral(self, highest=None):
     index_list, pref_list, pivot_list = ([] for i in range(3))
     if self.if_cut is True :
@@ -1218,6 +1223,7 @@ class ManageXml():
       self.spectral = [index_list, pref_list, pivot_list, cutoff_list]
     return self.spectral
 
+  # get prefact error values ---!
   def loadPrefError(self, highest=None):
     err_list = []
     for src in self.root.findall('source'):
@@ -1234,11 +1240,13 @@ class ManageXml():
     self.err = err_list
     return self.err
 
+  # save xml files ---!
   def __saveXml(self):
     self.src_lib.write(self.__xml, encoding="UTF-8", xml_declaration=True,
                       standalone=False, pretty_print=True)
     return
 
+  # set a default spectral model and bkg ---!
   def __setModel(self):
     if self.default_model is True:
       att_prefactor = {'name': 'Prefactor', 'scale': '1e-16', 'value': '5.7', 'min': '1e-07', 'max': '1e7', 'free': '1'}
@@ -1258,6 +1266,7 @@ class ManageXml():
     else:
       pass
 
+  # set tscalc to 1 ---!
   def setTsTrue(self):
     for src in self.root.findall('source'):
       if src.attrib['name'] != 'Background' and src.attrib['name'] != 'CTABackgroundModel':
@@ -1265,6 +1274,7 @@ class ManageXml():
     self.__saveXml()
     return
 
+  # modeify the spectral component of candidate list ---!
   def modXml(self, overwrite=True):
     self.__setModel()
     # source ---!
@@ -1317,6 +1327,7 @@ class ManageXml():
     self.__saveXml()
     return
 
+  # free and fix parameters for max like computation ---!
   def prmsFreeFix(self):
     for src in self.root.findall('source'):
       if src.attrib['name'] != 'Background' and src.attrib['name'] != 'CTABackgroundModel':
@@ -1336,6 +1347,7 @@ class ManageXml():
     self.__saveXml()
     return
 
+  # sort candidates by their ts value ---!
   def sortSrcTs(self):
     src = self.root.findall("*[@ts]")
     self.root[:-1] = sorted(src, key=lambda el: (el.tag, el.attrib['ts']), reverse=True)
@@ -1345,11 +1357,13 @@ class ManageXml():
     self.__saveXml()
     return from_highest
 
+  # close xml ---!
   def closeXml(self):
     self.file.close()
     return
 
-# --------------------------------- CLASS PIPELINE GRAPHICS --------------------------------- !!!
+# --------------------------------- CLASS GRAPHICS --------------------------------- !!!
+
 class Graphics():
   '''
   This class handles all the graphic methods connected to the analysis pipeline. Each public field (self.field)
