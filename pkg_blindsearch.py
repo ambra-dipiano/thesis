@@ -335,7 +335,7 @@ class Analysis() :
   # retrive the redshift and evaluate which table column is the nearest, then access its index ---!
   def __zfetch(self):
     hdul = self.__openFITS()
-    # fetch z and chose the table column with min distance from it ---!
+    # fetch z from the template and chose the table column with min distance from it ---!
     z = hdul[0].header['REDSHIFT']
     with open(self.table, 'r') as f:
       reader = csv.reader(f)
@@ -889,9 +889,14 @@ class Analysis() :
       return aeff, a, theta, e
 
   # degrade bkg counts by normalise for aeff nominal and multiply times aeff degraded ---!
-  def __degrBkg(self, nominal_irf, degraded_irf):
-    # degrade Aeff and get its returns ---!
+  def __degrBkg(self, nominal_irf, degraded_irf, aeff=True):
+    # degrade Aeff (only if True) and get its returns ---!
+    if not aeff:
+      tmp = self.factor
+      self.factor = 1
     aeff_nom, aeff_deg, theta, e_aeff = self.__degrAeff(nominal_irf=nominal_irf, degraded_irf=degraded_irf, r=True)
+    if not aeff:
+      self.factor = tmp
     # initialise ---!
     extension = 'BACKGROUND'
     field = 6
@@ -935,7 +940,6 @@ class Analysis() :
             b[idf, idx, idy] = 0.
           else:
             b[idf,idx,idy] = bkg[idf,idx,idy] / nominal_interp[idtheta,idf] * degraded_interp[idtheta,idf]
-
     # save to new ---!
     with fits.open(degraded_irf, mode='update') as hdul:
       hdul[extension].data.field(field)[:] = b
@@ -944,7 +948,7 @@ class Analysis() :
     return
 
   # degrade IRFs via Effective Area and/or Background ---!
-  def degradeIrf(self, bkg=True):
+  def degradeIrf(self, bkg=True, aeff=True):
     # initialize ---!
     folder, nominal_cal, nominal_irf, degraded_cal, degraded_irf = self.__initCaldbIrf()
     # open all folder permission ---!
@@ -960,7 +964,8 @@ class Analysis() :
       self.__degrAeff(nominal_irf=nominal_irf, degraded_irf=degraded_irf)
     # degradation bkg counts ---!
     else:
-      self.__degrBkg(nominal_irf=nominal_irf, degraded_irf=degraded_irf)
+      self.__degrBkg(nominal_irf=nominal_irf, degraded_irf=degraded_irf, aeff=aeff)
+
 
     # close degraded caldb permission ---!
     self.__closePermission(degraded_cal)
