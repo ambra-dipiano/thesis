@@ -44,12 +44,19 @@ for i in range(Ne-1):
 # last bin ---!
 en[Ne]=energy[Ne-1][0]+(energy[Ne-1][0]-en[Ne-1])
 
+# energy ranges
 LST = (min(en, key=lambda x:abs(x-30)), min(en, key=lambda x:abs(x-150)))
 MST = (min(en, key=lambda x:abs(x-150)), min(en, key=lambda x:abs(x-10000)))
 SST = (min(en, key=lambda x:abs(x-1000)), min(en, key=lambda x:abs(x-300000)))
 CTA = (min(en, key=lambda x:abs(x-30)), min(en, key=lambda x:abs(x-150000)))
-
 elow = (min(en, key=lambda x:abs(x-1)), min(en, key=lambda x:abs(x-30)))
+
+# time bins ---!
+medium = min(en, key=lambda x:abs(x-30))
+worst = min(en, key=lambda x:abs(x-50))
+hundred = min(en, key=lambda x:abs(x-100))
+thousand = min(en, key=lambda x:abs(x-1000))
+tbins = [medium, worst, hundred, thousand]
 
 # =====================
 # !!! PLOT TEMPLATE !!!
@@ -60,14 +67,22 @@ sns.set()
 # FLUX SPECTRA ---!
 f=[]
 f8=[]
+f9=[]
+f10=[]
 for i in range(Nt):
     f.append(0.0)
     f8.append(0.0)
+    f9.append(0.0)
+    f10.append(0.0)
     for j in range(Ne):
         f[i]=f[i]+spectra[i][j]*(en[j+1]-en[j])
         if en[j] <= SST[1] and en[j] >= SST[0]:
             f8[i]=f8[i]+spectra[i][j]*(en[j+1]-en[j])
-        
+        if en[j] <= CTA[1] and en[j] >= CTA[0]:
+            f9[i]=f9[i]+spectra[i][j]*(en[j+1]-en[j])
+        if en[j] <= MST[1] and en[j] >= MST[0]:
+            f10[i]=f10[i]+spectra[i][j]*(en[j+1]-en[j])
+
 # FLUX EBL ---!
 f2=[]
 f3=[]
@@ -97,17 +112,18 @@ for i in range(Nt):
           
 # some t spectra ---!
 fig1=plt.figure(3)
-for i in range(3):
+t1=27
+for i in range(2):
     x=[]
     y=[]
     z=[]
     for j in range(Ne):
         x.append(energy[j][0])
-        y.append(spectra[i*20+5][j])
-        z.append(ebl[i*20+5][j])
-    plt.loglog(x, y, '-', label='%0.2fs-%0.2fs' %(time[i*20+5][0], time[i*20+6][0]))
+        y.append(spectra[t1+i*20][j])
+        z.append(ebl[t1+i*20][j])
+    plt.loglog(x, y, '-', label='%0.2fs-%0.2fs' %(time[t1+i*20][0], time[t1+i*20+1][0]))
     plt.loglog(x, z, '-.', label='" " EBL adsorbed')
-    plt.title('template')
+    plt.title('template spectra')
     plt.xlabel('E (GeV)')
     plt.ylabel('d$\Phi$/dE (ph/cm$^2$/s/GeV)')
 plt.axvline(30, c='k', ls='--')
@@ -121,17 +137,17 @@ plt.show()
 # lightcurves ---!
 fig2=plt.figure(2)
 ax = plt.subplot(111, yscale='log')
-plt.plot(time, f, label='no EBL')
-plt.plot(time, f2, ls=':', label='+EBL')
-plt.plot(time, f4, label='CTA+EBL')
-plt.plot(time, f8, label='SST')
-plt.plot(time, f7, ls=':', label='SST+EBL')
-plt.title('template')
+#plt.plot(time, f, label='no EBL')
+plt.plot(time, f9, label='CTA (30GeV-150TeV)')
+plt.plot(time, f5, ls='-.', label='CTA+EBL')
+plt.plot(time, f10, label='MST (150GeV-10TeV)')
+plt.plot(time, f4, ls='-.', label='MST+EBL')
+plt.title('template lightcurve')
 plt.xlabel('time (s)')
 plt.ylabel('F (ph/cm2/s)')
 plt.legend()
-#plt.ylim([1e-11, 1e-14])
-#plt.xlim([2e3, 1e4])
+plt.ylim([1e-11, 1e-8])
+plt.xlim([-0.5, 2e3])
 plt.tight_layout()
 fig2.savefig(png + 'template_lightcurve.png')
 plt.show()
