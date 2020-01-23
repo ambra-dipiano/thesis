@@ -8,6 +8,7 @@ import numpy as np
 import csv
 import os
 import sys
+import time
 
 # --------------------------------- SETUP --------------------------------- !!!
 
@@ -25,7 +26,7 @@ caldb = 'prod3b-v2'
 irf = 'South_z40_0.5h'
 
 sigma = 5  # detection acceptance (Gaussian)
-texp = [1, 5, 10, 100]  # exposure times (s)
+texp = [100]  # exposure times (s)
 texp.sort()
 tint = len(texp)
 tdelay = 30  # slewing time (s)
@@ -242,6 +243,7 @@ for k in range(trials):
 
     # --------------------------------- MAX LIKELIHOOD --------------------------------- !!!
 
+    start_time = time.time()
     likeXml = detectionXml.replace('_det%dsgm' % tObj.sigma, '_like%dsgm' % tObj.sigma)
     if os.path.isfile(likeXml):
       os.remove(likeXml)
@@ -250,6 +252,8 @@ for k in range(trials):
     tObj.output = likeXml
     tObj.maxLikelihood()
     likeObj = ManageXml(likeXml)
+    elapsed = time.time() - start_time
+    print(elapsed, 's for %d' %texp[i])
     if src_sort:
       highest_ts_src = likeObj.sortSrcTs()[0]
     else:
