@@ -399,7 +399,7 @@ def hist2d_map(x, y, trials, nbin=None, width=None, xcentre=0, ycentre=0, thresh
 
 # WILKS THEOREM DIST FOR EMPTY FIELDS ---!
 def ts_wilks(x, trials, df=1, nbin=None, width=None, ylim=None, xlim=None, show=False,
-             fontsize=12, figsize=(4,6), xlabel='TS', ylabel='normalised counts',
+             fontsize=12, figsize=(4,6), rotation=0, xlabel='TS', ylabel='normalised counts',
              title='TS distribution (empty fields)', filename='wilks_preTrials.png'):
 
   if width is None:
@@ -414,6 +414,9 @@ def ts_wilks(x, trials, df=1, nbin=None, width=None, ylim=None, xlim=None, show=
   sns.set()
 
   ax = plt.subplot(111, yscale='log')
+  plt.xticks(fontsize=fontsize, rotation=rotation)
+  plt.yticks(fontsize=fontsize, rotation=rotation)
+
   h, edges = np.histogram(x, bins=int(nbin), density=False, range=(0., max(x)))
   yerr = np.sqrt(h)/trials
   h = h/trials
@@ -443,7 +446,7 @@ def ts_wilks(x, trials, df=1, nbin=None, width=None, ylim=None, xlim=None, show=
 
 # WILKS THEOREM P-VALUES FOR EMPTY FIELDS ---!
 def p_values(x, trials, df=1, nbin=None, width=None, ylim=None, xlim=None, show=False,
-             fontsize=12, figsize=(4,6), xlabel='h', ylabel='p-values',
+             fontsize=12, figsize=(4,6), rotation=0, xlabel='h', ylabel='p-values',
              title='p-value (empty fields)', filename='pvalue_preTrials.png'):
 
   if width is None:
@@ -458,6 +461,8 @@ def p_values(x, trials, df=1, nbin=None, width=None, ylim=None, xlim=None, show=
   sns.set()
 
   ax = plt.subplot(111, yscale='log')
+  plt.xticks(fontsize=fontsize, rotation=rotation)
+  plt.yticks(fontsize=fontsize, rotation=rotation)
 
   h, edges = np.histogram(x, bins=int(nbin), density=False, range=(0., max(x)))
   yerr = np.sqrt(h)/trials
@@ -493,7 +498,7 @@ def p_values(x, trials, df=1, nbin=None, width=None, ylim=None, xlim=None, show=
 
 # WILKS THEOREM P-VALUES FOR EMPTY FIELDS ---!
 def ts_wilks_cumulative(x, trials, df=1, nbin=None, width=None, ylim=None, xlim=None, show=False,
-                        fontsize=12, figsize=(6,4), xlabel='h', ylabel='cumulative probability',
+                        fontsize=12, figsize=(6,4), rotation=0, xlabel='h', ylabel='cumulative probability',
                         title='p-value (empty fields)', filename='cumulative_preTrials.png'):
 
   if width is None:
@@ -508,6 +513,8 @@ def ts_wilks_cumulative(x, trials, df=1, nbin=None, width=None, ylim=None, xlim=
   sns.set()
 
   ax = plt.subplot(111)
+  plt.xticks(fontsize=fontsize, rotation=rotation)
+  plt.yticks(fontsize=fontsize, rotation=rotation)
 
   h, edges = np.histogram(x, bins=int(nbin), density=False, range=(0., max(x)))
   yerr = np.sqrt(h)/trials
