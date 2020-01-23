@@ -4,11 +4,11 @@
 
 # IMPORTS ---!
 from pkg_blindsearch import *
-from module_plot import *
+#from module_plot import *
 import numpy as np
 import csv
 import os
-import sys
+import time
 
 # --------------------------------- SETUP --------------------------------- !!!
 
@@ -53,7 +53,7 @@ if_cut = False  # adds a cut-off parameter to the source model
 ebl_fits = False  # generate the EBL absorbed template
 extract_spec = True  # generates spectral tables and obs definition models
 irf_degrade = False  # use degraded irf
-compute_degr = False  # compute irf degradation
+compute_degr = True  # compute irf degradation
 src_sort = True  # sorts scandidates from highest TS to lowest
 skip_exist = False  # skips the step if ID exists in csv (issue: if True than add+2h will start anew from last csv tbin)
 debug = False  # prints logfiles on terminal
@@ -351,6 +351,7 @@ for k in range(trials):
 
       # --------------------------------- MAX LIKELIHOOD --------------------------------- !!!
 
+      start_time = time.time()
       likeXml = detectionXml.replace('_det%dsgm' % tObj.sigma, '_like%dsgm' % tObj.sigma)
       if os.path.isfile(likeXml):
         os.remove(likeXml)
@@ -358,6 +359,8 @@ for k in range(trials):
       tObj.model = detectionXml
       tObj.output = likeXml
       tObj.maxLikelihood()
+      elapsed = time.time() - start_time
+      print(elapsed, 's for %d' % texp[index])
       print('likelihood', tObj.output) if checks2 else None
       likeObj = ManageXml(likeXml)
       if src_sort and Ndet > 0:
