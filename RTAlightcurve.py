@@ -8,8 +8,7 @@ from module_plot import *
 import numpy as np
 import csv
 import os
-import sys
-
+import time
 # --------------------------------- SETUP --------------------------------- !!!
 
 # initialize global count ---!
@@ -357,6 +356,7 @@ for k in range(trials):
 
       # --------------------------------- MAX LIKELIHOOD --------------------------------- !!!
 
+      start_time = time.time()
       likeXml = detectionXml.replace('_det%dsgm' % tObj.sigma, '_like%dsgm' % tObj.sigma)
       if os.path.isfile(likeXml):
         os.remove(likeXml)
@@ -364,6 +364,8 @@ for k in range(trials):
       tObj.model = detectionXml
       tObj.output = likeXml
       tObj.maxLikelihood()
+      end_time = time.time() - start_time
+      print(end_time, 's with texp=%d s' %texp[i])
       print('likelihood', tObj.output) if checks2 else None
       likeObj = ManageXml(likeXml)
       if src_sort and Ndet > 0:
@@ -504,7 +506,7 @@ for k in range(trials):
 
       # --------------------------------- CLEAR SPACE --------------------------------- !!!
 
-      if tObj.t[0] > tmax[index]:
+      if tbin > 1:
         os.system('rm ' + p.getSelectDir() + '*ebl%06d*' % count)
         os.system('rm ' + p.getDetDir() + '*ebl%06d*' % count)
 
