@@ -128,7 +128,7 @@ if plot:
     ax = plt.subplot(111, xscale='log')
     plt.title(caldb_nom + ': '+ irf.replace('_', '\_') + ' (texp=%ds)' %texp[j])
     plt.xlabel('energy (TeV)')
-    plt.ylabel('ratio nominal/degraded')
+    plt.ylabel('ratio nominal/degraded sensitivity')
     plt.plot(10**energy_nom, sens_nom/sens_deg)
     plt.axhline(0.5, c='r', ls='-.')
     # plt.ylim(0., 1.)
@@ -161,4 +161,5 @@ if plot:
     for i in range(len(y2)):
       plt.plot(x, y2[i], label=l[i])
       plt.scatter(x, y2[i])
+    plt.legend()
     plt.savefig(pngpath + caldb_nom + '_fluxInt_texp.png')
