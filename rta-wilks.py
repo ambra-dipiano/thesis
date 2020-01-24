@@ -50,10 +50,8 @@ tcsv = 'time_slices.csv'
 cfg = xmlConfig()
 p = ConfigureXml(cfg)
 
-# pointing with off-axis equal to max prob GW ---!
-true_coord = (33.057, -51.841)  # true position of source RA/DEC (deg)
-offmax = (-1.475, -1.370)  # off-axis RA/DEC (deg)
-pointing = (true_coord[0] + offmax[0], true_coord[1] + offmax[1])  # pointing direction RA/DEC (deg)
+# pointing ---!
+pointing = (31.582, -53.211)  # pointing direction RA/DEC (deg)
 
 # recap and dof ---!
 dof, m2, m1 = getDof()
