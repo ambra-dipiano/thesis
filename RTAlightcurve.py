@@ -55,7 +55,7 @@ if_ebl = True  # uses the EBL absorbed template
 if_cut = False  # adds a cut-off parameter to the source model
 ebl_fits = False  # generate the EBL absorbed template
 extract_spec = True  # generates spectral tables and obs definition models
-irf_degrade = False  # use degraded irf
+irf_degrade = True  # use degraded irf
 compute_degr = False  # compute irf degradation
 src_sort = True  # sorts scandidates from highest TS to lowest
 skip_exist = False  # skips the step if ID exists in csv (issue: if True than add+2h will start anew from last csv tbin)
@@ -247,8 +247,6 @@ for k in range(trials):
       tbin = clocking / current_twindows[i]  # temporal bin number of this analysis
       IDbin = 'tbin%09d' % tbin
       csvName = p.getCsvDir() + 'tesi_tdel%d_deg%s_%ds.csv' % (tdelay, str(irf_degrade), texp[index])
-      if irf_degrade:
-        csvName = csvName.replace('.csv', '_degraded.csv')
       if os.path.isfile(csvName):
         skip = checkTrialId(csvName, IDbin)
       else:
@@ -356,7 +354,7 @@ for k in range(trials):
 
       # --------------------------------- MAX LIKELIHOOD --------------------------------- !!!
 
-      start_time = time.time()
+      start_time = time.time() if checks1 else None
       likeXml = detectionXml.replace('_det%dsgm' % tObj.sigma, '_like%dsgm' % tObj.sigma)
       if os.path.isfile(likeXml):
         os.remove(likeXml)
@@ -364,9 +362,10 @@ for k in range(trials):
       tObj.model = detectionXml
       tObj.output = likeXml
       tObj.maxLikelihood()
-      end_time = time.time() - start_time
-      print(end_time, 's with texp=%d s' %texp[i])
-      print('likelihood', tObj.output) if checks2 else None
+      if checks1:
+        end_time = time.time() - start_time
+        print(end_time, 's with texp=%d s' %texp[i])
+        print('likelihood', tObj.output)
       likeObj = ManageXml(likeXml)
       if src_sort and Ndet > 0:
         highest_ts_src = likeObj.sortSrcTs()[0]
@@ -506,9 +505,8 @@ for k in range(trials):
 
       # --------------------------------- CLEAR SPACE --------------------------------- !!!
 
-      if tbin > 1:
-        os.system('rm ' + p.getSelectDir() + '*ebl%06d*' % count)
-        os.system('rm ' + p.getDetDir() + '*ebl%06d*' % count)
+      os.system('rm ' + p.getSelectDir() + '*ebl%06d*' % count)
+      os.system('rm ' + p.getDetDir() + '*ebl%06d*' % count)
 
   if int(count) != 1:
     os.system('rm ' + p.getSimDir() + '*ebl%06d*' % count)
