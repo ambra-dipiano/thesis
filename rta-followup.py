@@ -4,12 +4,11 @@
 
 # IMPORTS ---!
 from pkg_blindsearch import *
-#from module_plot import *
+from module_plot import *
 import numpy as np
 import csv
 import os
 import time
-
 # --------------------------------- SETUP --------------------------------- !!!
 
 # compact initialisation ---!
@@ -31,8 +30,8 @@ tdelay = 50  # slewing time (s)
 tmax = []
 for i in range(len(texp)):
   tmax.append(tdelay + texp[i])
-ttotal = 1e4  # maximum tobs (4h at least) simulation total time (s)
-add_hours = 7200  # +2h observation time added after first none detection (s)
+ttotal = 1e4 #1e6  # maximum tobs (4h at least) simulation total time (s)
+add_hours = 7200 #7200  # +2h observation time added after first none detection (s)
 run_duration = 1200  # 20min observation run time for LST in RTA (s) ---!
 elow = 0.03  # simulation minimum energy (TeV)
 ehigh = 150.0  # simulation maximum energy (TeV)
@@ -52,8 +51,8 @@ if_ebl = True  # uses the EBL absorbed template
 if_cut = False  # adds a cut-off parameter to the source model
 ebl_fits = False  # generate the EBL absorbed template
 extract_spec = True  # generates spectral tables and obs definition models
-irf_degrade = False  # use degraded irf
-compute_degr = True  # compute irf degradation
+irf_degrade = True  # use degraded irf
+compute_degr = False  # compute irf degradation
 src_sort = True  # sorts scandidates from highest TS to lowest
 skip_exist = False  # skips the step if ID exists in csv (issue: if True than add+2h will start anew from last csv tbin)
 debug = False  # prints logfiles on terminal
@@ -215,7 +214,7 @@ for k in range(trials):
     # --------------------------------- CLOCKING BREAK --------------------------------- !!!
 
     # check tlast, if globally reached then stop current trial ---!
-    if clocking >= max(tlast):#-min(texp):
+    if clocking >= max(tlast):
       print('end analysis trial', count, ' at clocking', tlast)
       break
     current_twindows = []
@@ -242,8 +241,6 @@ for k in range(trials):
       tbin = clocking / current_twindows[i]  # temporal bin number of this analysis
       IDbin = 'tbin%09d' % tbin
       csvName = p.getCsvDir() + 'tesi_tdel%d_deg%s_%ds.csv' % (tdelay, str(irf_degrade), texp[index])
-      if irf_degrade:
-        csvName = csvName.replace('.csv', '_degraded.csv')
       if os.path.isfile(csvName):
         skip = checkTrialId(csvName, IDbin)
       else:
@@ -351,7 +348,7 @@ for k in range(trials):
 
       # --------------------------------- MAX LIKELIHOOD --------------------------------- !!!
 
-      start_time = time.time()
+      start_time = time.time() if checks1 else None
       likeXml = detectionXml.replace('_det%dsgm' % tObj.sigma, '_like%dsgm' % tObj.sigma)
       if os.path.isfile(likeXml):
         os.remove(likeXml)
@@ -359,9 +356,10 @@ for k in range(trials):
       tObj.model = detectionXml
       tObj.output = likeXml
       tObj.maxLikelihood()
-      elapsed = time.time() - start_time
-      print(elapsed, 's for %d' % texp[index])
-      print('likelihood', tObj.output) if checks2 else None
+      if checks1:
+        end_time = time.time() - start_time
+        print(end_time, 's with texp=%d s' %texp[i])
+        print('likelihood', tObj.output)
       likeObj = ManageXml(likeXml)
       if src_sort and Ndet > 0:
         highest_ts_src = likeObj.sortSrcTs()[0]
@@ -501,8 +499,8 @@ for k in range(trials):
 
       # --------------------------------- CLEAR SPACE --------------------------------- !!!
 
-      # os.system('rm ' + p.getSelectDir() + '*ebl%06d*' % count)
-      # os.system('rm ' + p.getDetDir() + '*ebl%06d*' % count)
+      os.system('rm ' + p.getSelectDir() + '*ebl%06d*' % count)
+      os.system('rm ' + p.getDetDir() + '*ebl%06d*' % count)
 
   if int(count) != 1:
     os.system('rm ' + p.getSimDir() + '*ebl%06d*' % count)

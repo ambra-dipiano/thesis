@@ -32,12 +32,7 @@ if nominal:
 if degraded:
   caldb.append(caldb_deg)
   print('compute degraded')
-  if compute:
-    irfObj = Analysis()
-    irfObj.irf = irf
-    irfObj.caldb = caldb_nom
-    irfObj.factor = 2
-    #irfObj.degradeIrf()
+
 e = [0.03, 150.0]
 texp = [1, 5, 10, 100]
 pointing = (33.057, -51.841) # pointing direction RA/DEC (deg)
@@ -140,30 +135,30 @@ if plot:
     # plt.show()
     plt.savefig(savefig3[j])
 
-    if sens_type.capitalize() == 'Integral':
-      x = [1, 5, 10, 100]
-      y1 = [[6.358567480537711e-11, 2.1582881778139934e-11, 1.3048873052454111e-11, 2.7600318180325007e-12]]
-      y2 = [[6.902673455761295e-09, 2.3429740362872147e-09, 1.4165472006464716e-09, 2.9962091973864583e-10]]
-      y1.append([3.45734663098577e-11, 1.3048873052446157e-11,7.910828789733936e-12, 1.6811190279480429e-12])
-      y2.append([3.753193606911769e-09, 1.4165472006456084e-09, 8.587762584435284e-10, 1.824973270427709e-10])
-      l = ['degraded', 'nominal']
-      # sens ---!
-      plt.figure()
-      ax = plt.subplot(111, xscale='log')
-      plt.title(caldb_nom + ': ' + irf.replace('_', '\_'))
-      plt.xlabel('exposure time (s)')
-      plt.ylabel('E$^2$F sensitivity (erg/cm$^2$/s)')
-      for i in range(len(y1)):
-        plt.plot(x, y1[i], label=l[i])
-        plt.scatter(x, y1[i])
-      plt.savefig(pngpath + caldb_nom + '_sensInt_texp.png')
-      # flux ---!
-      plt.figure()
-      ax = plt.subplot(111, xscale='log')
-      plt.title(caldb_nom + ': ' + irf.replace('_', '\_'))
-      plt.xlabel('exposure time (s)')
-      plt.ylabel('ph flux (ph/cm$^2$/s)')
-      for i in range(len(y2)):
-        plt.plot(x, y2[i], label=l[i])
-        plt.scatter(x, y2[i])
-      plt.savefig(pngpath + caldb_nom + '_fluxInt_texp.png')
+    # plot 1 enery bin integral sens: x=texp, y1=sens, y2=phflux ---!
+    x = [1, 5, 10, 100]
+    y1 = [[6.358567480537711e-11, 2.1582881778139934e-11, 1.3048873052454111e-11, 2.7600318180325007e-12]]
+    y2 = [[6.902673455761295e-09, 2.3429740362872147e-09, 1.4165472006464716e-09, 2.9962091973864583e-10]]
+    y1.append([3.45734663098577e-11, 1.3048873052446157e-11,7.910828789733936e-12, 1.6811190279480429e-12])
+    y2.append([3.753193606911769e-09, 1.4165472006456084e-09, 8.587762584435284e-10, 1.824973270427709e-10])
+    l = ['degraded', 'nominal']
+    # sens ---!
+    plt.figure()
+    ax = plt.subplot(111, xscale='log', yscale='log')
+    plt.title(caldb_nom + ': ' + irf.replace('_', '\_'))
+    plt.xlabel('exposure time (s)')
+    plt.ylabel('E$^2$F sensitivity (erg/cm$^2$/s)')
+    for i in range(len(y1)):
+      plt.plot(x, y1[i], label=l[i])
+      plt.scatter(x, y1[i])
+    plt.savefig(pngpath + caldb_nom + '_sensInt_texp.png')
+    # flux ---!
+    plt.figure()
+    ax = plt.subplot(111, xscale='log', yscale='log')
+    plt.title(caldb_nom + ': ' + irf.replace('_', '\_'))
+    plt.xlabel('exposure time (s)')
+    plt.ylabel('ph flux (ph/cm$^2$/s)')
+    for i in range(len(y2)):
+      plt.plot(x, y2[i], label=l[i])
+      plt.scatter(x, y2[i])
+    plt.savefig(pngpath + caldb_nom + '_fluxInt_texp.png')

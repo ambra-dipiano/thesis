@@ -811,6 +811,35 @@ class Analysis() :
     uplim.execute()
     return
 
+  # ctulimit wrapper ---!
+  def ctoolsLightCurve(self, nbins=20, bin_type='LIN'):
+    lc = ctools.cslightcrv()
+    lc['inobs'] = self.input
+    lc['inmodel'] = self.model
+    lc['srcname'] = self.src_name
+    lc['caldb'] = self.caldb
+    lc['irf'] = self.irf
+    lc['outfile'] = self.output
+    lc['tbinalg'] = bin_type
+    lc['tmin'] = self.t[0]
+    lc['tmax'] = self.t[1] # default reference energy for differential limit (in TeV)
+    lc['tbins'] = nbins
+    lc['method'] = '3D'
+    lc['emin'] = self.e[0]  # default minimum energy for integral flux limit (in TeV)
+    lc['emax'] = self.e[1]  # default maximum energy for integral flux limit (in TeV)
+    lc['enumbins'] = 0
+    lc['coordsys'] = self.coord_sys
+    lc['proj'] = 'CAR'
+    lc['xref'] = self.pointing[0]
+    lc['yref'] = self.pointing[1]
+    lc["nthreads"] = self.nthreads
+    lc['logfile'] = self.output.replace('.xml', '.log')
+    lc['debug'] = self.debug
+    if self.if_log:
+      lc.logFileOpen()
+    lc.execute()
+    return
+
   # compute integral photon flux for PL model ---!
   def photonFluxPowerLaw(self, gamma, k0, e0, norm_factor=1):
     e1 = self.e[0]*1e6
