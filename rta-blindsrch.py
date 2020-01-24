@@ -71,11 +71,7 @@ model_pl = 'run0406_ID000126.xml'
 tcsv = 'time_slices.csv'
 
 # pointing with off-axis equal to max prob GW ---!
-true_coord = (33.057, -51.841)  # true position of source RA/DEC (deg)
-offmax = (-1.475, -1.370)  # off-axis RA/DEC (deg)
-pointing = (true_coord[0] + offmax[0], true_coord[1] + offmax[1])  # pointing direction RA/DEC (deg)
-# true_coord, pointing, offmax = getPointing(None, p.getWorkingDir()+nominal_template)
-# pointing with off-axis equal to max prob GW ---!
+true_coord, pointing, offmax = getPointing(fits_file=p.getWorkingDir()+ebl_template, merge_map=p.getWorkingDir()+merge_map)
 
 # recap and dof ---!
 dof, m2, m1 = getDof()
