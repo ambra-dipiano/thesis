@@ -7,29 +7,24 @@ import ctools
 import cscripts
 import pyregion
 from astropy.io import fits
+import healpy as hp
 import numpy as np
 import os.path
 import pandas as pd
-from matplotlib.colors import SymLogNorm
 from scipy.interpolate import interp1d
 import untangle
 import csv
 import re
 import subprocess
 from lxml import etree as ET
-import matplotlib
-#matplotlib.rcsetup.validate_backend('agg')
 import matplotlib.pyplot as plt
+from matplotlib.colors import SymLogNorm
 import seaborn as sns
 
+
+
+# configure paths (absolute) ---!
 def xmlConfig(cfgfile='/config.xml') :
-  '''
-  This function loads a configuration xml file from the same directory where the code itself is stored.
-  :param cfgfile: str:
-            relative path of the configuration xml file wrt the directory of this file, default = "/config.xml"
-  :return: cfg.config: dict
-            dictionary containing the paths information
-  '''
   # load configuration file ---!
   cfgfile = os.path.dirname(__file__)+str(cfgfile)
   # create configuration dictionary ---!
@@ -37,6 +32,7 @@ def xmlConfig(cfgfile='/config.xml') :
     cfg = untangle.parse(f.read())
   return cfg.config
 
+# analysis dof ---!
 def getDof(cfgfile='/config.xml'):
   cfg = xmlConfig(cfgfile)
   if type(cfg.xml.src.free) is list:
@@ -47,46 +43,29 @@ def getDof(cfgfile='/config.xml'):
   dof = src
   return dof, bkg+src, bkg
 
+# true source coords from FITS ---!
 def getTrueCoords(fits_file):
-  '''
-  This function extract source position information from a fits table file.
-  :param fits_file: str
-            absolute path of the fits table file
-  :return: (ra, dec): tuple
-            source coordinates RA/DEC
-  '''
   with fits.open(fits_file) as hdul:
     ra = hdul[0].header['RA']
     dec = hdul[0].header['DEC']
   return (ra, dec)
 
-def getPointing(merge_map, fits_file, roi=5):
-  '''
-  This function extract source position information from a fits table file, max probability coordinates from a
-  probability fits map and compute the corresponding off axis. If None prob map is given the offaxis is randomly
-  computed and the pointing coordinates accordingly derived.
-  :param merge_map: str
-            absolute path of the probability map fits file
-  :param fits_file: str
-            absolute path of the fits table file
-  :param roi: scalar
-            region of interest
-  :return: true_coord: tuple
-            source coordinates RA/DEC
-  :return: pointing: tuple
-            pointing coordinates RA/DEC
-  :return: offaxis: tuple
-            offaxis angle between pointing and position RA/DEC
-  '''
+# telescope pointing, either adding off-axis to true coords or as alert probability map peak coords ---!
+def getPointing(fits_file, merge_map=None, roi=5):
   true_coord = getTrueCoords(fits_file)
   if merge_map==None:
-    offaxis = (np.random.uniform(0,5,1), np.random.uniform(0,5,1))
+    offaxis = (np.random.normal(0,5,1), np.random.normal(0,5,1))
     pointing = (true_coord[0] + offaxis[0], true_coord[1] + offaxis[1])
   else:
-    with fits.open(merge_map) as hdul:
-      # search max prob coords WIP ---!
-      offaxis = (0,0)
-      pointing = (true_coord[0] + offaxis[0], true_coord[1] + offaxis[1])
+    # open and handle map ---!
+    map = hp.read_map(merge_map)
+    pixels = len(map)
+    axis = hp.npix2nside(pixels)
+    # search max prob coords ---!
+    pmax = np.argmax(map)
+    theta, phi = hp.pix2ang(axis, pmax)
+    pointing = (np.rad2deg(phi), np.rad2deg(0.5 * np.pi - theta))
+    offaxis = (pointing[0] - true_coord[0], pointing[1] - true_coord[1])
   return true_coord, pointing, offaxis
 
 def checkTrialId(file, id):
