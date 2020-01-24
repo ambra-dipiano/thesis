@@ -49,7 +49,7 @@ LST = (min(en, key=lambda x:abs(x-30)), min(en, key=lambda x:abs(x-150)))
 MST = (min(en, key=lambda x:abs(x-150)), min(en, key=lambda x:abs(x-10000)))
 SST = (min(en, key=lambda x:abs(x-1000)), min(en, key=lambda x:abs(x-300000)))
 CTA = (min(en, key=lambda x:abs(x-30)), min(en, key=lambda x:abs(x-150000)))
-elow = (min(en, key=lambda x:abs(x-1)), min(en, key=lambda x:abs(x-30)))
+below = (min(en, key=lambda x:abs(x-1)), min(en, key=lambda x:abs(x-30)))
 
 # time bins ---!
 medium = min(en, key=lambda x:abs(x-30))
