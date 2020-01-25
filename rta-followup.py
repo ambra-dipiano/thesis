@@ -1,3 +1,6 @@
+# MIT License
+# Copyright (c) 2019, 2020 Ambra Di Piano
+# ---------------------------------------
 # ======================================================= #
 # TESTING cssrcdetect FOR CTA-RTA PERFORMANCE EVALUATIONS #
 # ======================================================= #
@@ -26,7 +29,7 @@ irf = 'South_z40_0.5h'
 
 sigma = 5  # detection acceptance (Gaussian)
 texp = (10, 100)  # exposure times (s)
-tdelay = 50  # slewing time (s)
+tdelay = 30  # slewing time (s)
 tmax = []
 for i in range(len(texp)):
   tmax.append(tdelay + texp[i])
@@ -51,7 +54,7 @@ if_ebl = True  # uses the EBL absorbed template
 if_cut = False  # adds a cut-off parameter to the source model
 ebl_fits = False  # generate the EBL absorbed template
 extract_spec = True  # generates spectral tables and obs definition models
-irf_degrade = True  # use degraded irf
+irf_degrade = False  # use degraded irf
 compute_degr = False  # compute irf degradation
 src_sort = True  # sorts scandidates from highest TS to lowest
 skip_exist = False  # skips the step if ID exists in csv (issue: if True than add+2h will start anew from last csv tbin)
@@ -71,12 +74,8 @@ model_pl = 'run0406_ID000126.xml'
 tcsv = 'time_slices.csv'
 
 # pointing with off-axis equal to max prob GW ---!
-true_coord = (33.057, -51.841)  # true position of source RA/DEC (deg)
-offmax = (-1.475, -1.370)  # off-axis RA/DEC (deg)
-pointing = (true_coord[0] + offmax[0], true_coord[1] + offmax[1])  # pointing direction RA/DEC (deg)
-# true_coord, pointing, offmax = getPointing(None, p.getWorkingDir()+nominal_template)
-# pointing with off-axis equal to max prob GW ---!
-print('coords true:', true_coord, 'point', pointing, 'off', offmax) if checks2 else None
+true_coord, pointing, offmax = getPointing(fits_file=p.getWorkingDir()+ebl_template, merge_map=p.getWorkingDir()+merge_map)
+print('coords true:', true_coord, 'point', pointing, 'off', offmax) #if checks2 else None
 
 # recap and dof ---!
 dof, m2, m1 = getDof()

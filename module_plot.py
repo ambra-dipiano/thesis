@@ -1,3 +1,6 @@
+# MIT License
+# Copyright (c) 2019, 2020 Ambra Di Piano
+# ---------------------------------------
 # ============================ #
 # MODULE OF PLOTTING FUNCTIONS #
 # ============================ #

@@ -1,3 +1,10 @@
+# MIT License
+# Copyright (c) 2019, 2020 Ambra Di Piano
+# ---------------------------------------
+# ================== #
+#  CALDB DEGRADATION #
+# ================== #
+
 from pkg_blindsearch import Analysis
 import os
 

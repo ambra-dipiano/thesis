@@ -1,3 +1,6 @@
+# MIT License
+# Copyright (c) 2019, 2020 Ambra Di Piano
+# ---------------------------------------
 # ======================================================= #
 # TESTING cssrcdetect FOR CTA-RTA PERFORMANCE EVALUATIONS #
 # ======================================================= #
@@ -72,6 +75,7 @@ tcsv = 'time_slices.csv'
 
 # pointing with off-axis equal to max prob GW ---!
 true_coord, pointing, offmax = getPointing(fits_file=p.getWorkingDir()+ebl_template, merge_map=p.getWorkingDir()+merge_map)
+print('coords true:', true_coord, 'point', pointing, 'off', offmax) if checks else None
 
 # recap and dof ---!
 dof, m2, m1 = getDof()

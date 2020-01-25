@@ -1,6 +1,9 @@
-# ==============
-# !!! SET UP !!!
-# ==============
+# MIT License
+# Copyright (c) 2019, 2020 Ambra Di Piano
+# ---------------------------------------
+# =====================
+# !!! SPECTRA DN LC !!!
+# =====================
 
 import matplotlib.pyplot as plt
 from astropy.io import fits
