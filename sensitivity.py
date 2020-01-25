@@ -151,8 +151,9 @@ if plot:
     for i in range(len(y1)):
       plt.plot(x, y1[i], label=l[i])
       plt.scatter(x, y1[i])
+    plt.legend()
     plt.savefig(pngpath + caldb_nom + '_sensInt_texp.png')
-    # flux ---!
+    # ph flux ---!
     plt.figure()
     ax = plt.subplot(111, xscale='log', yscale='log')
     plt.title(caldb_nom + ': ' + irf.replace('_', '\_'))
