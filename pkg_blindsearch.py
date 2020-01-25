@@ -1,11 +1,10 @@
-# ============================ #
-# MODULE OF ANALYSIS FUNCTIONS #
-# ============================ #
+# ============================= #
+# PACKAGE OF ANALYSIS FUNCTIONS #
+# ============================= #
 
 import gammalib
 import ctools
 import cscripts
-import pyregion
 from astropy.io import fits
 import healpy as hp
 import numpy as np
@@ -17,11 +16,6 @@ import csv
 import re
 import subprocess
 from lxml import etree as ET
-import matplotlib.pyplot as plt
-from matplotlib.colors import SymLogNorm
-import seaborn as sns
-
-
 
 # configure paths (absolute) ---!
 def xmlConfig(cfgfile='/config.xml') :
@@ -1399,92 +1393,3 @@ class ManageXml():
     self.file.close()
     return
 
-# --------------------------------- CLASS GRAPHICS --------------------------------- !!!
-
-class Graphics():
-  '''
-  This class handles all the graphic methods connected to the analysis pipeline. Each public field (self.field)
-  can be set accordingly to the user needs from a python script, while private fields (self.__field) is for internal
-  usage. Equally, public methods (methodName()) can be invoked within a python script once the class is instanced while
-  private methods (__methodName()) should only be used within the class itself.
-  '''
-
-  def __init__(self, cfgfile='/config.xml'):
-    # init paths ---!
-    self.__cfg = xmlConfig(cfgfile)
-    self.__p = ConfigureXml(self.__cfg)
-    # plotting fields ---!
-    self.title = ['title'] # title for
-    self.xlabel = ['x']
-    self.ylabel = ['y']
-    self.grphlabel = ['data']
-    self.cbarlabel = ['counts']
-    self.colors = ['b']
-    self.markers = ['+']
-    self.fontsize = 12
-    self.cmap = 'jet'
-    # axis and images fields ---!
-    self.subplots = (1, 1)  # (rows, cols)
-    # conditional control ---!
-    self.show = False
-    self.usetex = True
-    self.sharex = 'col'
-    self.sharey = 'row'
-    # files ---!
-    self.imgname = 'image.png'
-
-  # handles SD9 regions WIP ---!
-  def __handleReg(self, file):
-    with pyregion.open(file) as r:
-      r[0].attr[1]['color'] = self.colors
-    # NEED TO SAVE CHANGES ---!
-    return r
-
-  # plots skymaps ---!
-  def showSkymap(self, skyfile, rfile=None, rcolor='k'):
-    # add path ---!
-    self.imgname = self.__p.getPngDir() + self.imgname
-    for id, file in enumerate(skyfile):
-      skyfile[id] = self.__p.getDetDir() + file
-    for id, file in enumerate(rfile):
-      rfile[id] = self.__p.getDetDir() + file
-    # set graph ---!
-    self.colors = rcolor
-    print('before')
-    fig, axs = plt.subplots(self.subplots[0], self.subplots[1], sharex=self.sharex, sharey=self.sharey)
-    print('after')
-    plt.rc('text', usetex=self.usetex)
-    # grid of plots ---!
-    num = 0
-    for cols in range(self.subplots[0]):
-      for rows in range(self.subplots[1]):
-        num += 1
-        print(num)
-        # data ---!
-        with fits.open(skyfile[num-1]) as hdulist:
-          data = hdulist[0].data
-          # plot skymap ---!
-          axs[cols, rows].imshow(data[num-1], cmap=self.cmap, norm=SymLogNorm(1), interpolation='gaussian',
-                     label=self.grphlabel[num-1])
-          # plot regions ---!
-          if rfile != None:
-            r = pyregion.open(rfile[num-1]).as_imagecoord(hdulist[0].header)
-            for i in range(len(r)):
-              r[i].attr[1]['color'] = self.colors
-              patch_list, text_list = r.get_mpl_patches_texts()
-              for p in patch_list:
-                axs[cols, rows].add_patch(p)
-              for t in text_list:
-                axs[cols, rows].add_artist(t)
-
-    # decorate plot ---!
-    fig.xlabel(self.xlabel)
-    fig.ylabel(self.ylabel)
-    fig.suptitle(self.title) if self.title != None else None
-    fig.colorbar().set_label(self.cbarlabel)
-    # save fig ---!
-    plt.savefig(self.imgname)
-    # show fig ---!
-    plt.show() if self.show else None
-    plt.close()
-    return
