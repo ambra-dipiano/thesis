@@ -241,7 +241,7 @@ for k in range(trials):
       tbin = clocking / current_twindows[i]  # temporal bin number of this analysis
       IDbin = 'tbin%09d' % tbin
       csvName = p.getCsvDir() + 'tesi_tdel%d_deg%s_%ds.csv' % (tdelay, str(irf_degrade), texp[index])
-      if os.path.isfile(csvName):
+      if os.path.isfile(csvName) and skip_exist:
         skip = checkTrialId(csvName, IDbin)
       else:
         skip = False
