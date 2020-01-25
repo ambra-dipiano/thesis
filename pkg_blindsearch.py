@@ -62,13 +62,8 @@ def getPointing(fits_file, merge_map=None, roi=5):
     offaxis = (pointing[0] - true_coord[0], pointing[1] - true_coord[1])
   return true_coord, pointing, offaxis
 
+# checks if a trial ID is already existing within a data file ---!
 def checkTrialId(file, id):
-  '''
-  This function checks if a trial ID is already existing within a data file.
-  :param file: data file (str)
-  :param id: trial ID (str)
-  :return: True id the ID exists, False if it doesn't
-  '''
   with open(file=file) as f:
     df = pd.read_csv(f)
     cols = list(df.columns)
@@ -83,11 +78,12 @@ def checkTrialId(file, id):
 
 class ConfigureXml() :
   '''
-  This class handles the configuration of paths for the analysis.
+  This class handles the configuration of absolute paths for the analysis.
   '''
   def __init__(self, cfg) :
     self.__initPath(cfg)
 
+  # initialise paths ---!
   def __initPath(self, cfg) :
     self.__cfg = cfg
     self.__root = self.__cfg.dir.root['path']
@@ -100,6 +96,7 @@ class ConfigureXml() :
     self.__csvpath = self.__cfg.dir.csvpath['path']
     self.__pngpath = self.__cfg.dir.pngpath['path']
 
+  # check the existance of the directory and create if missing ---!
   def __checkDir(self, dir):
     isdir = os.path.isdir(dir)
     return isdir
@@ -107,6 +104,7 @@ class ConfigureXml() :
     if not self.__checkDir(dir=dir):
       os.mkdir(dir)
 
+  # get root dir ---!
   def getRootDir(self):
     return self.__root
 
@@ -126,7 +124,7 @@ class ConfigureXml() :
     self.__runpath = runDir
     self.__makeDir(runDir)
 
-  # directory storing runs data ---!
+  # directory storing template data ---!
   def getDataDir(self):
     self.__makeDir(self.__datapath.replace('${runpath}', self.getRunDir()))
     return self.__datapath.replace('${runpath}', self.getRunDir())
@@ -166,6 +164,7 @@ class ConfigureXml() :
     self.__runpath = csvDir
     self.__makeDir(csvDir)
 
+  # target directory for images ---!
   def getPngDir(self):
     self.__makeDir(self.__pngpath.replace('${workdir}', self.getWorkingDir()))
     return self.__pngpath.replace('${workdir}', self.getWorkingDir())
@@ -401,7 +400,6 @@ class Analysis() :
   # read template and return tbin_stop containing necessary exposure time coverage ---!
   def loadTemplate(self) :
     self.__getFitsData()
-
     self.__Nt = len(self.__time)
     self.__Ne = len(self.__energy)
 
@@ -438,7 +436,6 @@ class Analysis() :
   # get tbin_stop without loading the template ---!
   def getTimeBinStop(self) :
     self.__getFitsData()
-
     self.__Nt = len(self.__time)
     self.__Ne = len(self.__energy)
 
@@ -481,7 +478,6 @@ class Analysis() :
     tbins = sorted(tbins)
     tbins = self.__dropListDuplicates(tbins)
     return tbins
-
 
   # ctobssim wrapper ---!
   def eventSim(self) :
@@ -535,7 +531,7 @@ class Analysis() :
     return slice_list
 
   # create single photon list from obs list ---!
-  def __singlePhotonList(self, sample, filename, GTI, shift_time=False):
+  def __singlePhotonList(self, sample, filename, GTI, shift_time=False, new_GTI=False):
     print('GTI', GTI)
     sample = sorted(sample)
     n = 0
@@ -570,21 +566,23 @@ class Analysis() :
       hdul.flush()
       # sort times and modify indexes ---!
       indexes = hdul[1].data.field(0)
-      # if shift_time:
-      #   times = hdul[1].data.field('TIME')
-      #   times = sorted(times)
-      GTI_new = []
+      if shift_time:
+        times = hdul[1].data.field('TIME')
+        times = sorted(times)
       for i, ind in enumerate(indexes):
         hdul[1].data.field(0)[i] = i + 1
-        # if shift_time:
-        #   hdul[1].data.field('TIME')[i] = times[i]
+        if shift_time:
+          hdul[1].data.field('TIME')[i] = times[i]
       # modify GTI ---!
-      GTI_new.append(min(hdul[1].data.field('TIME'), key=lambda x: abs(x - GTI[0])))
-      GTI_new.append(min(hdul[1].data.field('TIME'), key=lambda x: abs(x - GTI[1])))
-      hdul[2].data[0][0] = GTI_new[0]
-      hdul[2].data[0][1] = GTI_new[1]
-      # hdul[2].data[0][0] = GTI[0]
-      # hdul[2].data[0][1] = GTI[1]
+      if new_GTI:
+        GTI_new = []
+        GTI_new.append(min(hdul[1].data.field('TIME'), key=lambda x: abs(x - GTI[0])))
+        GTI_new.append(min(hdul[1].data.field('TIME'), key=lambda x: abs(x - GTI[1])))
+        hdul[2].data[0][0] = GTI_new[0]
+        hdul[2].data[0][1] = GTI_new[1]
+      else:
+        hdul[2].data[0][0] = GTI[0]
+        hdul[2].data[0][1] = GTI[1]
       hdul.flush()
     return
 
@@ -1139,24 +1137,17 @@ class ManageXml():
 
   # skip node listed in skip element or filters ---!
   def __skipNode(self, cfg):
-    '''
-    :retun true for skip node
-    '''
     src = self.__getSrcObj()
     if src.attrib[cfg.get('idAttribute')] in cfg.get('skip'):
       return True
-
     for filter in cfg.get('filters'):
       if src.attrib[filter.get('attribute')] == filter.get('value'):
         return True
-
     if len(cfg.get('selectors')) == 0:
       return False
-
     for select in cfg.get('selectors'):
       if src.attrib[select.get('attribute')] == select.get('value'):
         return False
-
     return True
 
   # get TS values ---!
