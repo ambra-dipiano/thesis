@@ -29,8 +29,7 @@ caldb = 'prod3b-v2'
 irf = 'South_z40_0.5h'
 
 sigma = 5  # detection acceptance (Gaussian)
-texp = [100]  # exposure times (s)
-texp.sort()
+texp = (10, 100)  # exposure times (s)
 tint = len(texp)
 tdelay = 30  # slewing time (s)
 tmin = [tdelay for i in range(tint)]  # start of bin to select (s)
