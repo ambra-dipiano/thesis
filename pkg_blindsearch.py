@@ -48,7 +48,7 @@ def getTrueCoords(fits_file):
   return (ra, dec)
 
 # telescope pointing, either adding off-axis to true coords or as alert probability map peak coords ---!
-def getPointing(fits_file, merge_map=None, roi=5):
+def getPointing(fits_file, merge_map=None):
   true_coord = getTrueCoords(fits_file)
   if merge_map==None:
     offaxis = (np.random.normal(0,5,1), np.random.normal(0,5,1))
@@ -64,6 +64,18 @@ def getPointing(fits_file, merge_map=None, roi=5):
     pointing = (np.rad2deg(phi), np.rad2deg(0.5 * np.pi - theta))
     offaxis = (pointing[0] - true_coord[0], pointing[1] - true_coord[1])
   return true_coord, pointing, offaxis
+
+# retrieve telescope pointing coordinates from alert probability map ---!
+def getPointingAlert(merge_map=None):
+  # load map ---!
+  map = hp.read_map(merge_map)
+  pixels = len(map)
+  axis = hp.npix2nside(pixels)
+  # search max prob coords ---!
+  pmax = np.argmax(map)
+  theta, phi = hp.pix2ang(axis, pmax)
+  pointing = (np.rad2deg(phi), np.rad2deg(0.5 * np.pi - theta))
+  return pointing
 
 # checks if a trial ID is already existing within a data file ---!
 def checkTrialId(file, id):
