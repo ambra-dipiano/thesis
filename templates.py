@@ -48,7 +48,7 @@ for i in range(Ne-1):
 en[Ne]=energy[Ne-1][0]+(energy[Ne-1][0]-en[Ne-1])
 
 # energy ranges
-LST = (min(en, key=lambda x:abs(x-30)), min(en, key=lambda x:abs(x-150)))
+LST = (min(en, key=lambda x:abs(x-20)), min(en, key=lambda x:abs(x-150)))
 MST = (min(en, key=lambda x:abs(x-150)), min(en, key=lambda x:abs(x-10000)))
 SST = (min(en, key=lambda x:abs(x-1000)), min(en, key=lambda x:abs(x-300000)))
 CTA = (min(en, key=lambda x:abs(x-30)), min(en, key=lambda x:abs(x-150000)))
@@ -72,11 +72,13 @@ f=[]
 f8=[]
 f9=[]
 f10=[]
+f11=[]
 for i in range(Nt):
     f.append(0.0)
     f8.append(0.0)
     f9.append(0.0)
     f10.append(0.0)
+    f11.append(0.0)
     for j in range(Ne):
         f[i]=f[i]+spectra[i][j]*(en[j+1]-en[j])
         if en[j] <= SST[1] and en[j] >= SST[0]:
@@ -84,7 +86,9 @@ for i in range(Nt):
         if en[j] <= CTA[1] and en[j] >= CTA[0]:
             f9[i]=f9[i]+spectra[i][j]*(en[j+1]-en[j])
         if en[j] <= MST[1] and en[j] >= MST[0]:
-            f10[i]=f10[i]+spectra[i][j]*(en[j+1]-en[j])
+            f10[i] = f10[i] + spectra[i][j] * (en[j + 1] - en[j])
+        if en[j] <= LST[1] and en[j] >= LST[0]:
+            f11[i]=f11[i]+spectra[i][j]*(en[j+1]-en[j])
 
 # FLUX EBL ---!
 f2=[]
@@ -116,7 +120,7 @@ for i in range(Nt):
 # some t spectra ---!
 fig1=plt.figure(3)
 t1=27
-for i in range(2):
+for i in range(3):
     x=[]
     y=[]
     z=[]
@@ -134,7 +138,7 @@ plt.text(40, 1e-8, '30 GeV', color='k')
 plt.legend(loc=3) #if i == 0 else None
 #plt.xlim([0.1, 1e4])
 plt.tight_layout()
-fig1.savefig(png + 'template_spectra_ebl.png')
+fig1.savefig(png + 'template_spectra_ebl_3.png')
 plt.show()
   
 # lightcurves ---!
@@ -143,16 +147,20 @@ ax = plt.subplot(111, yscale='log')
 #plt.plot(time, f, label='no EBL')
 plt.plot(time, f9, label='CTA (30GeV-150TeV)')
 plt.plot(time, f5, ls='-.', label='CTA+EBL')
+plt.plot(time, f11, label='LST (20GeV-150GeV)')
+plt.plot(time, f3, ls='-.', label='LST+EBL')
 plt.plot(time, f10, label='MST (150GeV-10TeV)')
 plt.plot(time, f4, ls='-.', label='MST+EBL')
+plt.plot(time, f8, label='SST (10TeV-300TeV)')
+plt.plot(time, f7, ls='-.', label='SST+EBL')
 plt.title('template lightcurve')
 plt.xlabel('time (s)')
 plt.ylabel('F (ph/cm2/s)')
 plt.legend()
-plt.ylim([1e-11, 1e-8])
-plt.xlim([-0.5, 2e3])
+plt.ylim([1e-12, 1e-8])
+plt.xlim([-0.5, 15e2])
 plt.tight_layout()
-fig2.savefig(png + 'template_lightcurve.png')
+fig2.savefig(png + 'template_lightcurve_3.png')
 plt.show()
 
 
