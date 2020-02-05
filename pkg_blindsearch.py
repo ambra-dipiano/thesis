@@ -602,12 +602,13 @@ class Analysis() :
     return
 
   # created one FITS table containing all events and GTIs ---!
-  def appendEventsSinglePhList(self):
-    GTI = []
-    with fits.open(self.input[0]) as hdul:
-      GTI.append(hdul[2].data[0][0])
-    with fits.open(self.input[-1]) as hdul:
-      GTI.append(hdul[2].data[0][1])
+  def appendEventsSinglePhList(self, GTI=None):
+    if GTI == None:
+      GTI = []
+      with fits.open(self.input[0]) as hdul:
+        GTI.append(hdul[2].data[0][0])
+      with fits.open(self.input[-1]) as hdul:
+        GTI.append(hdul[2].data[0][1])
     self.__singlePhotonList(sample=self.input, filename=self.output, GTI=GTI)
     return
 
