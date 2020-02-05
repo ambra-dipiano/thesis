@@ -549,17 +549,20 @@ class Analysis() :
   def __singlePhotonList(self, sample, filename, GTI, shift_time=False, new_GTI=False):
     print('GTI', GTI)
     sample = sorted(sample)
+    print(sample)
     n = 0
     for i, f in enumerate(sample):
       print(f)
       with fits.open(f) as hdul:
-        if n == 0 and len(hdul[1].data) > 0:
+        if len(hdul[1].data) == 0:
+          continue
+        if n == 0:
           h1 = hdul[1].header
           h2 = hdul[2].header
           ext1 = hdul[1].data
           ext2 = hdul[2].data
           n += 1
-        elif n != 0 and len(hdul[1].data) > 0:
+        else:
           ext1 = np.append(ext1, hdul[1].data)
     # create output FITS file empty ---!
     hdu = fits.PrimaryHDU()
