@@ -57,7 +57,7 @@ extract_spec = True  # generates spectral tables and obs definition models
 irf_degrade = True  # use degraded irf
 compute_degr = False  # compute irf degradation
 src_sort = True  # sorts scandidates from highest TS to lowest
-repoint = True  # repoint to source coords after positive detection
+repoint = False  # repoint to source coords after positive detection
 skip_exist = False  # skips the step if ID exists in csv (issue: if True than add+2h will start anew from last csv tbin)
 debug = False  # prints logfiles on terminal
 if_log = True  # saves logfiles
@@ -267,7 +267,8 @@ for k in range(trials):
       # if positive detection has been achieved, use cource coordinates not original pointing
       if repoint and ('Nsrc' in locals()):
         print(pointing) if checks2 else None
-        pointing = (ra_det[0], dec_det[0])
+        if Nsrc > 0:
+          pointing = (ra_det[0], dec_det[0])
         print(pointing) if checks2 else None
 
       # --------------------------------- OBSERVATION LIST --------------------------------- !!!
