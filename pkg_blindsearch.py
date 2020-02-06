@@ -546,14 +546,37 @@ class Analysis() :
         slice_list.append(i)
     return slice_list
 
+  # change from GTI of run to min and max of time events ---!
+  def __newGoodTimeIntervals(self, hdul):
+    GTI_new = []
+    GTI_new.append(min(hdul[1].data.field('TIME'), key=lambda x: abs(x - GTI[0])))
+    GTI_new.append(min(hdul[1].data.field('TIME'), key=lambda x: abs(x - GTI[1])))
+    hdul[2].data[0][0] = GTI_new[0]
+    hdul[2].data[0][1] = GTI_new[1]
+    hdul.flush()
+    return
+
+  # reindex rows after sorting ---!
+  def __reindexEvents(self, hdul):
+    indexes = hdul[1].data.field(0)
+    for i, ind in enumerate(indexes):
+      hdul[1].data.field(0)[i] = i + 1
+    hdul.flush()
+    return
+
+  # sort simulated events by time (TIME) instead of source (MC_ID) ---!
+  def __sortEventsByTime(self, hdul, hdr):
+    data = table.Table(hdul[1].data)
+    data.sort('TIME')
+    hdul[1] = fits.BinTableHDU(name='EVENTS', data=data, header=hdr)
+    hdul.flush()
+    return
+
   # create single photon list from obs list ---!
-  def __singlePhotonList(self, sample, filename, GTI, shift_time=False, new_GTI=True):
-    print('GTI', GTI)
+  def __singlePhotonList(self, sample, filename, GTI, new_GTI=True):
     sample = sorted(sample)
-    print(sample)
     n = 0
     for i, f in enumerate(sample):
-      print(f)
       with fits.open(f) as hdul:
         if len(hdul[1].data) == 0:
           continue
@@ -577,28 +600,20 @@ class Analysis() :
       hdul.append(hdu1)
       hdul.append(hdu2)
       hdul.flush()
+      # sort table by time ---!
+      self.__sortEventsByTime(hdul=hdul, hdr=h1)
+    # manipulate fits ---!
     with fits.open(filename, mode='update') as hdul:
       # drop events exceeding GTI ---!
       slice = self.__dropExceedingEvents(hdul=hdul, GTI=GTI)
       if len(slice) > 0:
         hdul[1].data = hdul[1].data[slice]
       hdul.flush()
-      # sort times and modify indexes ---!
-      indexes = hdul[1].data.field(0)
-      if shift_time:
-        times = hdul[1].data.field('TIME')
-        times = sorted(times)
-      for i, ind in enumerate(indexes):
-        hdul[1].data.field(0)[i] = i + 1
-        if shift_time:
-          hdul[1].data.field('TIME')[i] = times[i]
+      # modify indexes  ---!
+      self.__reindexEvents(hdul=hdul)
       # modify GTI ---!
       if new_GTI:
-        GTI_new = []
-        GTI_new.append(min(hdul[1].data.field('TIME'), key=lambda x: abs(x - GTI[0])))
-        GTI_new.append(min(hdul[1].data.field('TIME'), key=lambda x: abs(x - GTI[1])))
-        hdul[2].data[0][0] = GTI_new[0]
-        hdul[2].data[0][1] = GTI_new[1]
+        self.__newGoodTimeIntervals(hdul=hdul)
       else:
         hdul[2].data[0][0] = GTI[0]
         hdul[2].data[0][1] = GTI[1]
@@ -650,7 +665,6 @@ class Analysis() :
             else:
               filename = filename.replace('_n%03d.fits' % (n - 1), '_n%03d.fits' % n)
             sample = self.__dropListDuplicates(sample)
-            print('call 1', filename)
             self.__singlePhotonList(sample=sample, filename=filename, GTI=[max_length * (j), max_length * (j + 1)])
             n += 1
             drop = len(sample) - 1
