@@ -522,7 +522,6 @@ class Analysis() :
   def obsList(self, obsname):
     xml = gammalib.GXml()
     obslist = xml.append('observation_list title="observation library"')
-
     for i in range(len(self.input)):
       obs = obslist.append('observation name="%s" id="%02d" instrument="CTA"' % (obsname, i))
       obs.append('parameter name="EventList" file="%s"' % self.input[i])
@@ -646,7 +645,7 @@ class Analysis() :
     return
 
   # created a number of FITS table containing all events and GTIs ---!
-  def appendEventsMultiPhList(self, max_length=None, last=None):
+  def appendEventsMultiPhList(self, max_length=None, last=None, r=True):
     n = 1
     sample = []
     singlefile = str(self.output)
@@ -672,15 +671,10 @@ class Analysis() :
               self.input = self.input[drop - 1:]
             sample = [f]
             break
-          # if tlast > last - max_length or i == len(self.input) - 1:
-          #   filename = filename.replace('_n%03d.fits' % (n), '_n%03d.fits' % (n+1))
-          #   sample.append(f)
-          #   sample = self.__dropListDuplicates(sample)
-          #   print('call 2', filename)
-          #   self.__singlePhotonList(sample=sample, filename=filename, GTI=[max_length * (j), max_length * (j + 1)])
-          #   sample = [f]
-          #   break
-    return n, singlefile
+    if r:
+      return n, singlefile
+    else:
+      return
 
   # ctselect wrapper ---!
   def eventSelect(self, prefix=None):
