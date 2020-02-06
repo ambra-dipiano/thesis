@@ -453,7 +453,7 @@ def showSensitivity(x, y, savefig, xlabel='energy (GeV)', ylabel='sensitivity', 
   plt.xlabel(xlabel, fontsize=fontsize)
   plt.title(title, fontsize=fontsize)
   plt.legend(loc=0)
-  ax2 = plt.subplot(212, sharex=ax1, yscale='lin')
+  ax2 = plt.subplot(212, sharex=ax1, yscale='linear')
   for i in range(len(y)-1):
     plt.plot(x[0], y[0]/y[i+1], label=ratios)
   plt.ylabel('ratio nominal/degraded sensitivity', fontsize=fontsize)
