@@ -547,7 +547,7 @@ class Analysis() :
     return slice_list
 
   # change from GTI of run to min and max of time events ---!
-  def __newGoodTimeIntervals(self, hdul):
+  def __newGoodTimeIntervals(self, hdul, GTI):
     GTI_new = []
     GTI_new.append(min(hdul[1].data.field('TIME'), key=lambda x: abs(x - GTI[0])))
     GTI_new.append(min(hdul[1].data.field('TIME'), key=lambda x: abs(x - GTI[1])))
@@ -613,7 +613,7 @@ class Analysis() :
       self.__reindexEvents(hdul=hdul)
       # modify GTI ---!
       if new_GTI:
-        self.__newGoodTimeIntervals(hdul=hdul)
+        self.__newGoodTimeIntervals(hdul=hdul, GTI=GTI)
       else:
         hdul[2].data[0][0] = GTI[0]
         hdul[2].data[0][1] = GTI[1]
