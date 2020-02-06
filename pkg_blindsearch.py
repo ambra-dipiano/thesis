@@ -9,6 +9,7 @@ import gammalib
 import ctools
 import cscripts
 from astropy.io import fits
+from astropy import table
 import healpy as hp
 import numpy as np
 import os.path
@@ -546,7 +547,7 @@ class Analysis() :
     return slice_list
 
   # create single photon list from obs list ---!
-  def __singlePhotonList(self, sample, filename, GTI, shift_time=False, new_GTI=False):
+  def __singlePhotonList(self, sample, filename, GTI, shift_time=False, new_GTI=True):
     print('GTI', GTI)
     sample = sorted(sample)
     print(sample)
@@ -579,7 +580,7 @@ class Analysis() :
     with fits.open(filename, mode='update') as hdul:
       # drop events exceeding GTI ---!
       slice = self.__dropExceedingEvents(hdul=hdul, GTI=GTI)
-      if len(slice) > 2:
+      if len(slice) > 0:
         hdul[1].data = hdul[1].data[slice]
       hdul.flush()
       # sort times and modify indexes ---!
