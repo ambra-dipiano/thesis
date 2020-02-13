@@ -27,15 +27,15 @@ degraded = True
 compute = True
 plot = True
 sens_type = 'Differential'
-print(sens_type, 'sensitivity')
+print('Compute', sens_type, 'sensitivity')
 
 caldb = []
 if nominal:
   caldb.append(caldb_nom)
-  print('Nominal cladb')
+  print('Use nominal cladb')
 if degraded:
   caldb.append(caldb_deg)
-  print('Degraded caldb')
+  print('Use degraded caldb')
 
 e = [0.03, 150.0]
 texp = [1, 5, 10, 100]
@@ -47,7 +47,7 @@ src_name = 'GRB'
 if compute:
   for i in range(len(caldb)):
     for j in range(len(texp)):
-      print('texp=', texp[j])
+      print('texp = ', texp[j], ' s')
       event = outpath + 'texp%ds_' %texp[j] + caldb[i] + '_phlist.fits'
       results = outpath + 'texp%ds_' %texp[j] + caldb[i] + '_maxlike.xml'
       output = outpath + 'texp%ds_' %texp[j] + caldb[i] + '_sens.csv'
@@ -72,3 +72,41 @@ if compute:
       nObj.src_name = src_name
       nObj.eventSens(bins=nbins)
 
+# ------------------------------------- PLOT --------------------------------------- !!!
+
+if plot:
+  csv = [[], []]
+  savefig1, savefig2, savefig3 = [], [], []
+  list_sens_nom, list_flux_nom, list_sens_deg, list_flux_deg = [], [], [], []
+  for i in range(len(caldb)):
+    for j in range(len(texp)):
+      csv[i].append(outpath + 'texp%ds_' %texp[j] + caldb[i] + '_crab_sens.csv')
+      pngroot = caldb[i] + '_texp%ds' %texp[j]
+      if sens_type.capitalize() != 'Integral':
+        savefig1.append(pngpath + pngroot + '_sensDiff.png')
+        savefig2.append(pngpath + pngroot + '_sensDiff_phflux.png')
+      else:
+        savefig1.append(pngpath + pngroot + '_sensInt.png')
+        savefig2.append(pngpath + pngroot + '_sensInt_phflux.png')
+
+  for j in range(len(texp)):
+    title = caldb_nom + ': ' + irf.replace('_', '\_') + ' with texp=%ds' %texp[j]
+    # nominal
+    df_nom = pd.read_csv(csv[0][j])
+    cols = list(df_nom.columns)
+    energy_nom = np.array(df_nom[cols[0]])
+    sens_nom = np.array(df_nom[cols[6]])
+    flux_nom = np.array(df_nom[cols[4]])
+    # degraded ---!
+    df_deg = pd.read_csv(csv[1][j])
+    energy_deg = np.array(df_deg[cols[0]])
+    sens_deg = np.array(df_deg[cols[6]])
+    flux_deg = np.array(df_deg[cols[4]])
+
+    showSensitivity([10**energy_nom, 10**energy_deg], [sens_nom, sens_deg], savefig=savefig1[j], marker=['+', 'x'],
+                    xlabel='energy (TeV)', ylabel='E$^2$F sensitivity (erg/cm$^2$/s)',
+                    label=['full sens irf', 'degraded irf'], title=title, fontsize=12, show=False)
+
+    showSensitivity([10**energy_nom, 10**energy_deg], [flux_nom, flux_deg], savefig=savefig2[j], marker=['+', 'x'],
+                    xlabel='energy (TeV)', ylabel='ph flux (ph/cm$^2$/s)',
+                    label=['full sens irf', 'degraded irf'], title=title, fontsize=12, show=False)
