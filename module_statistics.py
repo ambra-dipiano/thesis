@@ -254,7 +254,7 @@ def hist2d_rayleigh_CI(x, y, nbin=None, width=None, rayleigh_prms={'loc':0, 'sca
     cir.set_facecolor('none')
     ax.add_artist(cir)
 
-  plt.colorbar(h[3], ax=ax).set_label('counts')
+  plt.colorbar(h[3], ax=ax, fontsize=fontsize).set_label('counts')
   plt.axis([xcentre - ax_thresh, xcentre + ax_thresh, ycentre - ax_thresh, ycentre + ax_thresh], 'equal') if ax_thresh != None else None
   plt.xlabel(xlabel, fontsize=fontsize)
   plt.ylabel(ylabel, fontsize=fontsize)
@@ -316,7 +316,7 @@ def hist2d_gauss_CI(x, y, nbin=None, width=None, xcentre=0, ycentre=0, threshold
     ell.set_facecolor('none')
     ax.add_artist(ell)
 
-  plt.colorbar(h[3], ax=ax).set_label('counts')
+  plt.colorbar(h[3], ax=ax, fontsize=fontsize).set_label('counts')
   plt.axis([xcentre - ax_thresh, xcentre + ax_thresh, ycentre - ax_thresh, ycentre + ax_thresh], 'equal') if ax_thresh != None else None
   plt.xlabel(xlabel, fontsize=fontsize)
   plt.ylabel(ylabel, fontsize=fontsize)
@@ -403,7 +403,7 @@ def hist2d_map(x, y, trials, nbin=None, width=None, xcentre=0, ycentre=0, thresh
 
   m = plt.cm.ScalarMappable(cmap='jet')
   m.set_clim(0., trials/100)
-  plt.colorbar(m, boundaries=np.linspace(0, 100, 11), label='cts \%')
+  plt.colorbar(m, boundaries=np.linspace(0, 100, 11), label='cts \%', fontsize=fontsize)
 
   # cbar = plt.colorbar(h[3], ax=ax, label='cts')
 
