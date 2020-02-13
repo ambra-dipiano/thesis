@@ -24,15 +24,17 @@ from scipy.ndimage.filters import gaussian_filter
 extra = Rectangle((0, 0), 1, 1, fc="w", fill=False, edgecolor='none', linewidth=0)
 extra2 = Line2D([0], [0], ls='-.', color='k', lw='1')
 
-def hist1d(x, mean, nbin=20, hist=True, fontsize=12, color='b',
-                 alpha=0.5, title='gaussian fit', ax_thresh=0.2, xlabel='x', ylabel='y', leglabel='data',
+def hist1d(x, mean, nbin=20, hist=True, fontsize=20, color='b', xscale='linear', figsize=(15,8), rotation=0,
+                 alpha=0.5, title='gaussian fit', ax_thresh=None, xlabel='x', ylabel='y', leglabel='data',
                  filename='hist1d_gauss.png', show=True):
 
-  fig = plt.figure()
+  fig = plt.figure(figsize=figsize)
   plt.rc('text', usetex=True)
   sns.set()
 
-  ax = plt.subplot(111)
+  ax = plt.subplot(111, xscale=xscale)
+  plt.xticks(fontsize=fontsize, rotation=rotation)
+  plt.yticks(fontsize=fontsize, rotation=rotation)
   # plt.plot([],[], color='none', label='wbin=%.2fdeg' %width)
   for index, el in enumerate(x):
     if el[0] is list():
@@ -56,8 +58,8 @@ def hist1d(x, mean, nbin=20, hist=True, fontsize=12, color='b',
 
 
 # HIST 1D GAUSSIAN DISTRIBUTION ---!
-def hist1d_gauss(x, mean, loc=0, threshold=1, nbin=20, width=None, hist=True, fontsize=12, color='b',
-                 alpha=0.5, title='gaussian fit', ax_thresh=0.2, xlabel='x', ylabel='y', leglabel='data',
+def hist1d_gauss(x, mean, loc=0, threshold=1, nbin=20, width=None, hist=True, fontsize=20, figsize=(15,8), color='b',
+                 alpha=0.5, title='gaussian fit', ax_thresh=0.2, xlabel='x', ylabel='y', leglabel='data', rotation=0,
                  filename='hist1d_gauss.png', show=True):
 
   if nbin == None:
@@ -65,11 +67,13 @@ def hist1d_gauss(x, mean, loc=0, threshold=1, nbin=20, width=None, hist=True, fo
       print('Error: set either nbin or width')
     nbin = int(threshold/width)
 
-  fig = plt.figure()
+  fig = plt.figure(figsize=figsize)
   plt.rc('text', usetex=True)
   sns.set()
 
   ax = plt.subplot(111)
+  plt.xticks(fontsize=fontsize, rotation=rotation)
+  plt.yticks(fontsize=fontsize, rotation=rotation)
   # plt.plot([],[], color='none', label='wbin=%.2fdeg' %width)
   for index, el in enumerate(x):
     if el[0] is list():
@@ -95,7 +99,7 @@ def hist1d_gauss(x, mean, loc=0, threshold=1, nbin=20, width=None, hist=True, fo
 
 # HIST 1D RAYLEIGH DISTRIBUTION ---!
 def hist1d_rayleigh(x, mean, rayleigh_prms={'loc':0, 'scale':[1]}, threshold=1, nbin=None, width=None, hist=True,
-                    fontsize=12, color='b', alpha=0.5, title='rayleigh fit', ax_thresh=0.2, xlabel='x', ylabel='y',
+                    fontsize=20, figsize=(15,8), rotation=0, color='b', alpha=0.5, title='rayleigh fit', ax_thresh=0.2, xlabel='x', ylabel='y',
                     leglabel='data', filename='hist1d_rayleigh.png', show=True):
 
   if width == None:
@@ -105,11 +109,13 @@ def hist1d_rayleigh(x, mean, rayleigh_prms={'loc':0, 'scale':[1]}, threshold=1, 
   if nbin == None and width == None:
     print('Error: set either nbin or width')
 
-  fig = plt.figure()
+  fig = plt.figure(figsize=figsize)
   plt.rc('text', usetex=True)
   sns.set()
 
   ax = plt.subplot(111)
+  plt.xticks(fontsize=fontsize, rotation=rotation)
+  plt.yticks(fontsize=fontsize, rotation=rotation)
   # plt.plot([],[], color='none', label='wbin=%.2fdeg' %width)
   for index, el in enumerate(x):
     if el[0] is list():
@@ -137,13 +143,15 @@ def hist1d_rayleigh(x, mean, rayleigh_prms={'loc':0, 'scale':[1]}, threshold=1, 
 # RAYLEIGH CDF WITH CONFIDENCE INTERVAL ---!
 def rayleigh_cdf(x, loc=0, scale=1, if_CI=True, probs=(0.6827, 0.9545, 0.9973, 0.99994),
                  xlabel='x', title='x$\\sim$ RA($\\gamma$) CDF', colors=('k', 'r', 'orange', 'm'),
-                 fontsize=12, filename='theo_rayleigh_cdf.png', show=False):
+                 fontsize=20, figsize=(15,8), rotation=0, filename='theo_rayleigh_cdf.png', show=False):
 
-  fig = plt.figure()
+  fig = plt.figure(figsize=figsize)
   plt.rc('text', usetex=True)
   sns.set()
 
   ax = plt.subplot(111)
+  plt.xticks(fontsize=fontsize, rotation=rotation)
+  plt.yticks(fontsize=fontsize, rotation=rotation)
   ax.plot(np.sort(x), stats.rayleigh.cdf(np.sort(x), loc=loc, scale=scale), ls='-', label='cdf')
   ax.axvline(scale, c='maroon', label='$\gamma$')
   ax.axvline(np.std(x), c='maroon', ls=':', label='1 std =%.2f' %(np.std(x)))
@@ -173,13 +181,15 @@ def rayleigh_cdf(x, loc=0, scale=1, if_CI=True, probs=(0.6827, 0.9545, 0.9973, 0
 # RAYLEIGH PDF WITH CONFIDENCE INTERVAL ---!
 def rayleigh_pdf(x, loc=0, scale=1, if_CI=True, probs=(0.6827, 0.9545, 0.9973, 0.99994),
                  xlabel='x', title='x$\\sim$ RA($\\gamma$) CDF', colors=('k', 'r', 'orange', 'm'),
-                 fontsize=12, filename='theo_rayleigh_cdf.png', show=False):
+                 fontsize=20, figsize=(15,8), rotation=0, filename='theo_rayleigh_cdf.png', show=False):
 
-  fig = plt.figure()
+  fig = plt.figure(figsize=figsize)
   plt.rc('text', usetex=True)
   sns.set()
 
   ax = plt.subplot(111)
+  plt.xticks(fontsize=fontsize, rotation=rotation)
+  plt.yticks(fontsize=fontsize, rotation=rotation)
   ax.plot(np.sort(x), stats.rayleigh.pdf(np.sort(x), loc=loc, scale=scale), ls='-', label='cdf')
   ax.axvline(scale, c='maroon', label='$\gamma$')
   ax.axvline(np.std(x), c='maroon', ls=':', label='1 std =%.2f' %(np.std(x)))
@@ -207,7 +217,10 @@ def rayleigh_pdf(x, loc=0, scale=1, if_CI=True, probs=(0.6827, 0.9545, 0.9973, 0
 
 
 # 2D HISTOGRAM WITH RAYLEIGH CONFIDENCE INTERVAL ---!
-def hist2d_rayleigh_CI(x, y, nbin=None, width=None, rayleigh_prms={'loc':0, 'scale':1}, xcentre=0, ycentre=0, threshold=1, probs=(0.6827, 0.9545, 0.9973, 0.99994), colors=('k', 'r', 'orange', 'm'), ax_thresh=0.2, xlabel='x', ylabel='y', title='confidence intervals from theoretical distribution', fontsize=12, filename='hist2d_CIrayleigh.png', show=False):
+def hist2d_rayleigh_CI(x, y, nbin=None, width=None, rayleigh_prms={'loc':0, 'scale':1}, xcentre=0, ycentre=0,
+                       threshold=1, probs=(0.6827, 0.9545, 0.9973, 0.99994), colors=('k', 'r', 'orange', 'm'),
+                       ax_thresh=0.2, xlabel='x', ylabel='y', title='confidence intervals from theoretical distribution',
+                       fontsize=20 , figsize=(15,8), rotation=0, filename='hist2d_CIrayleigh.png', show=False):
 
   xmean = np.mean(x)
   ymean = np.mean(y)
@@ -219,11 +232,13 @@ def hist2d_rayleigh_CI(x, y, nbin=None, width=None, rayleigh_prms={'loc':0, 'sca
   if nbin is None and width is None:
     print('Error: set either nbin or width')
 
-  fig = plt.figure()
+  fig = plt.figure(figsize=figsize)
   plt.rc('text', usetex=True)
   sns.set()
 
   ax = plt.subplot(111)
+  plt.xticks(fontsize=fontsize, rotation=rotation)
+  plt.yticks(fontsize=fontsize, rotation=rotation)
   h = ax.hist2d(x, y, bins=nbin, cmap='jet',
                 range=[[xcentre - threshold, xcentre + threshold], [ycentre - threshold, ycentre + threshold]])
   plt.scatter(xcentre, ycentre, c='w', marker='*', s=1e2)
@@ -265,7 +280,8 @@ def eigsorted(cov):
 # 2D HISTOGRAM WITH GAUSSIAN COVARIANCE CONFIDENCE INTERVAL ---!
 def hist2d_gauss_CI(x, y, nbin=None, width=None, xcentre=0, ycentre=0, threshold=1, nstd=(1, 2, 3, 5),
                     colors=('k', 'r', 'orange', 'm'), ax_thresh=0.2, xlabel='x', ylabel='y', show=False,
-                    title='confidence intervals from theoretical distribution', fontsize=12, filename='hist2d_CIgauss.png'):
+                    title='confidence intervals from theoretical distribution', fontsize=20, figsize=(15,8), rotation=0,
+                    filename='hist2d_CIgauss.png'):
 
   xmean = np.mean(x)
   ymean = np.mean(y)
@@ -277,11 +293,13 @@ def hist2d_gauss_CI(x, y, nbin=None, width=None, xcentre=0, ycentre=0, threshold
   if nbin is None and width is None:
     print('Error: set either nbin or width')
 
-  fig = plt.figure()
+  fig = plt.figure(figsize=figsize)
   plt.rc('text', usetex=True)
   sns.set()
 
   ax = plt.subplot(111)
+  plt.xticks(fontsize=fontsize, rotation=rotation)
+  plt.yticks(fontsize=fontsize, rotation=rotation)
   h = ax.hist2d(x, y, bins=nbin, cmap='jet',
                 range=[[xcentre - threshold, xcentre + threshold], [ycentre - threshold, ycentre + threshold]])
   plt.scatter(xcentre, ycentre, c='w', marker='*', s=1e2)
@@ -315,9 +333,9 @@ def hist2d_gauss_CI(x, y, nbin=None, width=None, xcentre=0, ycentre=0, threshold
 
 # 2D HISTOGRAM MAP ---!
 def hist2d_map(x, y, trials, nbin=None, width=None, xcentre=0, ycentre=0, threshold=1, ax_thresh=0.2, xlabel='x', ylabel='y',
-               title='probability map', fontsize=12, filename='hist2d_map.png', if_CI=None, rayleigh={'loc':0, 'scale':1},
-               nstd=(1, 2, 3, 5), colors=('k', 'r', 'orange', 'm'), probs=(0.6827, 0.9545, 0.9973, 0.99994),
-               smooth=True, show=False):
+               title='probability map', fontsize=20, figsize=(15,8), rotation=0, filename='hist2d_map.png', if_CI=None,
+               rayleigh={'loc':0, 'scale':1}, nstd=(1, 2, 3, 5), colors=('k', 'r', 'orange', 'm'),
+               probs=(0.6827, 0.9545, 0.9973, 0.99994), smooth=True, show=False):
 
   if width is None:
     width = threshold/nbin
@@ -326,11 +344,13 @@ def hist2d_map(x, y, trials, nbin=None, width=None, xcentre=0, ycentre=0, thresh
   if nbin is None and width is None:
     print('Error: set either nbin or width')
 
-  fig = plt.figure()
+  fig = plt.figure(figsize=figsize)
   plt.rc('text', usetex=True)
   sns.set()
 
   ax = plt.subplot(111)
+  plt.xticks(fontsize=fontsize, rotation=rotation)
+  plt.yticks(fontsize=fontsize, rotation=rotation)
   h = ax.hist2d(x, y, bins=nbin, cmap='jet', vmin=0.0, vmax=trials,
                 range=[[xcentre - threshold, xcentre + threshold], [ycentre - threshold, ycentre + threshold]])
   if smooth:
@@ -390,7 +410,7 @@ def hist2d_map(x, y, trials, nbin=None, width=None, xcentre=0, ycentre=0, thresh
   plt.axis([xcentre - ax_thresh, xcentre + ax_thresh, ycentre - ax_thresh, ycentre + ax_thresh], 'equal')
   plt.xlabel(xlabel, fontsize=fontsize)
   plt.ylabel(ylabel, fontsize=fontsize)
-  plt.title(title, fontsize=fontsize)
+  plt.title(title, fontsize=fontsize) if title!=None else None
 
   plt.tight_layout()
   fig.savefig(filename)
@@ -402,7 +422,7 @@ def hist2d_map(x, y, trials, nbin=None, width=None, xcentre=0, ycentre=0, thresh
 
 # WILKS THEOREM DIST FOR EMPTY FIELDS ---!
 def ts_wilks(x, trials, df=1, nbin=None, width=None, ylim=None, xlim=None, show=False,
-             fontsize=12, figsize=(4,6), rotation=0, xlabel='TS', ylabel='normalised counts',
+             fontsize=20, figsize=(15,8), rotation=0, xlabel='TS', ylabel='normalised counts',
              title='TS distribution (empty fields)', filename='wilks_preTrials.png'):
 
   if width is None:
@@ -449,7 +469,7 @@ def ts_wilks(x, trials, df=1, nbin=None, width=None, ylim=None, xlim=None, show=
 
 # WILKS THEOREM P-VALUES FOR EMPTY FIELDS ---!
 def p_values(x, trials, df=1, nbin=None, width=None, ylim=None, xlim=None, show=False,
-             fontsize=12, figsize=(4,6), rotation=0, xlabel='h', ylabel='p-values',
+             fontsize=20, figsize=(15,8), rotation=0, xlabel='h', ylabel='p-values',
              title='p-value (empty fields)', filename='pvalue_preTrials.png'):
 
   if width is None:
@@ -501,7 +521,7 @@ def p_values(x, trials, df=1, nbin=None, width=None, ylim=None, xlim=None, show=
 
 # WILKS THEOREM P-VALUES FOR EMPTY FIELDS ---!
 def ts_wilks_cumulative(x, trials, df=1, nbin=None, width=None, ylim=None, xlim=None, show=False,
-                        fontsize=12, figsize=(6,4), rotation=0, xlabel='h', ylabel='cumulative probability',
+                        fontsize=20, figsize=(15,8), rotation=0, xlabel='h', ylabel='cumulative probability',
                         title='p-value (empty fields)', filename='cumulative_preTrials.png'):
 
   if width is None:
@@ -567,7 +587,7 @@ def chi2_reduced(x, trials, df=1, nbin=None, width=None, var=True):
   #p = stats.chi2.pdf(cbin, df=df)/2
   #err = yerr/h
 
-  print('values', h, '\nerrors', yerr, '\nerror perc', err)
+  #print('values', h, '\nerrors', yerr, '\nerror perc', err)
 
   with np.errstate(invalid='raise'):
     if var:
