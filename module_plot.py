@@ -7,7 +7,7 @@
 
 # IMPORTS ---!
 import matplotlib.pyplot as plt
-import pyregion
+#import pyregion
 import seaborn as sns
 from astropy.io import fits
 from matplotlib.colors import SymLogNorm
@@ -410,7 +410,7 @@ def degradedIRF_3d(x, y, z, xlabel='x', ylabel='y', zlabel='z', title=None, c=('
   ax.set_zlim(zlim)
   ax.set_xlabel(xlabel, fontsize=fontsize, labelpad=fontsize)
   ax.set_ylabel(ylabel, fontsize=fontsize, labelpad=fontsize)
-  ax.set_zlabel(zlabel, fontsize=fontsize*10, labelpad=fontsize)
+  ax.set_zlabel(zlabel, fontsize=fontsize, labelpad=fontsize)
   ax.set_title(title, fontsize=fontsize) if title != None else None
   ax.legend(curve, label, loc=0, fontsize=fontsize) if label != None else None
   plt.tight_layout()
@@ -450,14 +450,17 @@ def showSensitivity(x, y, savefig, xlabel='energy (GeV)', ylabel='sensitivity', 
   for i in range(len(y)):
     plt.plot(x[i], y[i], marker=marker[i], label=label[i])
   plt.ylabel(ylabel, fontsize=fontsize)
-  plt.xlabel(xlabel, fontsize=fontsize)
   plt.title(title, fontsize=fontsize)
   plt.legend(loc=0)
   ax2 = plt.subplot(212, sharex=ax1, yscale='linear')
   for i in range(len(y)-1):
-    plt.plot(x[0], y[0]/y[i+1], label=ratios)
-  plt.ylabel('ratio nominal/degraded sensitivity', fontsize=fontsize)
+    plt.plot(x[0], y[0]/y[i+1])
+  plt.axhline(0.5, ls='-.', c='r')
+  plt.ylabel('ratio nom/deg', fontsize=fontsize)
+  plt.xlabel(xlabel, fontsize=fontsize)
+  plt.ylim([0.,1.])
   plt.tight_layout()
+  plt.legend(fontsize=fontsize)
   fig.savefig(savefig)
   plt.show() if show else None
 
