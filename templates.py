@@ -14,6 +14,7 @@ pathin = '/home/ambra/Desktop/cluster-morgana/run0406_test/run0406/'
 path = pathin + 'run0406_ID000126/'
 png = pathin + 'png/'
 template = 'run0406_ID000126_ebl.fits'
+erange = 'core'
 
 # load data ---!
 hdul =  fits.open(pathin + template)
@@ -48,10 +49,22 @@ for i in range(Ne-1):
 en[Ne]=energy[Ne-1][0]+(energy[Ne-1][0]-en[Ne-1])
 
 # energy ranges
-LST = (min(en, key=lambda x:abs(x-20)), min(en, key=lambda x:abs(x-150)))
-MST = (min(en, key=lambda x:abs(x-150)), min(en, key=lambda x:abs(x-10000)))
-SST = (min(en, key=lambda x:abs(x-1000)), min(en, key=lambda x:abs(x-300000)))
+if erange == 'core':
+    LST = (min(en, key=lambda x:abs(x-20)), min(en, key=lambda x:abs(x-150)))
+    lLST = '20GeV-150GeV'
+    MST = (min(en, key=lambda x:abs(x-150)), min(en, key=lambda x:abs(x-5000)))
+    lMST = '150GeV-5TeV'
+    SST = (min(en, key=lambda x:abs(x-5000)), min(en, key=lambda x:abs(x-300000)))
+    lSST = '5TeV-300TeV'
+else:
+    LST = (min(en, key=lambda x:abs(x-20)), min(en, key=lambda x:abs(x-3000)))
+    lLST = '20GeV-3TeV'
+    MST = (min(en, key=lambda x:abs(x-80)), min(en, key=lambda x:abs(x-50000)))
+    lMST = '80GeV-50TeV'
+    SST = (min(en, key=lambda x:abs(x-1000)), min(en, key=lambda x:abs(x-300000)))
+    lSST = '1TeV-300TeV'
 CTA = (min(en, key=lambda x:abs(x-30)), min(en, key=lambda x:abs(x-150000)))
+lCTA = '30GeV-150TeV'
 below = (min(en, key=lambda x:abs(x-1)), min(en, key=lambda x:abs(x-30)))
 
 # time bins ---!
@@ -145,22 +158,28 @@ plt.show()
 fig2=plt.figure(2)
 ax = plt.subplot(111, yscale='log')
 #plt.plot(time, f, label='no EBL')
-plt.plot(time, f9, label='CTA (30GeV-150TeV)')
+plt.plot(time, f9, label='CTA (%s)' %lCTA)
 plt.plot(time, f5, ls='-.', label='CTA+EBL')
-plt.plot(time, f11, label='LST (20GeV-150GeV)')
+plt.plot(time, f11, label='LST (%s)' %lLST)
 plt.plot(time, f3, ls='-.', label='LST+EBL')
-plt.plot(time, f10, label='MST (150GeV-10TeV)')
+plt.plot(time, f10, label='MST (%s)' %lMST)
 plt.plot(time, f4, ls='-.', label='MST+EBL')
-plt.plot(time, f8, label='SST (10TeV-300TeV)')
+plt.plot(time, f8, label='SST (%s)' %lSST)
 plt.plot(time, f7, ls='-.', label='SST+EBL')
-plt.title('template lightcurve')
+if erange == 'core':
+    ranges = '(full system sensitivity range)'
+    suffix = 'fullsys'
+else:
+    ranges = '(required range)'
+    suffix = 'req'
+plt.title('template lightcurve '+ranges)
 plt.xlabel('time (s)')
 plt.ylabel('F (ph/cm2/s)')
 plt.legend()
-plt.ylim([1e-12, 1e-8])
+plt.ylim([1e-13, 1e-8])
 plt.xlim([-0.5, 15e2])
 plt.tight_layout()
-fig2.savefig(png + 'template_lightcurve_3.png')
+fig2.savefig(png + 'template_lightcurve_%s.png' %suffix)
 plt.show()
 
 
