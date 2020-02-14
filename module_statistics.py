@@ -330,10 +330,9 @@ def hist2d_gauss_CI(x, y, nbin=None, width=None, xcentre=0, ycentre=0, threshold
   plt.close()
   return fig, ax
 
-
 # 2D HISTOGRAM MAP ---!
 def hist2d_map(x, y, trials, nbin=None, width=None, xcentre=0, ycentre=0, threshold=1, ax_thresh=0.2, xlabel='x', ylabel='y',
-               title='probability map', fontsize=20, figsize=(15,8), rotation=0, filename='hist2d_map.png', if_CI=None,
+               title='probability map', fontsize=20, figsize=(10,8), rotation=0, filename='hist2d_map.png', if_CI=None,
                rayleigh={'loc':0, 'scale':1}, nstd=(1, 2, 3, 5), colors=('k', 'r', 'orange', 'm'),
                probs=(0.6827, 0.9545, 0.9973, 0.99994), smooth=True, show=False):
 
