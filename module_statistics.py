@@ -43,7 +43,7 @@ def hist1d(x, mean, nbin=20, hist=True, fontsize=20, color='b', xscale='linear',
                  fit=norm, norm_hist=True, fit_kws={"color": color[index]},
                  color=color[index], hist_kws={'alpha':alpha}, label=leglabel[index])
     plt.axvline(mean[index], c=color[index], ls='--', lw=2,
-                label='mean $\\approx$ %.3Edeg' %mean[index]) if mean != None else None
+                label='mean $\\approx$ %.1E' %mean[index]) if mean != None else None
   plt.title(title, fontsize=fontsize)
   plt.xlabel(xlabel, fontsize=fontsize)
   plt.ylabel(ylabel, fontsize=fontsize)
