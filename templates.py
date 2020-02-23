@@ -48,6 +48,9 @@ for i in range(Ne-1):
 # last bin ---!
 en[Ne]=energy[Ne-1][0]+(energy[Ne-1][0]-en[Ne-1])
 
+# energy in erg (1 GeV = 0.00160218 erg) ---!
+erg = np.array(en)*0.0016022
+
 # energy ranges
 if erange == 'core':
     LST = (min(en, key=lambda x:abs(x-20)), min(en, key=lambda x:abs(x-150)))
@@ -65,6 +68,8 @@ else:
     lSST = '1TeV-300TeV'
 CTA = (min(en, key=lambda x:abs(x-30)), min(en, key=lambda x:abs(x-150000)))
 lCTA = '30GeV-150TeV'
+MAGIC = (min(en, key=lambda x:abs(x-30)), min(en, key=lambda x:abs(x-1000))) # 25 GeV - 50 TeV [full]
+lMAGIC = '30GeV-1TeV'
 below = (min(en, key=lambda x:abs(x-1)), min(en, key=lambda x:abs(x-30)))
 
 # time bins ---!
@@ -110,6 +115,8 @@ f4=[]
 f5=[]
 f6=[]
 f7=[]
+ferg = []
+ferg2 = []
 for i in range(Nt):
     f2.append(0.0)
     f3.append(0.0)
@@ -117,6 +124,8 @@ for i in range(Nt):
     f5.append(0.0)
     f6.append(0.0)
     f7.append(0.0)
+    ferg.append(0.0)
+    ferg2.append(0.0)
     for j in range(Ne):
         f2[i]=f2[i]+ebl[i][j]*(en[j+1]-en[j])
         if en[j] <= LST[1] and en[j] >= LST[0]:
@@ -129,7 +138,11 @@ for i in range(Nt):
             f6[i]=f6[i]+ebl[i][j]*(en[j+1]-en[j])
         if en[j] <= SST[1] and en[j] >= SST[0]:
             f7[i]=f7[i]+ebl[i][j]*(en[j+1]-en[j])
-          
+        if en[j] <= CTA[1] and en[j] >= CTA[0]:
+            ferg[i]=ferg[i]+ebl[i][j]/0.0016022*(erg[j+1]-erg[j])
+        if en[j] <= MAGIC[1] and en[j] >= MAGIC[0]:
+            ferg2[i]=ferg2[i]+ebl[i][j]/0.0016022*(erg[j+1]-erg[j])
+
 # some t spectra ---!
 fig1=plt.figure(3)
 t1=27
@@ -182,4 +195,24 @@ plt.tight_layout()
 fig2.savefig(png + 'template_lightcurve_%s.png' %suffix)
 plt.show()
 
-
+# lightcurves [erg] ---!
+fig2=plt.figure(2)
+ax = plt.subplot(111, yscale='log', xscale='log')
+#plt.plot(time, f, label='no EBL')
+plt.plot(time, ferg, label='CTA (%s)' %lCTA)
+plt.plot(time, ferg2, label='MAGIC (%s)' %lMAGIC)
+if erange == 'core':
+    ranges = '(full system sensitivity range)'
+    suffix = 'fullsys'
+else:
+    ranges = '(required range)'
+    suffix = 'req'
+plt.title('template lightcurve '+ranges)
+plt.xlabel('time (s)')
+plt.ylabel('F (erg/cm2/s)')
+plt.legend()
+#plt.ylim([1e-11, 1e-8])
+plt.xlim([50, 1e6])
+plt.tight_layout()
+fig2.savefig(png + 'template_lightcurve_%s.png' %suffix)
+plt.show()
