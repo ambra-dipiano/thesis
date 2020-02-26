@@ -14,7 +14,7 @@ pathin = '/home/ambra/Desktop/cluster-morgana/run0406_test/run0406/'
 path = pathin + 'run0406_ID000126/'
 png = pathin + 'png/'
 template = 'run0406_ID000126_ebl.fits'
-erange = 'core'
+erange = 'fullsys'
 
 # load data ---!
 hdul =  fits.open(pathin + template)
@@ -49,10 +49,10 @@ for i in range(Ne-1):
 en[Ne]=energy[Ne-1][0]+(energy[Ne-1][0]-en[Ne-1])
 
 # energy in erg (1 GeV = 0.00160218 erg) ---!
-erg = np.array(en)*0.0016022
+erg = np.array(en)/0.00160218
 
 # energy ranges
-if erange == 'core':
+if erange == 'fullsys':
     LST = (min(en, key=lambda x:abs(x-20)), min(en, key=lambda x:abs(x-150)))
     lLST = '20GeV-150GeV'
     MST = (min(en, key=lambda x:abs(x-150)), min(en, key=lambda x:abs(x-5000)))
@@ -68,8 +68,10 @@ else:
     lSST = '1TeV-300TeV'
 CTA = (min(en, key=lambda x:abs(x-30)), min(en, key=lambda x:abs(x-150000)))
 lCTA = '30GeV-150TeV'
-MAGIC = (min(en, key=lambda x:abs(x-30)), min(en, key=lambda x:abs(x-1000))) # 25 GeV - 50 TeV [full]
+MAGIC = (min(en, key=lambda x:abs(x-300)), min(en, key=lambda x:abs(x-1000)))
 lMAGIC = '30GeV-1TeV'
+MAGIC2 = (min(en, key=lambda x: abs(x - 300)), min(en, key=lambda x: abs(x - 10000)))
+lMAGIC2 = '30GeV-1TeV'
 below = (min(en, key=lambda x:abs(x-1)), min(en, key=lambda x:abs(x-30)))
 
 # time bins ---!
@@ -115,8 +117,10 @@ f4=[]
 f5=[]
 f6=[]
 f7=[]
-ferg = []
-ferg2 = []
+ferg=[]
+ferg2=[]
+f12=[]
+f13=[]
 for i in range(Nt):
     f2.append(0.0)
     f3.append(0.0)
@@ -126,6 +130,8 @@ for i in range(Nt):
     f7.append(0.0)
     ferg.append(0.0)
     ferg2.append(0.0)
+    f12.append(0.0)
+    f13.append(0.0)
     for j in range(Ne):
         f2[i]=f2[i]+ebl[i][j]*(en[j+1]-en[j])
         if en[j] <= LST[1] and en[j] >= LST[0]:
@@ -139,9 +145,13 @@ for i in range(Nt):
         if en[j] <= SST[1] and en[j] >= SST[0]:
             f7[i]=f7[i]+ebl[i][j]*(en[j+1]-en[j])
         if en[j] <= CTA[1] and en[j] >= CTA[0]:
-            ferg[i]=ferg[i]+ebl[i][j]/0.0016022*(erg[j+1]-erg[j])
+            ferg[i]=ferg[i]+ebl[i][j]*0.0016022*(erg[j+1]-erg[j])
         if en[j] <= MAGIC[1] and en[j] >= MAGIC[0]:
-            ferg2[i]=ferg2[i]+ebl[i][j]/0.0016022*(erg[j+1]-erg[j])
+            ferg2[i]=ferg2[i]+ebl[i][j]*0.0016022*(erg[j+1]-erg[j])
+        if en[j] <= MAGIC[1] and en[j] >= MAGIC[0]:
+            f12[i]=f12[i]+ebl[i][j]*(en[j+1]-en[j])
+        if en[j] <= MAGIC2[1] and en[j] >= MAGIC2[0]:
+            f13[i]=f13[i]+ebl[i][j]*(en[j+1]-en[j])
 
 # some t spectra ---!
 fig1=plt.figure(3)
@@ -197,22 +207,19 @@ plt.show()
 
 # lightcurves [erg] ---!
 fig2=plt.figure(2)
-ax = plt.subplot(111, yscale='log', xscale='log')
+ax = plt.subplot(111, yscale='log', xscale='linear')
 #plt.plot(time, f, label='no EBL')
-plt.plot(time, ferg, label='CTA (%s)' %lCTA)
-plt.plot(time, ferg2, label='MAGIC (%s)' %lMAGIC)
-if erange == 'core':
-    ranges = '(full system sensitivity range)'
-    suffix = 'fullsys'
-else:
-    ranges = '(required range)'
-    suffix = 'req'
-plt.title('template lightcurve '+ranges)
+#plt.plot(time, f2, label='CTA (%s)' %lCTA)
+plt.plot(time, f12, label='EBL absorbed (%s)' %lMAGIC)
+#plt.plot(time, f13, label='EBL absorbed (%s)' %lMAGIC2)
+ranges = '(E range of GRB190114C obs. by MAGIC)'
+suffix = 'MAGIC'
+plt.title('template lightcurves'+ranges)
 plt.xlabel('time (s)')
-plt.ylabel('F (erg/cm2/s)')
+plt.ylabel('F (ph/cm2/s)')
 plt.legend()
-#plt.ylim([1e-11, 1e-8])
-plt.xlim([50, 1e6])
+plt.ylim([1e-11, 1e-9])
+plt.xlim([0, 200])
 plt.tight_layout()
 fig2.savefig(png + 'template_lightcurve_%s.png' %suffix)
 plt.show()
