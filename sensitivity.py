@@ -25,8 +25,8 @@ irf = 'South_z40_0.5h'
 nominal = True
 degraded = True
 compute = True
-plot = True
-sens_type = 'Differential'
+plot = False
+sens_type = 'Integral'
 print('Compute', sens_type, 'sensitivity')
 
 caldb = []
@@ -37,10 +37,13 @@ if degraded:
   caldb.append(caldb_deg)
   print('Use degraded caldb')
 
-e = [0.03, 150.0]
-texp = [1, 5, 10, 100]
+e = [0.1, 0.44]
+#texp = [42, 40, 70, 151.5, 438.5, 1654] # MAGIC 2
+#texp = [38.2, 39.8, 70.28] # MAGIC 1
+#texp = [1, 5, 10, 100] # CTA
+texp = [400, 500, 600] # HESS
 pointing = (33.057, -51.841) # pointing direction RA/DEC (deg) - centered on the source
-nbins = 20 # energy bins for sensitivity computation
+nbins = 1 # energy bins for sensitivity computation
 src_name = 'GRB'
 
 # INITIALIZE ---!
@@ -50,7 +53,7 @@ if compute:
       print('texp = ', texp[j], ' s')
       event = outpath + 'texp%ds_' %texp[j] + caldb[i] + '_phlist.fits'
       results = outpath + 'texp%ds_' %texp[j] + caldb[i] + '_maxlike.xml'
-      output = outpath + 'texp%ds_' %texp[j] + caldb[i] + '_sens.csv'
+      output = outpath + 'texp%ds_' %texp[j] + caldb[i] + '_HESSsens.csv'
       nObj = Analysis('/config_irf.xml')
       nObj.e = e
       nObj.t = [0, texp[j]]
