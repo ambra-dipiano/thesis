@@ -7,7 +7,7 @@
 
 # IMPORTS ---!
 import matplotlib.pyplot as plt
-#import pyregion
+import pyregion
 import seaborn as sns
 from astropy.io import fits
 from matplotlib.colors import SymLogNorm
@@ -235,7 +235,7 @@ def showSpectrum(file, figsize=(8,15), fontsize=12, title=('spectrum with errors
   fig.savefig(file.replace('.fits', '.png'), bbox_inches=extent.expanded(1.3, 1.3))
   extent = ax3.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
   fig.savefig(file.replace('.fits', '_log.png'), bbox_inches=extent.expanded(1.3, 1.3))
-  # show fig ---!
+  # show fig --
   plt.show() if show else None
   plt.close()
   return
