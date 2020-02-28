@@ -871,6 +871,8 @@ class Analysis() :
       conv = 1
     e1 = self.e[0] * conv
     e2 = self.e[1] * conv
+    e0 *= conv
+    k0 *= conv
     delta = gamma + 1
     factor = k0 / (e0**gamma * delta)
     flux = factor * (e2**delta - e1**delta)
