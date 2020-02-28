@@ -840,7 +840,7 @@ class Analysis() :
     return
 
   # compute integral photon flux for PL model ---!
-  def photonFluxPowerLaw(self, gamma, k0, e0, unit='MeV'):
+  def photonFluxPowerLaw(self, gamma, k0, e0=1, unit='MeV'):
     if unit == 'MeV':
       conv = 1e6
     elif unit == 'GeV':
@@ -855,7 +855,7 @@ class Analysis() :
     return flux
 
   # compute integral energy flux for PL model ---!
-  def energyFluxPowerLaw(self, gamma, k0, e0, unit='MeV'):
+  def energyFluxPowerLaw(self, gamma, k0, e0=1, unit='MeV'):
     if unit == 'MeV':
       conv = 1.60218e-6
     elif unit == 'GeV':
