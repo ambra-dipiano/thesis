@@ -862,17 +862,9 @@ class Analysis() :
     return
 
   # compute integral photon flux for PL model ---!
-  def photonFluxPowerLaw(self, gamma, k0, e0=1, unit='MeV'):
-    if unit == 'MeV':
-      conv = 1e6
-    elif unit == 'GeV':
-      conv = 1e3
-    else:
-      conv = 1
-    e1 = self.e[0] * conv
-    e2 = self.e[1] * conv
-    e0 *= conv
-    k0 *= conv
+  def photonFluxPowerLaw(self, gamma, k0, e0=1):
+    e1 = self.e[0]
+    e2 = self.e[1]
     delta = gamma + 1
     factor = k0 / (e0**gamma * delta)
     flux = factor * (e2**delta - e1**delta)
