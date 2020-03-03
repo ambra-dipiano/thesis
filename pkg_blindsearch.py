@@ -872,7 +872,11 @@ class Analysis() :
 
   # compute integral energy flux for PL model ---!
   def energyFluxPowerLaw(self, gamma, k0, e0=1, unit='MeV'):
-    if unit == 'MeV':
+    if unit == 'eV':
+      conv = 1.60218e-12
+    elif unit == 'keV':
+      conv = 1.60218e-9
+    elif unit == 'MeV':
       conv = 1.60218e-6
     elif unit == 'GeV':
       conv = 1.60218e-3
