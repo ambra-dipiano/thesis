@@ -80,7 +80,7 @@ irf_degrade = True  # use degraded irf
 compute_degr = False  # compute irf degradation
 src_sort = True  # sorts scandidates from highest TS to lowest
 repoint = False  # repoint to source coords after positive detection
-skip_exist = False  # skips the step if ID exists in csv (issue: if True than add+2h will start anew from last csv tbin)
+skip_exist = False  # skips the step if ID exists in csv
 debug = False  # prints logfiles on terminal
 if_log = True  # saves logfiles
 
@@ -479,10 +479,9 @@ for k in range(trials):
       # --------------------------------- INTEGRATED FLUX --------------------------------- !!!
 
       flux_ph, flux_ph_err = ([] for n in range(2))
-      norm_factor = 1
       if Ndet > 0:
-        flux_ph.append(tObj.photonFluxPowerLaw(index[0], pref[0], pivot[0], norm_factor=norm_factor))  # E (MeV)
-        flux_ph_err.append(tObj.photonFluxPowerLaw(index[0], pref_err[0], pivot[0], norm_factor=norm_factor))  # E (MeV)
+        flux_ph.append(tObj.photonFluxPowerLaw(index[0], pref[0], pivot[0]))  # E (MeV)
+        flux_ph_err.append(tObj.photonFluxPowerLaw(index[0], pref_err[0], pivot[0]))  # E (MeV)
       else:
         flux_ph.append(np.nan)
         flux_ph_err.append(np.nan)
