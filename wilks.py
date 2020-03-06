@@ -116,11 +116,11 @@ for n in range(len(texp)):
   # -------------------------------- PLOT ---!
 
   fig, ax = ts_wilks(ts, trials, df=dof, nbin=nbin, width=wbin, figsize=(8, 12), fontsize=fontsize,
-                     title='prod3b-v2: South\_z40\_0.5h (texp=%ds)' % texp[n],
+                     title='prod3b-v2: South\_z40\_0.5h (texp=%ds)' % texp[n], show=True,
                      filename=png_path + filename.replace('.csv', '_wilks.png'), ylim=(1e-7, 2e0))
 
   fig, ax = p_values(ts, trials, df=dof, nbin=nbin, width=wbin, figsize=(8, 12), fontsize=fontsize,
-                     title='prod3b-v2: South\_z40\_0.5h (texp=%ds)' % texp[n],
+                     title='prod3b-v2: South\_z40\_0.5h (texp=%ds)' % texp[n], show=True,
                      filename=png_path + filename.replace('.csv', '_pvalues.png'), ylim=(1e-7, 2e0))
 
   fig, ax = ts_wilks_cumulative(ts, trials, df=dof, nbin=nbin, width=wbin, figsize=(12, 8),
