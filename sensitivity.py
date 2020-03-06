@@ -97,6 +97,11 @@ if compute:
       nObj.src_name = src_name
       nObj.eventSens(bins=nbins)
 
+os.system('rm '+outpath+'*.log')
+os.system('rm '+outpath+'*.fits')
+os.system('rm '+outpath+'*.xml')
+
+
 # ------------------------------------- PLOT --------------------------------------- !!!
 
 if plot:
