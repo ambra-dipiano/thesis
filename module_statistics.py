@@ -569,12 +569,17 @@ def p_values(x, trials, df=1, nbin=None, width=None, ylim=None, xlim=None, show=
   plt.xticks(fontsize=fontsize, rotation=rotation)
   plt.yticks(fontsize=fontsize, rotation=rotation)
 
-  h, edges = np.histogram(x, bins=int(nbin), density=False, range=(0., max(x)))
+  h = np.empty(len(np.arange(int(max(x)))))
+  p = np.empty(len(np.arange(int(max(x)))))
+  cbin, xerr = [], []
+  for i in range(int(max(x))):
+    cbin.append(i+1)
+    xerr.append(0.5)
+    for idx, val in enumerate(x):
+      if val >= i+1:
+        h[i] += 1
+  p = h/trials
   yerr = np.sqrt(h)/trials
-  h = h/trials
-  cbin = (edges[1:] + edges[:-1]) / 2
-  p = (1 - stats.chi2.cdf(cbin, df=df)) / 2
-  xerr = (edges[:-1] - edges[1:]) / 2
 
   x2 = np.arange(0, 30, 1)
   plt.errorbar(cbin[0], p[0], yerr=yerr[0], xerr=xerr[0], fmt='k+', markersize=5)
@@ -621,12 +626,17 @@ def ts_wilks_cumulative(x, trials, df=1, nbin=None, width=None, ylim=None, xlim=
   plt.xticks(fontsize=fontsize, rotation=rotation)
   plt.yticks(fontsize=fontsize, rotation=rotation)
 
-  h, edges = np.histogram(x, bins=int(nbin), density=False, range=(0., max(x)))
+  h = np.empty(len(np.arange(int(max(x)))))
+  p = np.empty(len(np.arange(int(max(x)))))
+  cbin, xerr = [], []
+  for i in range(int(max(x))):
+    cbin.append(i+1)
+    xerr.append(0.5)
+    for idx, val in enumerate(x):
+      if val >= i+1:
+        h[i] += 1
+  p = 1 - h/trials
   yerr = np.sqrt(h)/trials
-  h = h/trials
-  cbin = (edges[1:] + edges[:-1]) / 2
-  p = stats.chi2.cdf(cbin, df=df)
-  xerr = (edges[:-1] - edges[1:]) / 2
 
   x2 = np.arange(0, 30, 1)
   plt.errorbar(cbin[0], p[0], yerr=yerr[0], xerr=xerr[0], fmt='k+', markersize=5)
