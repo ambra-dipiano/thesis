@@ -324,9 +324,13 @@ class Analysis() :
     return self.__time[sliceObj]
 
   # compute the EBL absorption ---!
-  def __addEbl(self):
+  def __addEbl(self, unit='MeV'):
     self.__getFitsData()
     tau_gilmore, E = self.__getCsvData()
+    if unit == 'GeV':
+      E *= 1e3
+    elif unit == 'TeV':
+      E *= 1e6
     # interpolate linearly handling NaNs/inf/zeroes ---!
     with np.errstate(invalid='raise'):
       interp = interp1d(E, tau_gilmore, bounds_error=False)
@@ -362,19 +366,19 @@ class Analysis() :
     return
 
   # add EBL extension to a FITS template ---!
-  def fitsEbl(self, template_ebl):
+  def fitsEbl(self, template_ebl, ext_name='EBL Gilmore', unit='MeV'):
     hdul = self.__openFITS()
     if self.zfetch:
       self.__zfetch()
     if self.plot:
-      x, y, x2, y2 = self.__addEbl()
+      x, y, x2, y2 = self.__addEbl(unit='MeV')
     else:
-      self.__addEbl()
+      self.__addEbl(unit='MeV')
     # update fits ---!
-    hdu = fits.BinTableHDU(name='EBL Gilmore', data=self.__ebl)
+    hdu = fits.BinTableHDU(name=ext_name, data=self.__ebl)
     header = hdu.header
     header.set('UNITS', 'ph/cm2/s/GeV', ' ')
-    hdu = fits.BinTableHDU(name='EBL Gilmore', data=self.__ebl, header=header)
+    hdu = fits.BinTableHDU(name=ext_name, data=self.__ebl, header=header)
     hdul.append(hdu)
     # save to new ---!
     if os.path.isfile(template_ebl):
