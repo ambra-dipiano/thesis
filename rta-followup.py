@@ -67,10 +67,11 @@ wbin = 0.02  # skymap bin width (deg)
 corr_rad = 0.1  # Gaussian
 max_src = 5  # max candidates
 ts_threshold = 25  # TS threshold for reliable detection
+highest_ts = ts_threshold  # minimum threshold to repoint (repoint will be for monotonically higher ts only)
 reduce_flux = None  # flux will be devided by factor reduce_flux, if nominal then set to None
 
 # conditions control ---!
-checks1 = True  # prints info
+checks1 = False  # prints info
 checks2 = False  # prints more info
 if_ebl = True  # uses the EBL absorbed template
 if_cut = False  # adds a cut-off parameter to the source model
@@ -79,11 +80,11 @@ extract_spec = True  # generates spectral tables and obs definition models
 irf_degrade = True  # use degraded irf
 compute_degr = False  # compute irf degradation
 src_sort = True  # sorts scandidates from highest TS to lowest
+use_runs = True  # if True uses phlists of run_duration otherwise uese the template format
 repoint = False  # repoint to source coords after positive detection
 skip_exist = False  # skips the step if ID exists in csv
 debug = False  # prints logfiles on terminal
 if_log = True  # saves logfiles
-use_runs = False  # if True uses phlists of run_duration otherwise uese the template format
 
 # path configuration ---!
 cfg = xmlConfig()
@@ -123,9 +124,9 @@ print('!!! *** !!! total observation time:', ttotal, ' s')
 print('!!! *** !!! additional observation time:', add_hours, ' s')
 print('!!! *** !!! delay time:', tdelay, ' s\n')
 if use_runs:
-  print('handle data in runs of', run_duration, 's')
+  print('handle data in runs of', run_duration, 's\n')
 else:
-  print('handle data with template structure')
+  print('handle data with template structure\n')
 
 del dof, m1, m2
 
@@ -215,20 +216,20 @@ for k in range(trials):
 
   # --------------------------------- APPEND EVENTS IN PH-LIST --------------------------------- !!!
 
-  # if use_runs:
-  #   print('handle data in runs of', run_duration, 's') if checks1 else None
-  #   event_all = p.getSimDir() + f + '.fits'
-  #   if reduce_flux != None:
-  #     event_all = event_all.replace('.fits', '_flux%s.fits' % str(reduce_flux))
-  #   tObj.input = event_bins
-  #   tObj.output = event_all
-  #   if run_duration == ttotal:
-  #     tObj.appendEventsSinglePhList()
-  #     phlist = event_all
-  #     num_max = 1
-  #   else:
-  #     num_max, phlist = tObj.appendEventsMultiPhList(max_length=run_duration, last=ttotal)
-  #     print('phlist root name', phlist) if checks2 else None
+  if use_runs:
+    print('handle data in runs of', run_duration, 's') if checks1 else None
+    event_all = p.getSimDir() + f + '.fits'
+    if reduce_flux != None:
+      event_all = event_all.replace('.fits', '_flux%s.fits' % str(reduce_flux))
+    tObj.input = event_bins
+    tObj.output = event_all
+    if run_duration == ttotal:
+      tObj.appendEventsSinglePhList()
+      phlist = event_all
+      num_max = 1
+    else:
+      num_max, phlist = tObj.appendEventsMultiPhList(max_length=run_duration, last=ttotal)
+      print('phlist root name', phlist) if checks2 else None
 
   # --------------------------------- 2° LOOP :: tbins --------------------------------- !!!
 
@@ -295,41 +296,32 @@ for k in range(trials):
       if tObj.t[1] > ttotal:
         tObj.t[1] = ttotal
 
-      # --------------------------------- REPOINTING ---------------------------------- !!!
-
-      # if positive detection has been achieved, use cource coordinates not original pointing
-      if repoint and ('Nsrc' in locals()):
-        print(pointing) if checks2 else None
-        if Nsrc > 0:
-          pointing = (ra_det[0], dec_det[0])
-        print(pointing) if checks2 else None
-
       # --------------------------------- OBSERVATION LIST --------------------------------- !!!
 
-      # # using runs ---!
-      # if use_runs:
-      #   if run_duration != ttotal:
-      #     if (tObj.t[0] < GTIf[index] or tObj.t[0] == GTIf[index]) and (tObj.t[1] == GTIf[index] or tObj.t[1] < GTIf[index]):
-      #       event_bins = [phlist.replace('.fits', '_n%03d.fits' %num[index])]
-      #     elif (tObj.t[0] < GTIf[index] or tObj.t[0] == GTIf[index]) and (tObj.t[1] == GTIf[index] or tObj.t[1] > GTIf[index]):
-      #       event_bins = [phlist.replace('.fits', '_n%03d.fits' %num[index])]
-      #       if num[index]+1 < num_max or num[index]+1 == num_max:
-      #         event_bins.append(phlist.replace('.fits', '_n%03d.fits' %(num[index]+1)))
-      #       GTIf[index] += run_duration
-      #       num[index] += 1
-      #     else:
-      #       event_bins = [phlist.replace('.fits', '_n%03d.fits' %(num[index]+1))]
-      #       GTIf[index] += run_duration
-      #       num[index] += 1
-      #   else:
-      #     event_bins = [phlist]
+      # using runs ---!
+      if use_runs:
+        if run_duration != ttotal:
+          if (tObj.t[0] < GTIf[index] or tObj.t[0] == GTIf[index]) and (tObj.t[1] == GTIf[index] or tObj.t[1] < GTIf[index]):
+            event_bins = [phlist.replace('.fits', '_n%03d.fits' %num[index])]
+          elif (tObj.t[0] < GTIf[index] or tObj.t[0] == GTIf[index]) and (tObj.t[1] == GTIf[index] or tObj.t[1] > GTIf[index]):
+            event_bins = [phlist.replace('.fits', '_n%03d.fits' %num[index])]
+            if num[index]+1 < num_max or num[index]+1 == num_max:
+              event_bins.append(phlist.replace('.fits', '_n%03d.fits' %(num[index]+1)))
+            GTIf[index] += run_duration
+            num[index] += 1
+          else:
+            event_bins = [phlist.replace('.fits', '_n%03d.fits' %(num[index]+1))]
+            GTIf[index] += run_duration
+            num[index] += 1
+        else:
+          event_bins = [phlist]
       # using tbins ---!
-      #else:
-      phlist = p.getSelectDir() + f + '.fits'
-      bins = tObj.getTimeBins(GTI=tObj.t, tgrid=tgrid)
-      event_bins = []
-      for bin in bins:
-        event_bins.append(p.getSimDir() + f + '_tbin%02d.fits' %bin)
+      else:
+        phlist = p.getSelectDir() + f + '.fits'
+        bins = tObj.getTimeBins(GTI=tObj.t, tgrid=tgrid)
+        event_bins = []
+        for bin in bins:
+          event_bins.append(p.getSimDir() + f + '_tbin%02d.fits' %bin)
 
       print('event bins', event_bins) if checks2 else None
       # actual computation of obs list ---!
@@ -442,6 +434,15 @@ for k in range(trials):
 
       Nsrc = n
 
+      # --------------------------------- REPOINTING ---------------------------------- !!!
+
+      # if positive detection has been achieved, use cource coordinates not original pointing
+      if repoint:
+        if float(ts[0]) > highest_ts:
+          pointing = (ra_det[0], dec_det[0])
+          highest_ts = float(ts[0])
+          print('repointing to', pointing, 'with TS:', ts[0])
+
       # --------------------------------- +2h FROM LAST DETECTION --------------------------------- !!!
 
       # if no detection set False and defined end of observation ---!
@@ -456,7 +457,6 @@ for k in range(trials):
           print('reset tlast = ', tlast[index], ' with texp = ', texp[index])
       # if later detection then reset True ---!
       elif float(ts[0]) >= ts_threshold and not is_detection[index]:
-        print('belated detection, reset total duration')
         is_detection[index] = True
 
       # --------------------------------- BEST FIT RA & DEC --------------------------------- !!!
