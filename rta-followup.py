@@ -99,6 +99,8 @@ tcsv = 'time_slices.csv'
 
 # pointing with off-axis equal to max prob GW ---!
 true_coord, pointing, offmax = getPointing(fits_file=p.getWorkingDir()+ebl_template, merge_map=p.getWorkingDir()+merge_map)
+pointing = [round(pointing[0], 3), round(pointing[1], 3)]
+offmax = [round(offmax[0], 3), round(offmax[1], 3)]
 print('coords true:', true_coord, 'point', pointing, 'off', offmax) #if checks2 else None
 
 # recap and dof ---!
@@ -120,6 +122,11 @@ print('!!! *** !!! detection confidence ts threshold:', ts_threshold)
 print('!!! *** !!! total observation time:', ttotal, ' s')
 print('!!! *** !!! additional observation time:', add_hours, ' s')
 print('!!! *** !!! delay time:', tdelay, ' s\n')
+if use_runs:
+  print('handle data in runs of', run_duration, 's')
+else:
+  print('handle data with template structure')
+
 del dof, m1, m2
 
 # --------------------------------- INITIALIZE --------------------------------- !!!
@@ -208,20 +215,20 @@ for k in range(trials):
 
   # --------------------------------- APPEND EVENTS IN PH-LIST --------------------------------- !!!
 
-  if use_runs:
-    print('handle data in runs of', run_duration, 's') if checks1 else None
-    event_all = p.getSimDir() + f + '.fits'
-    if reduce_flux != None:
-      event_all = event_all.replace('.fits', '_flux%s.fits' % str(reduce_flux))
-    tObj.input = event_bins
-    tObj.output = event_all
-    if run_duration == ttotal:
-      tObj.appendEventsSinglePhList()
-      phlist = event_all
-      num_max = 1
-    else:
-      num_max, phlist = tObj.appendEventsMultiPhList(max_length=run_duration, last=ttotal)
-      print('phlist root name', phlist) if checks2 else None
+  # if use_runs:
+  #   print('handle data in runs of', run_duration, 's') if checks1 else None
+  #   event_all = p.getSimDir() + f + '.fits'
+  #   if reduce_flux != None:
+  #     event_all = event_all.replace('.fits', '_flux%s.fits' % str(reduce_flux))
+  #   tObj.input = event_bins
+  #   tObj.output = event_all
+  #   if run_duration == ttotal:
+  #     tObj.appendEventsSinglePhList()
+  #     phlist = event_all
+  #     num_max = 1
+  #   else:
+  #     num_max, phlist = tObj.appendEventsMultiPhList(max_length=run_duration, last=ttotal)
+  #     print('phlist root name', phlist) if checks2 else None
 
   # --------------------------------- 2° LOOP :: tbins --------------------------------- !!!
 
@@ -299,32 +306,30 @@ for k in range(trials):
 
       # --------------------------------- OBSERVATION LIST --------------------------------- !!!
 
-      # using runs ---!
-      if use_runs:
-        print('handle data in runs of', run_duration, 's') if checks1 else None
-        if run_duration != ttotal:
-          if (tObj.t[0] < GTIf[index] or tObj.t[0] == GTIf[index]) and (tObj.t[1] == GTIf[index] or tObj.t[1] < GTIf[index]):
-            event_bins = [phlist.replace('.fits', '_n%03d.fits' %num[index])]
-          elif (tObj.t[0] < GTIf[index] or tObj.t[0] == GTIf[index]) and (tObj.t[1] == GTIf[index] or tObj.t[1] > GTIf[index]):
-            event_bins = [phlist.replace('.fits', '_n%03d.fits' %num[index])]
-            if num[index]+1 < num_max or num[index]+1 == num_max:
-              event_bins.append(phlist.replace('.fits', '_n%03d.fits' %(num[index]+1)))
-            GTIf[index] += run_duration
-            num[index] += 1
-          else:
-            event_bins = [phlist.replace('.fits', '_n%03d.fits' %(num[index]+1))]
-            GTIf[index] += run_duration
-            num[index] += 1
-        else:
-          event_bins = [phlist]
+      # # using runs ---!
+      # if use_runs:
+      #   if run_duration != ttotal:
+      #     if (tObj.t[0] < GTIf[index] or tObj.t[0] == GTIf[index]) and (tObj.t[1] == GTIf[index] or tObj.t[1] < GTIf[index]):
+      #       event_bins = [phlist.replace('.fits', '_n%03d.fits' %num[index])]
+      #     elif (tObj.t[0] < GTIf[index] or tObj.t[0] == GTIf[index]) and (tObj.t[1] == GTIf[index] or tObj.t[1] > GTIf[index]):
+      #       event_bins = [phlist.replace('.fits', '_n%03d.fits' %num[index])]
+      #       if num[index]+1 < num_max or num[index]+1 == num_max:
+      #         event_bins.append(phlist.replace('.fits', '_n%03d.fits' %(num[index]+1)))
+      #       GTIf[index] += run_duration
+      #       num[index] += 1
+      #     else:
+      #       event_bins = [phlist.replace('.fits', '_n%03d.fits' %(num[index]+1))]
+      #       GTIf[index] += run_duration
+      #       num[index] += 1
+      #   else:
+      #     event_bins = [phlist]
       # using tbins ---!
-      else:
-        print('handle data with template structure')
-        phlist = p.getSelectDir() + f + '.fits'
-        bins = tObj.getTimeBins(GTI=tObj.t, tgrid=tgrid)
-        event_bins = []
-        for bin in bins:
-          event_bins.append(p.getSimDir() + f + '_tbin%02d.fits' %bin)
+      #else:
+      phlist = p.getSelectDir() + f + '.fits'
+      bins = tObj.getTimeBins(GTI=tObj.t, tgrid=tgrid)
+      event_bins = []
+      for bin in bins:
+        event_bins.append(p.getSimDir() + f + '_tbin%02d.fits' %bin)
 
       print('event bins', event_bins) if checks2 else None
       # actual computation of obs list ---!
@@ -439,6 +444,7 @@ for k in range(trials):
 
       # --------------------------------- +2h FROM LAST DETECTION --------------------------------- !!!
 
+      # if no detection set False and defined end of observation ---!
       if (float(ts[0]) < ts_threshold or str(ts[0]) == 'nan') and is_detection[index]:
         is_detection[index] = False
         # add 2hrs of obs time ---!
@@ -448,6 +454,10 @@ for k in range(trials):
         if tlast[index] > ttotal:
           tlast[index] = ttotal
           print('reset tlast = ', tlast[index], ' with texp = ', texp[index])
+      # if later detection then reset True ---!
+      elif float(ts[0]) >= ts_threshold and not is_detection[index]:
+        print('belated detection, reset total duration')
+        is_detection[index] = True
 
       # --------------------------------- BEST FIT RA & DEC --------------------------------- !!!
 
