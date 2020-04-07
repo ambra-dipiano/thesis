@@ -1337,7 +1337,7 @@ class ManageXml():
     if self.default_model is True:
       att_prefactor = {'name': 'Prefactor', 'scale': '1e-16', 'value': '5.7', 'min': '1e-07', 'max': '1e7', 'free': '1'}
       att_index = {'name': 'Index', 'scale': '-1', 'value': '2.48', 'min': '0', 'max': '5.0', 'free': '1'}
-      att_pivot = {'name': 'PivotEnergy', 'scale': '1e6', 'value': '0.3', 'min': '1e-07', 'max': '1000.0', 'free': '0'}
+      att_pivot = {'name': 'PivotEnergy', 'scale': '1e6', 'value': '1.0', 'min': '1e-07', 'max': '1000.0', 'free': '0'}
       bkg_prefactor = {'name': 'Prefactor', 'scale': '1', 'value': '1.0', 'min': '1e-03', 'max': '1e+3.0', 'free': '1'}
       bkg_index = {'name': 'Index', 'scale': '1.0', 'value': '0.0', 'min': '-5', 'max': '+5.0', 'free': '1'}
       bkg_pivot = {'name': 'PivotEnergy', 'scale': '1e6', 'value': '1.0', 'min': '0.01', 'max': '1000.0', 'free': '0'}
