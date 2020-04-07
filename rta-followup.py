@@ -51,7 +51,7 @@ irf = 'South_z40_0.5h'
 
 sigma = 5  # detection acceptance (Gaussian)
 texp = (10, 100)  # exposure times (s)
-tdelay = 30  # slewing time (s)
+tdelay = 50  # slewing time (s)
 tmax = []
 for i in range(len(texp)):
   tmax.append(tdelay + texp[i])
@@ -83,6 +83,7 @@ repoint = False  # repoint to source coords after positive detection
 skip_exist = False  # skips the step if ID exists in csv
 debug = False  # prints logfiles on terminal
 if_log = True  # saves logfiles
+use_runs = True  # if True uses phlists of run_duration otherwise uese the template format
 
 # path configuration ---!
 cfg = xmlConfig()
@@ -119,6 +120,7 @@ print('!!! *** !!! detection confidence ts threshold:', ts_threshold)
 print('!!! *** !!! total observation time:', ttotal, ' s')
 print('!!! *** !!! additional observation time:', add_hours, ' s')
 print('!!! *** !!! delay time:', tdelay, ' s\n')
+del dof, m1, m2
 
 # --------------------------------- INITIALIZE --------------------------------- !!!
 
@@ -206,18 +208,20 @@ for k in range(trials):
 
   # --------------------------------- APPEND EVENTS IN PH-LIST --------------------------------- !!!
 
-  # event_all = p.getSimDir() + f + '.fits'
-  # if reduce_flux != None:
-  #   event_all = event_all.replace('.fits', '_flux%s.fits' % str(reduce_flux))
-  # tObj.input = event_bins
-  # tObj.output = event_all
-  # if run_duration == ttotal:
-  #   tObj.appendEventsSinglePhList()
-  #   phlist = event_all
-  #   num_max = 1
-  # else:
-  #   num_max, phlist = tObj.appendEventsMultiPhList(max_length=run_duration, last=ttotal)
-  #   print('phlist root name', phlist) if checks2 else None
+  if use_runs:
+    print('handle data in runs of', run_duration, 's') if checks1 else None
+    event_all = p.getSimDir() + f + '.fits'
+    if reduce_flux != None:
+      event_all = event_all.replace('.fits', '_flux%s.fits' % str(reduce_flux))
+    tObj.input = event_bins
+    tObj.output = event_all
+    if run_duration == ttotal:
+      tObj.appendEventsSinglePhList()
+      phlist = event_all
+      num_max = 1
+    else:
+      num_max, phlist = tObj.appendEventsMultiPhList(max_length=run_duration, last=ttotal)
+      print('phlist root name', phlist) if checks2 else None
 
   # --------------------------------- 2° LOOP :: tbins --------------------------------- !!!
 
@@ -296,28 +300,31 @@ for k in range(trials):
       # --------------------------------- OBSERVATION LIST --------------------------------- !!!
 
       # using runs ---!
-      # if run_duration != ttotal:
-      #   if (tObj.t[0] < GTIf[index] or tObj.t[0] == GTIf[index]) and (tObj.t[1] == GTIf[index] or tObj.t[1] < GTIf[index]):
-      #     event_bins = [phlist.replace('.fits', '_n%03d.fits' %num[index])]
-      #   elif (tObj.t[0] < GTIf[index] or tObj.t[0] == GTIf[index]) and (tObj.t[1] == GTIf[index] or tObj.t[1] > GTIf[index]):
-      #     event_bins = [phlist.replace('.fits', '_n%03d.fits' %num[index])]
-      #     if num[index]+1 < num_max or num[index]+1 == num_max:
-      #       event_bins.append(phlist.replace('.fits', '_n%03d.fits' %(num[index]+1)))
-      #     GTIf[index] += run_duration
-      #     num[index] += 1
-      #   else:
-      #     event_bins = [phlist.replace('.fits', '_n%03d.fits' %(num[index]+1))]
-      #     GTIf[index] += run_duration
-      #     num[index] += 1
-      # else:
-      #   event_bins = [phlist]
-
+      if use_runs:
+        print('handle data in runs of', run_duration, 's') if checks1 else None
+        if run_duration != ttotal:
+          if (tObj.t[0] < GTIf[index] or tObj.t[0] == GTIf[index]) and (tObj.t[1] == GTIf[index] or tObj.t[1] < GTIf[index]):
+            event_bins = [phlist.replace('.fits', '_n%03d.fits' %num[index])]
+          elif (tObj.t[0] < GTIf[index] or tObj.t[0] == GTIf[index]) and (tObj.t[1] == GTIf[index] or tObj.t[1] > GTIf[index]):
+            event_bins = [phlist.replace('.fits', '_n%03d.fits' %num[index])]
+            if num[index]+1 < num_max or num[index]+1 == num_max:
+              event_bins.append(phlist.replace('.fits', '_n%03d.fits' %(num[index]+1)))
+            GTIf[index] += run_duration
+            num[index] += 1
+          else:
+            event_bins = [phlist.replace('.fits', '_n%03d.fits' %(num[index]+1))]
+            GTIf[index] += run_duration
+            num[index] += 1
+        else:
+          event_bins = [phlist]
       # using tbins ---!
-      phlist = p.getSelectDir() + f + '.fits'
-      bins = tObj.getTimeBins(GTI=tObj.t, tgrid=tgrid)
-      event_bins = []
-      for bin in bins:
-        event_bins.append(p.getSimDir() + f + '_tbin%02d.fits' %bin)
+      else:
+        print('handle data with template structure')
+        phlist = p.getSelectDir() + f + '.fits'
+        bins = tObj.getTimeBins(GTI=tObj.t, tgrid=tgrid)
+        event_bins = []
+        for bin in bins:
+          event_bins.append(p.getSimDir() + f + '_tbin%02d.fits' %bin)
 
       print('event bins', event_bins) if checks2 else None
       # actual computation of obs list ---!
@@ -409,6 +416,7 @@ for k in range(trials):
       # --------------------------------- CLOSE DET XML --------------------------------- !!!
 
       detObj.closeXml()
+      del detObj
 
       # --------------------------------- BEST FIT TSV --------------------------------- !!!
 
@@ -435,7 +443,7 @@ for k in range(trials):
         is_detection[index] = False
         # add 2hrs of obs time ---!
         tlast[index] = tObj.t[1] + add_hours  # +2h ---!
-        print('+2h tlast = ', tlast[index], ' with texp = ', texp[index], 'at clocking', clocking)
+        print('+2h; tlast = ', tlast[index], ' with texp = ', texp[index], 'at clocking', clocking)
         # only 4hrs of simulation avialable, if tlast exceeds them then reset to ttotal ---!
         if tlast[index] > ttotal:
           tlast[index] = ttotal
@@ -491,6 +499,7 @@ for k in range(trials):
       # --------------------------------- CLOSE LIKE XML --------------------------------- !!!
 
       likeObj.closeXml()
+      del likeObj
 
       # --------------------------------- RESULTS TABLE (csv) --------------------------------- !!!
 
