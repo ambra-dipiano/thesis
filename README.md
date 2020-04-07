@@ -1,6 +1,7 @@
 # thesis
-Contains libs and scripts for my thesis project: detection of short gamma-ray bursts with CTA through real-time analysis.
+Contains libs and scripts for my thesis project: detection of short gamma-ray bursts with CTA through real-time analysis. In order to run the scripts and use the defined classes, a config.xml file must be setup (see the "config.xml" example file) with at least one path for the "root" folder.
 
+0. config.xml :: configuration file example
 1. degradation.py :: script for calibration database degradation
 2. modeule_plot.py :: functions for astronomical plots
 3. module_statistics.py :: functions for statistical plots and basic analysis
