@@ -38,6 +38,7 @@ import pandas as pd
 from matplotlib.colors import LogNorm
 from matplotlib.lines import Line2D
 from matplotlib.patches import Ellipse, Circle
+from scipy.ndimage.filters import gaussian_filter
 from matplotlib.ticker import FormatStrFormatter
 import matplotlib as mpl
 import scipy.ndimage as sp
@@ -241,7 +242,7 @@ def rayleigh_pdf(x, loc=0, scale=1, if_CI=True, probs=(0.6827, 0.9545, 0.9973, 0
 
 # 2D HISTOGRAM WITH RAYLEIGH CONFIDENCE INTERVAL ---!
 def hist2d_rayleigh_CI(x, y, nbin=None, width=None, rayleigh_prms={'loc':0, 'scale':1}, xcentre=0, ycentre=0, interp=None,
-                       threshold=1, probs=(0.6827, 0.9545, 0.9973, 0.99994), colors=('k', 'r', 'orange', 'm'),
+                       threshold=1, probs=(0.6827, 0.9545, 0.9973, 0.99994), colors=('k', 'r', 'orange', 'm'), lw=2, ms=2e2,
                        ax_thresh=0.2, xlabel='x', ylabel='y', title='confidence intervals from theoretical distribution',
                        fontsize=20 , figsize=(10,8), rotation=0, filename='hist2d_CIrayleigh.png', show=False):
 
@@ -260,14 +261,18 @@ def hist2d_rayleigh_CI(x, y, nbin=None, width=None, rayleigh_prms={'loc':0, 'sca
   sns.set()
 
   ax = plt.subplot(111)
-  h = plt.hist2d(x, y, bins=nbin, cmap='jet',
-                range=[[xcentre - threshold, xcentre + threshold], [ycentre - threshold, ycentre + threshold]])
-  if interp != None:
-    plt.cla()
-    plt.imshow(h[0], origin='lower', interpolation=interp, cmap='gist_heat')
+  if interp == None:
+    h = plt.hist2d(x, y, bins=nbin, cmap='jet',
+                   range=[[xcentre - threshold, xcentre + threshold], [ycentre - threshold, ycentre + threshold]])
+  else:
+    h, xedges, yedges = np.histogram2d(x, y, bins=nbin,
+                   range=[[xcentre - threshold, xcentre + threshold], [ycentre - threshold, ycentre + threshold]])
+    h = h.T
+    plt.imshow(h, interpolation=interp, cmap='gist_heat',
+               extent=[[xcentre - threshold, xcentre + threshold], [ycentre - threshold, ycentre + threshold]])
   plt.xticks(fontsize=fontsize, rotation=rotation)
   plt.yticks(fontsize=fontsize, rotation=rotation)
-  plt.scatter(xcentre, ycentre, c='k', marker='*', s=1e2)
+  plt.scatter(xcentre, ycentre, c='w', marker='*', s=ms)
   plt.plot([], [], c='none', label='Reyleigh')
   for i in range(len(probs)):
     plt.plot([], [], c=colors[i], label='%.2f' % (probs[i] * 100) + '\%')
@@ -276,7 +281,7 @@ def hist2d_rayleigh_CI(x, y, nbin=None, width=None, rayleigh_prms={'loc':0, 'sca
     #        r = stats.rayleigh.ppf(q=q, loc=rayleigh['loc'], scale=rayleigh['scale'])
     cir = Circle(xy=(float(xmean), float(ymean)),
                  radius=r,
-                 color=colors[i], lw=2)
+                 color=colors[i], lw=lw)
     cir.set_facecolor('none')
     ax.add_artist(cir)
 
@@ -305,8 +310,8 @@ def eigsorted(cov):
 
 
 # 2D HISTOGRAM WITH GAUSSIAN COVARIANCE CONFIDENCE INTERVAL ---!
-def hist2d_gauss_CI(x, y, nbin=None, width=None, xcentre=0, ycentre=0, threshold=1, nstd=(1, 2, 3, 5),
-                    colors=('k', 'r', 'orange', 'm'), ax_thresh=0.2, xlabel='x', ylabel='y', interp=None,
+def hist2d_gauss_CI(x, y, nbin=None, width=None, xcentre=0, ycentre=0, threshold=1, nstd=(1, 2, 3, 5), lw=2,
+                    colors=('k', 'r', 'orange', 'm'), ax_thresh=0.2, xlabel='x', ylabel='y', interp=None, ms=2e2,
                     title='confidence intervals from theoretical distribution', fontsize=20, figsize=(10,8), rotation=0,
                     filename='hist2d_CIgauss.png', show=False):
 
@@ -332,7 +337,7 @@ def hist2d_gauss_CI(x, y, nbin=None, width=None, xcentre=0, ycentre=0, threshold
     plt.imshow(h[0], origin='lower', interpolation=interp, cmap='gist_heat')
   plt.xticks(fontsize=fontsize, rotation=rotation)
   plt.yticks(fontsize=fontsize, rotation=rotation)
-  plt.scatter(xcentre, ycentre, c='k', marker='*', s=1e2)
+  plt.scatter(xcentre, ycentre, c='w', marker='*', s=ms)
   plt.plot([], [], c='none', label='gauss')
   for i in range(len(nstd)):
     plt.plot([], [], c=colors[i], label='%d $\sigma$' % (nstd[i]))
@@ -342,7 +347,7 @@ def hist2d_gauss_CI(x, y, nbin=None, width=None, xcentre=0, ycentre=0, threshold
     w, v = 2 * nstd[i] * np.sqrt(vals)
     ell = Ellipse(xy=(float(xmean), float(ymean)),
                   width=w, height=v,
-                  angle=float(theta), color=colors[i], lw=2)
+                  angle=float(theta), color=colors[i], lw=lw)
     ell.set_facecolor('none')
     ax.add_artist(ell)
 
@@ -387,7 +392,7 @@ def contour_gauss_CI(x, y, nbin=None, width=None, xcentre=0, ycentre=0, threshol
 
   plt.xticks(fontsize=fontsize, rotation=rotation)
   plt.yticks(fontsize=fontsize, rotation=rotation)
-  plt.scatter(xcentre, ycentre, c='k', marker='*', s=1e2)
+  plt.scatter(xcentre, ycentre, c='w', marker='*', s=1e2)
   plt.plot([], [], c='none', label='gauss')
   for i in range(len(nstd)):
     plt.plot([], [], c=colors[i], label='%d $\sigma$' % (nstd[i]))
