@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<config>
+	<dir>
+		<root path="/home/ambra/Desktop/cluster-morgana/" />
+		<workdir path="${root}run0406_test/run0406/" />
+		<runpath path="${workdir}run0406_ID000126/" />
+		<datapath path="${runpath}data/" />
+		<simpath path="${runpath}sim/" />
+		<selectpath path="${runpath}selected_sim/" />
+		<detpath path="${runpath}detection_all/" />
+		<csvpath path="${runpath}csv/" />
+		<pngpath path="${workdir}png/" />
+	</dir>
+	<xml>
+		<src idAttrib="name">
+			<free prm="Prefactor" />
+		</src>
+		<bkg idAttrib="name">
+			<free prm="Prefactor" />
+			<free prm="Index" />
+		</bkg>
+	</xml>
+</config>
+
