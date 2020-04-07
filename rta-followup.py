@@ -70,7 +70,7 @@ ts_threshold = 25  # TS threshold for reliable detection
 reduce_flux = None  # flux will be devided by factor reduce_flux, if nominal then set to None
 
 # conditions control ---!
-checks1 = False  # prints info
+checks1 = True  # prints info
 checks2 = False  # prints more info
 if_ebl = True  # uses the EBL absorbed template
 if_cut = False  # adds a cut-off parameter to the source model
@@ -83,7 +83,7 @@ repoint = False  # repoint to source coords after positive detection
 skip_exist = False  # skips the step if ID exists in csv
 debug = False  # prints logfiles on terminal
 if_log = True  # saves logfiles
-use_runs = True  # if True uses phlists of run_duration otherwise uese the template format
+use_runs = False  # if True uses phlists of run_duration otherwise uese the template format
 
 # path configuration ---!
 cfg = xmlConfig()
@@ -180,8 +180,8 @@ for k in range(trials):
   print('!!! check ---- seed=', tObj.seed) if checks2 else None
   # attach ID to fileroot ---!
   f = fileroot + 'ebl%06d' % (count)
-  if irf_degrade:
-    f += 'irf'
+#  if irf_degrade:
+#    f += 'irf'
   print('!!! check ---- file=', f) if checks2 else None
 
   # --------------------------------- SIMULATION --------------------------------- !!!
@@ -266,9 +266,9 @@ for k in range(trials):
 
       tbin = clocking / current_twindows[i]  # temporal bin number of this analysis
       IDbin = 'tbin%09d' % tbin
-      csvName = p.getCsvDir() + 'tesi_tdel%d_deg%s_%ds.csv' % (tdelay, str(irf_degrade), texp[index])
-      if os.path.isfile(csvName) and skip_exist:
-        skip = checkTrialId(csvName, IDbin)
+      csv_name = p.getCsvDir() + 'tesi_tdel%d_deg%s_%ds.csv' % (tdelay, str(irf_degrade), texp[index])
+      if os.path.isfile(csv_name) and skip_exist:
+        skip = checkTrialId(csv_name, IDbin)
       else:
         skip = False
       if skip_exist is True and skip is True:
@@ -524,13 +524,13 @@ for k in range(trials):
 
       row.append([IDbin, tObj.t[0], tObj.t[1], Ndet, Nsrc, ra_det[0], dec_det[0], ra_fit[0], dec_fit[0],
                   flux_ph[0], flux_ph_err[0], ts[0]])
-      if os.path.isfile(csvName):
-        with open(csvName, 'a') as csv_file:
+      if os.path.isfile(csv_name):
+        with open(csv_name, 'a') as csv_file:
           w = csv.writer(csv_file)
           w.writerows(row)
           csv_file.close()
       else:
-        with open(csvName, 'w+') as csv_file:
+        with open(csv_name, 'w+') as csv_file:
           csv_file.write(header)
           w = csv.writer(csv_file)
           w.writerows(row)
