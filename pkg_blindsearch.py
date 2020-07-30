@@ -72,9 +72,12 @@ def getTrueCoords(fits_file):
   return (ra, dec)
 
 # telescope pointing, either adding off-axis to true coords or as alert probability map peak coords ---!
-def getPointing(fits_file, merge_map=None):
+def getPointing(fits_file, merge_map=None, wobble=False):
   true_coord = getTrueCoords(fits_file)
-  if merge_map==None:
+  if wobble:
+    offaxis = (0,0.5)
+    pointing = (true_coord[0] + offaxis[0], true_coord[1] + offaxis[1])
+  elif merge_map==None:
     offaxis = (np.random.normal(0,5,1), np.random.normal(0,5,1))
     pointing = (true_coord[0] + offaxis[0], true_coord[1] + offaxis[1])
   else:
