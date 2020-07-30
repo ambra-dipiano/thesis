@@ -527,7 +527,7 @@ def ts_wilks(x, trials, df=1, nbin=None, width=None, ylim=None, xlim=None, show=
   plt.xticks(fontsize=fontsize, rotation=rotation)
   plt.yticks(fontsize=fontsize, rotation=rotation)
 
-  h, edges = np.histogram(x, bins=int(nbin), density=False, range=(0., max(x)))
+  h, edges = np.histogram(x, bins=int(nbin), density=False, range=(min(x), max(x)))
   yerr = np.sqrt(h)/trials
   h = h/trials
   cbin = (edges[1:] + edges[:-1]) / 2
@@ -586,7 +586,7 @@ def p_values(x, trials, df=1, nbin=None, width=None, ylim=None, xlim=None, show=
   p = h/trials
   yerr = np.sqrt(h)/trials
 
-  x2 = np.arange(0, 30, 1)
+  x2 = np.arange(min(x), max(x)+5, 1)
   plt.errorbar(cbin[0], p[0], yerr=yerr[0], xerr=xerr[0], fmt='k+', markersize=5)
   plt.errorbar(cbin[1:], p[1:], yerr=yerr[1:], xerr=xerr[1:], fmt='k+', markersize=5, label='ts')
   plt.plot(x2, (1 - stats.chi2.cdf(x2, df=df)), lw=1, ls='-.', c='green', label='$\\chi^2$(dof=%d)' %df)
@@ -643,7 +643,7 @@ def ts_wilks_cumulative(x, trials, df=1, nbin=None, width=None, ylim=None, xlim=
   p = 1 - h/trials
   yerr = np.sqrt(h)/trials
 
-  x2 = np.arange(0, 30, 1)
+  x2 = np.arange(min(x), max(x)+5, 1)
   plt.errorbar(cbin[0], p[0], yerr=yerr[0], xerr=xerr[0], fmt='k+', markersize=5)
   plt.errorbar(cbin[1:], p[1:], yerr=yerr[1:], xerr=xerr[1:], fmt='k+', markersize=5, label='ts')
   plt.plot(x2, stats.chi2.cdf(x2, df=df), lw=1, ls='-.', c='maroon', label='$P$(dof=%d)' %df)
@@ -697,3 +697,64 @@ def chi2_reduced(x, trials, df=1, nbin=None, width=None, var=True):
     N = np.count_nonzero(h[1:])
     chi2r = chi2 / (N - 1)
   return chi2, chi2r
+
+
+# MANUAL NORMALISED HISTOGRAM ---!
+def normedHist(x, trials=None, step=None, nbin=None, ylim=None, xlim=None, show=False, normed=True,
+               xscale='linear', yscale='log', fontsize=20, figsize=(15,12), rotation=0, xlabel='x',
+               ylabel='normalised counts', leglabel='legend', title='normed histogram',
+               usetex=True, usesns=False, filename='normed_histogram.png'):
+
+  x = np.sort(x)
+  if step is None:
+    step = (max(x)-min(x))/nbin
+  if nbin is None:
+    nbin = int((max(x)-min(x))/step)
+  if nbin is None and step is None:
+    print('Error: set either nbin or step')
+  if trials is None:
+    trials = len(x)
+
+  fig = plt.figure(figsize=figsize)
+  plt.rc('text', usetex=True) if usetex else None
+  if usesns:
+    sns.set()
+  else:
+    plt.grid()
+
+  ax = plt.subplot(111, yscale=yscale, xscale=xscale)
+  plt.xticks(fontsize=fontsize, rotation=rotation)
+  plt.yticks(fontsize=fontsize, rotation=rotation)
+
+  h = np.empty(len(np.arange(nbin)))
+  cbin, xerr = [], []
+  for i in range(nbin):
+    cbin.append(step*i + step/2)
+    xerr.append(step/2)
+    for idx, val in enumerate(x):
+      if val <= cbin[i]:
+        h[i] += 1
+    x=x[(x>=cbin[i])]
+  h_norm = h/trials
+
+  if normed:
+    yerr = np.sqrt(h) / trials
+    plt.errorbar(cbin, h_norm, yerr=yerr, xerr=xerr, fmt='k+', markersize=5, label=leglabel)
+  else:
+    yerr = h / trials
+    plt.errorbar(cbin, h, yerr=yerr, xerr=xerr, fmt='k+', markersize=5, label=leglabel)
+  plt.xlabel(xlabel, fontsize=fontsize)
+  plt.ylabel(ylabel, fontsize=fontsize)
+  plt.title(title, fontsize=fontsize)
+  plt.legend(loc=0, fontsize=fontsize)
+  plt.xlim(xlim) if xlim is not None else None
+  plt.ylim(ylim) if ylim is not None else None
+
+  plt.tight_layout()
+  fig.savefig(filename)
+
+  # show fig ---!
+  plt.show() if show else None
+  plt.close()
+
+  return fig, ax
