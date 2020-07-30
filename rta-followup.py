@@ -55,9 +55,9 @@ tdelay = 50  # slewing time (s)
 tmax = []
 for i in range(len(texp)):
   tmax.append(tdelay + texp[i])
-ttotal = 1e4 #1e6  # maximum tobs (4h at least) simulation total time (s)
-add_hours = 7200 #7200  # +2h observation time added after first none detection (s)
-run_duration = 1200  # 20min observation run time for LST in RTA (s) ---!
+ttotal = 600 #1e4  # maximum tobs (4h at least) simulation total time (s)
+add_hours = 10 #7200  # +2h observation time added after first none detection (s)
+run_duration = 600 #1200  # 20min observation run time for LST in RTA (s) ---!
 elow = 0.03  # simulation minimum energy (TeV)
 ehigh = 150.0  # simulation maximum energy (TeV)
 emin = 0.03  # selection minimum energy (TeV)
@@ -71,13 +71,13 @@ highest_ts = ts_threshold  # minimum threshold to repoint (repoint will be for m
 reduce_flux = None  # flux will be devided by factor reduce_flux, if nominal then set to None
 
 # conditions control ---!
-checks1 = False  # prints info
+checks1 = True  # prints info
 checks2 = False  # prints more info
 if_ebl = True  # uses the EBL absorbed template
 if_cut = False  # adds a cut-off parameter to the source model
 ebl_fits = False  # generate the EBL absorbed template
 extract_spec = True  # generates spectral tables and obs definition models
-irf_degrade = True  # use degraded irf
+irf_degrade = False  # use degraded irf
 compute_degr = False  # compute irf degradation
 src_sort = True  # sorts scandidates from highest TS to lowest
 use_runs = True  # if True uses phlists of run_duration otherwise uese the template format
@@ -102,7 +102,7 @@ tcsv = 'time_slices.csv'
 true_coord, pointing, offmax = getPointing(fits_file=p.getWorkingDir()+ebl_template, merge_map=p.getWorkingDir()+merge_map)
 pointing = [round(pointing[0], 3), round(pointing[1], 3)]
 offmax = [round(offmax[0], 3), round(offmax[1], 3)]
-print('coords true:', true_coord, 'point', pointing, 'off', offmax) #if checks2 else None
+print('\ncoords true:', true_coord, 'point', pointing, 'off', offmax) #if checks2 else None
 
 # recap and dof ---!
 dof, m2, m1 = getDof()
@@ -367,7 +367,7 @@ for k in range(trials):
       tObj.input = skymap
       tObj.output = detectionXml
       tObj.runDetection()
-      #showSkymap(skymap=skymap, reg=detectionXml.replace('.xml', '.reg'), show=False)
+      #showSkymap(file=skymap, reg=detectionXml.replace('.xml', '.reg'), show=False)
       print('detection', tObj.output) if checks2 else None
       detObj = ManageXml(detectionXml)
       detObj.sigma = sigma
