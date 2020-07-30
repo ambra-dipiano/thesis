@@ -44,16 +44,17 @@ import subprocess
 from lxml import etree as ET
 
 # configure paths (absolute) ---!
-def xmlConfig(cfgfile='/config.xml') :
+def xmlConfig(cfgfile='./config.xml') :
+  #print(cfgfile)
   # load configuration file ---!
-  cfgfile = os.path.dirname(__file__)+str(cfgfile)
+  #cfgfile = os.path.dirname(__file__)+str(cfgfile)
   # create configuration dictionary ---!
   with open(cfgfile) as f:
     cfg = untangle.parse(f.read())
   return cfg.config
 
 # analysis dof ---!
-def getDof(cfgfile='/config.xml'):
+def getDof(cfgfile='./config.xml'):
   cfg = xmlConfig(cfgfile)
   if type(cfg.xml.src.free) is list:
     src = len(cfg.xml.src.free)
@@ -78,7 +79,7 @@ def getPointing(fits_file, merge_map=None):
     pointing = (true_coord[0] + offaxis[0], true_coord[1] + offaxis[1])
   else:
     # open and handle map ---!
-    map = hp.read_map(merge_map)
+    map = hp.read_map(merge_map, dtype=None)
     pixels = len(map)
     axis = hp.npix2nside(pixels)
     # search max prob coords ---!
@@ -221,7 +222,7 @@ class Analysis() :
   usage. Equally, public methods (methodName()) can be invoked within a python script once the class is instanced while
   private methods (__methodName()) should only be used within the class itself.
   '''
-  def __init__(self, cfgfile='/config.xml'):
+  def __init__(self, cfgfile='./config.xml'):
     # location of ctools ---!
     self.__CTOOLS = os.environ.get('CTOOLS')
     # path initial configuration ---!
@@ -251,6 +252,7 @@ class Analysis() :
     self.seed = 1  # MC seed ---!
     self.coord_sys = 'CEL'  # coordinate system <CEL|GAL> ---!
     self.sky_subtraction = 'IRF'  # skymap subtraction type <NONE|IRF|RING> ---!
+    self.inexclusion = 'NONE'  # exlude sky regions <NONE/file> ---!
     self.bkg_type = 'irf'  # background model <Irf|Aeff|Racc> ---!
     self.src_type = 'POINT'  # source model type ---!
     self.src_name = 'Src001'  # name of source of interest ---!
@@ -724,8 +726,8 @@ class Analysis() :
     return
 
   # ctskymap wrapper ---!
-  def eventSkymap(self, wbin=0.02):
-    nbin = int(self.roi / wbin)
+  def eventSkymap(self, wbin=0.02, roi_factor=2/np.sqrt(2)):
+    nbin = int(self.roi * roi_factor / wbin)
     skymap = ctools.ctskymap()
     skymap['inobs'] = self.input
     skymap['outmap'] = self.output
@@ -740,6 +742,7 @@ class Analysis() :
     skymap['coordsys'] = self.coord_sys.upper()
     skymap['proj'] = 'CAR'
     skymap['bkgsubtract'] = self.sky_subtraction.upper()
+    skymap['inexclusion'] = self.inexclusion
     # skymap["nthreads"] = self.nthreads
     skymap['logfile'] = self.output.replace('.fits', '.log')
     skymap['debug'] = self.debug
@@ -1184,7 +1187,7 @@ class ManageXml():
   usage. Equally, public methods (methodName()) can be invoked within a python script once the class is instanced while
   private methods (__methodName()) should only be used within the class itself.
   '''
-  def __init__(self, xml, cfgfile='/config.xml'):
+  def __init__(self, xml, cfgfile='./config.xml'):
     self.__xml = xml
     self.__cfg = xmlConfig(cfgfile)
     self.__p = ConfigureXml(self.__cfg)
