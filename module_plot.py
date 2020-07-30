@@ -458,6 +458,7 @@ def interp_ebl(x, y, savefig, type='linear', xlabel='x', ylabel='y', title='titl
   plt.tight_layout()
   fig.savefig(savefig)
   plt.show() if show else None
+  plt.close()
   return
 
 # SENSITIVITY ---!
@@ -482,10 +483,9 @@ def showSensitivity(x, y, savefig, xlabel='energy (GeV)', ylabel='sensitivity', 
   plt.xlabel(xlabel, fontsize=fontsize)
   plt.ylim([0.,1.])
   plt.tight_layout()
-  plt.legend(fontsize=fontsize)
   fig.savefig(savefig)
   plt.show() if show else None
-
+  plt.close()
   return
 
 # plot lightcurve from pipeline ---!
@@ -531,4 +531,5 @@ def plotLightCurve(flux, t1, uplims, t2, xerr, yerr, filename, temp_t, temp_f, c
   plt.ylim(ylim) if not ylim else None
   plt.show()
   fig.savefig(filename)
+  plt.close()
   return
