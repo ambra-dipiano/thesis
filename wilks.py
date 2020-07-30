@@ -28,13 +28,12 @@
 
 import os
 import sys
-sys.path.append('/home/ambra/Desktop/cluster-morgana/')
 from module_statistics import *
 
 dof = 1
 folder = 'tesi_bkg_1e6_nominal_%ddof_fullE' % dof
-path = '/home/ambra/Desktop/cluster-morgana/archive_tests/tesi_02_bkg/' + folder + '/run0406_bkg/run0406_ID000126/csv/'
-png_path = '/home/ambra/Desktop/cluster-morgana/archive_tests/tesi_02_bkg/' + folder + '/png/'
+path = os.getenv('RTAPIPE') + '/archive_tests/tesi_02_bkg/' + folder + '/run0406_bkg/run0406_ID000126/csv/'
+png_path = os.getenv('RTAPIPE') + '/archive_tests/tesi_02_bkg/' + folder + '/png/'
 if not os.path.isdir(png_path):
   os.mkdir(png_path)
 
@@ -120,11 +119,11 @@ for n in range(len(texp)):
                      filename=png_path + filename.replace('.csv', '_wilks.png'), ylim=(1e-7, 2e0))
 
   fig, ax = p_values(ts, trials, df=dof, nbin=nbin, width=wbin, figsize=(8, 12), fontsize=fontsize,
-                     title='prod3b-v2: South\_z40\_0.5h (texp=%ds)' % texp[n], show=True,
+                     title='prod3b-v2: South\_z40\_0.5h (texp=%ds)' % texp[n], show=False,
                      filename=png_path + filename.replace('.csv', '_pvalues.png'), ylim=(1e-7, 2e0))
 
   fig, ax = ts_wilks_cumulative(ts, trials, df=dof, nbin=nbin, width=wbin, figsize=(12, 8),
-                                fontsize=fontsize,
+                                fontsize=fontsize, show=False,
                                 title='prod3b-v2: South\_z40\_0.5h (texp=%ds)' % texp[n],
                                 filename=png_path + filename.replace('.csv', '_cumulative.png'))
 
