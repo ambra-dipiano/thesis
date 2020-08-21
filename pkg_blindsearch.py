@@ -56,13 +56,17 @@ def xmlConfig(cfgfile='./config.xml') :
 # analysis dof ---!
 def getDof(cfgfile='./config.xml'):
   cfg = xmlConfig(cfgfile)
-  if type(cfg.xml.src.free) is list:
-    src = len(cfg.xml.src.free)
+  if type(cfg.dof.src.free) is list:
+    src = len(cfg.dof.src.free)
   else:
-    src = len([cfg.xml.src.free])
-  bkg = len(cfg.xml.bkg.free)
+    src = len([cfg.dof.src.free])
+  bkg = len(cfg.dof.bkg.free)
   dof = src
   return dof, bkg+src, bkg
+
+def getOpts(cfgfile='./config.xml'):
+  cfg = xmlConfig(cfgfile)
+  return cfg.opts
 
 # true source coords from FITS ---!
 def getTrueCoords(fits_file):
@@ -129,14 +133,17 @@ class ConfigureXml() :
   def __initPath(self, cfg) :
     self.__cfg = cfg
     self.__root = self.__cfg.dir.root['path']
-    self.__workdir = self.__cfg.dir.workdir['path']
+    self.__workdir = self.__root + self.__cfg.dir.workdir['path']
+    self.__datapath = self.__workdir + self.__cfg.dir.datapath['path']
+    self.__templates = self.__workdir + self.__cfg.dir.datapath['templates']
+    self.__models = self.__workdir + self.__cfg.dir.datapath['models']
+    self.__mergers = self.__workdir + self.__cfg.dir.datapath['mergers']
+    self.__obspath = self.__workdir + self.__cfg.dir.obspath['path']
+    self.__selectpath = self.__workdir + self.__cfg.dir.selectpath['path']
+    self.__detpath = self.__workdir + self.__cfg.dir.detpath['path']
+    self.__csvpath = self.__workdir + self.__cfg.dir.csvpath['path']
+    self.__pngpath = self.__workdir + self.__cfg.dir.pngpath['path']
     self.__runpath = self.__cfg.dir.runpath['path']
-    self.__datapath = self.__cfg.dir.datapath['path']
-    self.__simpath = self.__cfg.dir.simpath['path']
-    self.__selectpath = self.__cfg.dir.selectpath['path']
-    self.__detpath = self.__cfg.dir.detpath['path']
-    self.__csvpath = self.__cfg.dir.csvpath['path']
-    self.__pngpath = self.__cfg.dir.pngpath['path']
 
   # check the existance of the directory and create if missing ---!
   def __checkDir(self, dir):
@@ -152,67 +159,92 @@ class ConfigureXml() :
 
   # working directory ---!
   def getWorkingDir(self):
-    self.__makeDir(self.__workdir.replace('${root}', self.__root))
-    return self.__workdir.replace('${root}', self.__root)
-  def setWorkingDir(self, workingDir):
-    self.__workdir = workingDir
-    self.__makeDir(workingDir)
+    self.__makeDir(self.__workdir)
+    return self.__workdir
+  def setWorkingDir(self, working_dir):
+    self.__workdir = working_dir
+    self.__makeDir(working_dir)
 
-  # directory containing runs ---!
-  def getRunDir(self):
-    self.__makeDir(self.__runpath.replace('${workdir}', self.getWorkingDir()))
-    return self.__runpath.replace('${workdir}', self.getWorkingDir())
-  def setRunDir(self, runDir):
-    self.__runpath = runDir
-    self.__makeDir(runDir)
-
-  # directory storing template data ---!
+  # directory storing template spectra and lightcurves ---!
   def getDataDir(self):
-    self.__makeDir(self.__datapath.replace('${runpath}', self.getRunDir()))
-    return self.__datapath.replace('${runpath}', self.getRunDir())
-  def setDataDir(self, dataDir):
-    self.__runpath = dataDir
-    self.__makeDir(dataDir)
+    self.__makeDir(self.__datapath)
+    return self.__datapath
+  def setDataDir(self, data_dir):
+    self.__dapathpath = data_dir
+    self.__makeDir(data_dir)
+
+  # directory storing models data ---!
+  def getModelsDir(self):
+    self.__makeDir(self.__models)
+    return self.__models
+  def setModelsDir(self, models_dir):
+    self.__models = models_dir
+    self.__makeDir(models_dir)
+
+  # directory storing models data ---!
+  def getTemplatesDir(self):
+    self.__makeDir(self.__templates)
+    return self.__templates
+  def setTemplatesDir(self, templates_dir):
+    self.__models = templates_dir
+    self.__makeDir(templates_dir)
+
+  # directory storing models data ---!
+  def getMergersDir(self):
+    self.__makeDir(self.__mergers)
+    return self.__mergers
+  def setMergersDir(self, mergers_dir):
+    self.__models = mergers_dir
+    self.__makeDir(mergers_dir)
 
   # target directory for simulations ---!
-  def getSimDir(self):
-    self.__makeDir(self.__simpath.replace('${runpath}', self.getRunDir()))
-    return self.__simpath.replace('${runpath}', self.getRunDir())
-  def setSimDir(self, simDir):
-    self.__runpath = simDir
-    self.__makeDir(simDir)
+  def getObsDir(self):
+    self.__makeDir(self.__obspath)
+    return  self.__obspath
+  def setSimDir(self, obs_dir):
+    self.__obspath = obs_dir
+    self.__makeDir(obs_dir)
 
   # target directory for selections ---!
   def getSelectDir(self):
-    self.__makeDir(self.__selectpath.replace('${runpath}', self.getRunDir()))
-    return self.__selectpath.replace('${runpath}', self.getRunDir())
-  def setSelectDir(self, selectDir):
-    self.__runpath = selectDir
-    self.__makeDir(selectDir)
+    self.__makeDir(self.__selectpath)
+    return self.__selectpath
+  def setSelectDir(self, select_dir):
+    self.__selectpath = select_dir
+    self.__makeDir(select_dir)
 
   # target directory for pipeline products ---!
   def getDetDir(self):
-    self.__makeDir(self.__detpath.replace('${runpath}', self.getRunDir()))
-    return self.__detpath.replace('${runpath}', self.getRunDir())
-  def setDetDir(self, detDir):
-    self.__runpath = detDir
-    self.__makeDir(detDir)
+    self.__makeDir(self.__detpath)
+    return self.__detpath
+  def setDetDir(self, det_dir):
+    self.__detpath = det_dir
+    self.__makeDir(det_dir)
 
   # target directory for output tables ---!
   def getCsvDir(self):
-    self.__makeDir(self.__csvpath.replace('${runpath}', self.getRunDir()))
-    return self.__csvpath.replace('${runpath}', self.getRunDir())
-  def setCsvDir(self, csvDir):
-    self.__runpath = csvDir
-    self.__makeDir(csvDir)
+    self.__makeDir(self.__csvpath)
+    return self.__csvpath
+  def setCsvDir(self, csv_dir):
+    self.__csvpathpath = csv_dir
+    self.__makeDir(csv_dir)
 
   # target directory for images ---!
   def getPngDir(self):
-    self.__makeDir(self.__pngpath.replace('${workdir}', self.getWorkingDir()))
-    return self.__pngpath.replace('${workdir}', self.getWorkingDir())
-  def setPngDir(self, pngDir):
-    self.__pngpath = pngDir
-    self.__makeDir(pngDir)
+    self.__makeDir(self.__pngpath)
+    return self.__pngpath
+  def setPngDir(self, png_dir):
+    self.__pngpath = png_dir
+    self.__makeDir(png_dir)
+
+  # directory containing runs ---!
+  def getRunDir(self):
+    self.__makeDir(self.__root + self.__runpath.replace('${workdir}', self.getWorkingDir()))
+    return self.__runpath.replace('${workdir}', self.getWorkingDir())
+  def setRunDir(self, run_dir):
+    self.__runpath = run_dir
+    self.__makeDir(run_dir)
+
 
 # --------------------------------- CLASS ANALYSIS --------------------------------- !!!
 
@@ -1434,15 +1466,15 @@ class ManageXml():
     for src in self.root.findall('source'):
       if src.attrib['name'] != 'Background' and src.attrib['name'] != 'CTABackgroundModel':
         for prm in src.findall('*/parameter'):
-          if prm.attrib['name'] not in self.__cfg.xml.bkg.free:
+          if prm.attrib['name'] not in self.__cfg.dof.bkg.free:
             prm.set('free', '0')
-        for free in self.__cfg.xml.src.free:
+        for free in self.__cfg.dof.src.free:
           src.find('*/parameter[@name="%s"]' % free['prm']).set('free', '1') if free['prm'] != None else None
       else:
         for prm in src.findall('*/parameter'):
-          if prm.attrib['name'] not in self.__cfg.xml.bkg.free:
+          if prm.attrib['name'] not in self.__cfg.dof.bkg.free:
             prm.set('free', '0')
-        for free in self.__cfg.xml.bkg.free:
+        for free in self.__cfg.dof.bkg.free:
           src.find('*/parameter[@name="%s"]' % free['prm']).set('free', '1') if free['prm'] != None else None
 
     #self.setTsTrue() if self.tscalc is True else None
