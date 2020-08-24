@@ -123,7 +123,7 @@ def checkTrialId(file, id):
   return skip
 
 def parametersMapping(parameters):
-
+  opts = collections.namedtuple('RtaPhotometry')
   return
 
 # --------------------------------- CLASS xml CONFIGURATION --------------------------------- !!!
@@ -173,7 +173,7 @@ class ConfigureXml() :
 
   # directory storing template spectra and lightcurves ---!
   def getDataDir(self):
-    self.__makeDir(self.__datapath)
+    self.__makeDir(self.__datapath + self.__runpath)
     return self.__datapath + self.__runpath
   def setDataDir(self, data_dir):
     self.__dapathpath = data_dir
@@ -182,7 +182,7 @@ class ConfigureXml() :
   # directory storing models data ---!
   def getModelsDir(self):
     self.__makeDir(self.__models)
-    return self.__models + self.__runpath
+    return self.__models
   def setModelsDir(self, models_dir):
     self.__models = models_dir
     self.__makeDir(models_dir)
@@ -190,7 +190,7 @@ class ConfigureXml() :
   # directory storing models data ---!
   def getTemplatesDir(self):
     self.__makeDir(self.__templates)
-    return self.__templates + self.__runpath
+    return self.__templates
   def setTemplatesDir(self, templates_dir):
     self.__models = templates_dir
     self.__makeDir(templates_dir)
@@ -198,14 +198,14 @@ class ConfigureXml() :
   # directory storing models data ---!
   def getMergersDir(self):
     self.__makeDir(self.__mergers)
-    return self.__mergers + self.__runpath
+    return self.__mergers
   def setMergersDir(self, mergers_dir):
     self.__models = mergers_dir
     self.__makeDir(mergers_dir)
 
   # target directory for simulations ---!
   def getObsDir(self):
-    self.__makeDir(self.__obspath)
+    self.__makeDir(self.__obspath  + self.__runpath)
     return  self.__obspath + self.__runpath
   def setSimDir(self, obs_dir):
     self.__obspath = obs_dir
@@ -213,7 +213,7 @@ class ConfigureXml() :
 
   # target directory for selections ---!
   def getSelectDir(self):
-    self.__makeDir(self.__selectpath)
+    self.__makeDir(self.__selectpath + self.__runpath)
     return self.__selectpath + self.__runpath
   def setSelectDir(self, select_dir):
     self.__selectpath = select_dir
@@ -221,7 +221,7 @@ class ConfigureXml() :
 
   # target directory for pipeline products ---!
   def getDetDir(self):
-    self.__makeDir(self.__detpath)
+    self.__makeDir(self.__detpath + self.__runpath)
     return self.__detpath + self.__runpath
   def setDetDir(self, det_dir):
     self.__detpath = det_dir
@@ -229,7 +229,7 @@ class ConfigureXml() :
 
   # target directory for output tables ---!
   def getCsvDir(self):
-    self.__makeDir(self.__csvpath)
+    self.__makeDir(self.__csvpath + self.__runpath)
     return self.__csvpath + self.__runpath
   def setCsvDir(self, csv_dir):
     self.__csvpathpath = csv_dir
@@ -237,7 +237,7 @@ class ConfigureXml() :
 
   # target directory for images ---!
   def getPngDir(self):
-    self.__makeDir(self.__pngpath)
+    self.__makeDir(self.__pngpath + self.__runpath)
     return self.__pngpath + self.__runpath
   def setPngDir(self, png_dir):
     self.__pngpath = png_dir
@@ -246,9 +246,9 @@ class ConfigureXml() :
   # directories containing runs ---!
   def getRunDir(self):
     self.__makeDir(self.__datapath + self.__runpath)
-    self.__makeDir(self.__models + self.__runpath)
-    self.__makeDir(self.__templates + self.__runpath)
-    self.__makeDir(self.__mergers + self.__runpath)
+    self.__makeDir(self.__models)
+    self.__makeDir(self.__templates)
+    self.__makeDir(self.__mergers)
     self.__makeDir(self.__obspath + self.__runpath)
     self.__makeDir(self.__selectpath + self.__runpath)
     self.__makeDir(self.__detpath + self.__runpath)
