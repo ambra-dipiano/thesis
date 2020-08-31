@@ -110,19 +110,19 @@ def getPointingAlert(merge_map=None):
   pointing = (np.rad2deg(phi), np.rad2deg(0.5 * np.pi - theta))
   return pointing
 
-def wobbolePointing(run_number):
+def wobbleRotation(run_number, offset=0.5):
   mod = run_number % 4
-  offaxis = (0, 0)
+  offaxis = np.array(0, 0)
   if mod == 0:
-    offaxis = (0.5, -0.5)
+    offaxis = (0., -offset)
   elif mod == 1:
-    offaxis = (-0.5, -0.5)
+    offaxis = (-offset, 0.)
   elif mod == 2:
-    offaxis = (-0.5, +0.5)
+    offaxis = (0., offset)
   elif mod == 3:
-    offaxis = (0.5, 0.5)
+    offaxis = (offset, 0.)
 
-  return np.array(offaxis)
+  return offaxis
 
 # checks if a trial ID is already existing within a data file ---!
 def checkTrialId(file, id):
