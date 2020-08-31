@@ -110,6 +110,20 @@ def getPointingAlert(merge_map=None):
   pointing = (np.rad2deg(phi), np.rad2deg(0.5 * np.pi - theta))
   return pointing
 
+def wobbolePointing(run_number):
+  mod = run_number % 4
+  offaxis = (0, 0)
+  if mod == 0:
+    offaxis = (0.5, -0.5)
+  elif mod == 1:
+    offaxis = (-0.5, -0.5)
+  elif mod == 2:
+    offaxis = (-0.5, +0.5)
+  elif mod == 3:
+    offaxis = (0.5, 0.5)
+
+  return np.array(offaxis)
+
 # checks if a trial ID is already existing within a data file ---!
 def checkTrialId(file, id):
   with open(file=file) as f:
@@ -1310,8 +1324,8 @@ class ManageXml():
         if src.attrib['name'] == highest:
           ra = src.find('spatialModel/parameter[@name="RA"]').attrib['value']
           dec = src.find('spatialModel/parameter[@name="DEC"]').attrib['value']
-          ra_list.append(ra)
-          dec_list.append(dec)
+          ra_list.append(float(ra))
+          dec_list.append(float(dec))
     self.pos = [ra_list, dec_list]
     return self.pos
 
