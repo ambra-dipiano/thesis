@@ -32,13 +32,14 @@ import os
 
 # files ---!
 caldb = ['prod3b', 'prod3b-v1', 'prod3b-v2']
-irf = os.listdir(os.environ.get('CTOOLS') + '/share/caldb/data/cta/' + caldb + '/bcf/')
-#print(irf)
 
 # initialise ---!
 for db in caldb:
+  irf = os.listdir(os.environ.get('CTOOLS') + '/share/caldb/data/cta/' + db + '/bcf/')
   for fits in irf:
     irfObj = Analysis()
     irfObj.irf = fits
     irfObj.caldb = db
     irfObj.degradeIrf()
+
+print('caldb degradation completed')
