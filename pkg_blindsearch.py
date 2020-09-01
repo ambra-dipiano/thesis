@@ -101,7 +101,7 @@ def getPointing(fits_file, merge_map=None, wobble=False):
 # retrieve telescope pointing coordinates from alert probability map ---!
 def getPointingAlert(merge_map=None):
   # load map ---!
-  map = hp.read_map(merge_map)
+  map = hp.read_map(merge_map, dtype=None)
   pixels = len(map)
   axis = hp.npix2nside(pixels)
   # search max prob coords ---!
@@ -112,14 +112,14 @@ def getPointingAlert(merge_map=None):
 
 def wobbleRotation(run_number, offset=0.5):
   mod = run_number % 4
-  offaxis = np.array(0, 0)
-  if mod == 0:
+  offaxis = None
+  if mod == 1:
     offaxis = (0., -offset)
-  elif mod == 1:
-    offaxis = (-offset, 0.)
   elif mod == 2:
-    offaxis = (0., offset)
+    offaxis = (-offset, 0.)
   elif mod == 3:
+    offaxis = (0., offset)
+  elif mod == 0:
     offaxis = (offset, 0.)
 
   return offaxis
@@ -380,20 +380,30 @@ class Analysis() :
     return tau_gilmore, E
 
   # retrive csv temporal bin grid of the template in use and return the necessary slice ---!
-  def getTimeSlices(self):
+  def getTimeSlices(self, GTI, return_bins=False):
     df = self.__openCSV()
     cols = list(df.columns)
     self.__time = np.append(0, np.array(df[cols[1]]))
+    bin_start = 0
+    bin_stop = 1
     for i in range(len(self.__time)):
-      if self.__time[i] > self.tmax or self.__time[i] == self.tmax:
-        self.__time[i] = self.tmax
-        bin = i+1
+      if self.__time[i] < GTI[0]:
+        bin_start += 1
+        continue
+      elif self.__time[i] > GTI[1] or self.__time[i] == GTI[1]:
+        self.__time[i] = GTI[1]
+        bin_stop += i
         break
-    if bin < self.__Nt:
-      sliceObj = slice(0, bin + 1)
+    if bin_stop <= self.__Nt:
+      time_slice = slice(bin_start, bin_stop + 1)
     else:
-      sliceObj = slice(0, bin)
-    return self.__time[sliceObj]
+      time_slice = slice(bin_start, bin_stop)
+    if not time_slice:
+      raise ValueError('Invalid GTI: cannot extract time slices')
+    if not return_bins:
+      return self.__time[time_slice]
+    else:
+      return self.__time[time_slice], bin_start, bin_stop
 
   # compute the EBL absorption ---!
   def __addEbl(self, unit='MeV'):
@@ -512,7 +522,7 @@ class Analysis() :
     return
 
   # read template and return tbin_stop containing necessary exposure time coverage ---!
-  def loadTemplate(self) :
+  def loadTemplate(self, return_bin=False) :
     self.__getFitsData()
     self.__Nt = len(self.__time)
     self.__Ne = len(self.__energy)
@@ -545,7 +555,10 @@ class Analysis() :
     # extract spectrum if required ---!
     if self.extract_spec:
       self.__extractSpec()
-    return tbin_stop
+    if return_bin:
+      return tbin_stop
+    else:
+      return
 
   # get tbin_stop without loading the template ---!
   def getTimeBinStop(self) :
@@ -576,16 +589,16 @@ class Analysis() :
   def getTimeBins(self, GTI, tgrid):
     tbins = []
     for i in range(len(tgrid)):
-      if tgrid[i] <= GTI[0]+10 and tgrid[i+1] >= GTI[0]-10:
-      # if tgrid[i] <= GTI[0] and tgrid[i+1] >= GTI[0]:
+      # if tgrid[i] <= GTI[0]+10 and tgrid[i+1] >= GTI[0]-10:
+      if tgrid[i] <= GTI[0] and tgrid[i+1] >= GTI[0]:
         tbins.append(i)
         continue
-      if tgrid[i] >= GTI[0]-10 and tgrid[i+1] <= GTI[1]+10:
-      # if tgrid[i] >= GTI[0] and tgrid[i+1] <= GTI[1]:
+      # if tgrid[i] >= GTI[0]-10 and tgrid[i+1] <= GTI[1]+10:
+      elif tgrid[i] >= GTI[0] and tgrid[i+1] <= GTI[1]:
         tbins.append(i)
         continue
-      if tgrid[i] >= GTI[1]-10:
-      # if tgrid[i] >= GTI[1]:
+      # if tgrid[i] >= GTI[1]-10:
+      elif tgrid[i] >= GTI[1]:
         tbins.append(i)
         break
 
@@ -621,7 +634,7 @@ class Analysis() :
     xml = gammalib.GXml()
     obslist = xml.append('observation_list title="observation library"')
     for i in range(len(self.input)):
-      obs = obslist.append('observation name="%s" id="%02d" instrument="CTA"' % (obsname, i))
+      obs = obslist.append('observation name="%s" run="%02d" instrument="CTA"' % (obsname, i+1))
       obs.append('parameter name="EventList" file="%s"' % self.input[i])
     xml.save(self.output)
     return
@@ -670,7 +683,7 @@ class Analysis() :
     return
 
   # create single photon list from obs list ---!
-  def __singlePhotonList(self, sample, filename, GTI, new_GTI=True):
+  def __singlePhotonList(self, sample, filename, GTI, new_GTI=False):
     sample = sorted(sample)
     n = 0
     for i, f in enumerate(sample):
@@ -718,18 +731,18 @@ class Analysis() :
     return
 
   # created one FITS table containing all events and GTIs ---!
-  def appendEventsSinglePhList(self, GTI=None):
+  def appendEventsSinglePhList(self, GTI=None, new_GTI=False):
     if GTI == None:
       GTI = []
       with fits.open(self.input[0]) as hdul:
         GTI.append(hdul[2].data[0][0])
       with fits.open(self.input[-1]) as hdul:
         GTI.append(hdul[2].data[0][1])
-    self.__singlePhotonList(sample=self.input, filename=self.output, GTI=GTI)
+    self.__singlePhotonList(sample=self.input, filename=self.output, GTI=GTI, new_GTI=new_GTI)
     return
 
   # create one fits table appending source and bkg
-  def appendBkg(self, phlist, bkg, GTI):
+  def appendBkg(self, phlist, bkg, GTI, new_GTI):
     with fits.open(bkg, mode='update') as hdul:
       # fix GTI ---!
       hdul[2].data[0][0] = GTI[0]
@@ -739,11 +752,11 @@ class Analysis() :
       for i, t, in enumerate(times):
         hdul[1].data.field('TIME')[i] = t + GTI[0]
       hdul.flush()
-    self.__singlePhotonList(sample=[phlist, bkg], filename=phlist, GTI=GTI)
+    self.__singlePhotonList(sample=[phlist, bkg], filename=phlist, GTI=GTI, new_GTI=new_GTI)
     return
 
   # created a number of FITS table containing all events and GTIs ---!
-  def appendEventsMultiPhList(self, max_length=None, last=None, r=True):
+  def appendEventsMultiPhList(self, max_length=None, last=None, r=True, new_GTI=False):
     n = 1
     sample = []
     singlefile = str(self.output)
@@ -762,7 +775,8 @@ class Analysis() :
             else:
               filename = filename.replace('_n%03d.fits' % (n - 1), '_n%03d.fits' % n)
             sample = self.__dropListDuplicates(sample)
-            self.__singlePhotonList(sample=sample, filename=filename, GTI=[max_length * (j), max_length * (j + 1)])
+            self.__singlePhotonList(sample=sample, filename=filename,
+                                    GTI=[max_length * (j), max_length * (j + 1)], new_GTI=new_GTI)
             n += 1
             drop = len(sample) - 1
             if drop > 2:
