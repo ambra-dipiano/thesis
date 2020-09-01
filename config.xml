@@ -11,7 +11,7 @@
 		<pngpath path="png/" />
 		<runpath path="run0406/" />
 	</dir>
-	<xml>
+	<dof>
 		<src idAttrib="name">
 			<free prm="Prefactor" />
 		</src>
@@ -19,6 +19,6 @@
 			<free prm="Prefactor" />
 			<free prm="Index" />
 		</bkg>
-	</xml>
+	</dof>
 </config>
 
