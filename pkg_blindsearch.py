@@ -114,9 +114,9 @@ def wobbleRotation(run_number, offset=0.5):
   mod = run_number % 4
   offaxis = None
   if mod == 1:
-    offaxis = (0., -offset)
+    offaxis = (0., offset)
   elif mod == 2:
-    offaxis = (-offset, 0.)
+    offaxis = (offset, 0.)
   elif mod == 3:
     offaxis = (0., offset)
   elif mod == 0:
@@ -139,6 +139,16 @@ def checkTrialId(file, id):
 def parametersMapping(parameters):
   opts = collections.namedtuple('RtaPhotometry')
   return
+
+def increaseExposure(x, function='double'):
+  y = None
+  if function.lower() == 'double':
+    y = x*2
+  elif function.lower() == 'power2':
+    y = x**2
+  elif function.lower() == 'times10':
+    y = x*10
+  return y
 
 # --------------------------------- CLASS xml CONFIGURATION --------------------------------- !!!
 
@@ -1451,7 +1461,7 @@ class ManageXml():
 
   # set tscalc to 1 ---!
   def setTsTrue(self):
-    for src in self.root.findall('source'):
+    for src in self.root.findall('observation'):
       if src.attrib['name'] != 'Background' and src.attrib['name'] != 'CTABackgroundModel':
         src.set('tscalc', '1')
     self.__saveXml()
@@ -1547,3 +1557,9 @@ class ManageXml():
     self.file.close()
     return
 
+  # find observation filename ---!
+  def getRunList(self):
+    filenames = []
+    for obs in self.root.findall('observation/parameter[@name="EventList"]'):
+      filenames.append(obs.attrib['file'])
+    return filenames
