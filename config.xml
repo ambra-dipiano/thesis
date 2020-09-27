@@ -3,13 +3,13 @@
 	<dir>
 		<root path="/home/ambra/Desktop/CTA/rta-pipe/" />
 		<workdir path="rta_test/" />
-		<datapath path="data/" templates="templates/" models="models/" mergers="mergers/" />
+		<datapath path="data/" templates="templates/GammaCatalogV1.0/runs/" models="models/" mergers="mergers/" />
 		<obspath path="obs/" />
 		<selectpath path="selected_obs/" />
 		<detpath path="rta_products/" />
-		<csvpath path="csv_results/" />
+		<csvpath path="csv/" />
 		<pngpath path="png/" />
-		<runpath path="run0406/" />
+		<runpath path="" />
 	</dir>
 	<dof>
 		<src idAttrib="name">
