@@ -462,26 +462,30 @@ def interp_ebl(x, y, savefig, type='linear', xlabel='x', ylabel='y', title='titl
   return
 
 # SENSITIVITY ---!
-def showSensitivity(x, y, savefig, xlabel='energy (GeV)', ylabel='sensitivity', label=('nominal', 'nominal/2'),
-                    title='', fontsize=12, marker=('.'), ratios=('nominal/2'), show=True, tex=True):
+def showSensitivity(x, y, savefig, xlabel='energy (GeV)', ylabel='sensitivity', label=('nominal', 'nominal/2'), xscale='log', yscale='log', title='', fontsize=12, marker=('.'), ratio=True, show=True, tex=True):
 
   fig = plt.figure()
   plt.rc('text', usetex=True) if tex else None
   sns.set()
 
-  ax1 = plt.subplot(211, xscale='log', yscale='log')
+  if ratio:
+    ax1 = plt.subplot(211, xscale=xscale, yscale=yscale)
+  else:
+    ax1 = plt.subplot(111, xscale=xscale, yscale=yscale)
   for i in range(len(y)):
     plt.plot(x[i], y[i], marker=marker[i], label=label[i])
   plt.ylabel(ylabel, fontsize=fontsize)
   plt.title(title, fontsize=fontsize)
   plt.legend(loc=0)
-  ax2 = plt.subplot(212, sharex=ax1, yscale='linear')
-  for i in range(len(y)-1):
-    plt.plot(x[0], y[0]/y[i+1])
-  plt.axhline(0.5, ls='-.', c='r')
-  plt.ylabel('ratio nom/deg', fontsize=fontsize)
-  plt.xlabel(xlabel, fontsize=fontsize)
-  plt.ylim([0.,1.])
+
+  if ratio:
+    ax2 = plt.subplot(212, sharex=ax1, yscale='linear')
+    for i in range(len(y)-1):
+      plt.plot(x[0], y[0]/y[i+1])
+    plt.axhline(0.5, ls='-.', c='r')
+    plt.ylabel('ratio nom/deg', fontsize=fontsize)
+    plt.xlabel(xlabel, fontsize=fontsize)
+    plt.ylim([0.,1.])
   plt.tight_layout()
   fig.savefig(savefig)
   plt.show() if show else None
@@ -491,10 +495,10 @@ def showSensitivity(x, y, savefig, xlabel='energy (GeV)', ylabel='sensitivity', 
 # plot lightcurve from pipeline ---!
 def plotLightCurve(flux, t1, uplims, t2, xerr, yerr, filename, temp_t, temp_f, c1=('b'), c2=('r'), lf=('flux'),
                    lup=('upper limit'), alpha=0.5, fontsize=20, figsize=(20, 16), rotation=0,
-                   ylim=None, xlim=None, interp=False):
+                   ylim=None, xlim=None, interp=False, tex=True):
 
   fig = plt.figure(figsize=figsize)
-  plt.rc('text', usetex=True)
+  plt.rc('text', usetex=True) if tex else None
   sns.set()
 
   ax = plt.subplot(111, yscale='log', xscale='log')
