@@ -751,7 +751,7 @@ class Analysis() :
         self.__singlePhotonList(sample=self.input, filename=self.output, GTI=GTI, new_GTI=new_GTI)
         return
 
-    # create one fits table appending source and bkg
+    # create one fits table appending source and bkg within GTI ---!
     def appendBkg(self, phlist, bkg, GTI, new_GTI):
         with fits.open(bkg, mode='update') as hdul:
             # fix GTI ---!
@@ -763,6 +763,20 @@ class Analysis() :
                 hdul[1].data.field('TIME')[i] = t + GTI[0]
             hdul.flush()
         self.__singlePhotonList(sample=[phlist, bkg], filename=phlist, GTI=GTI, new_GTI=new_GTI)
+        return
+
+    # shift times in template simulation to append background before burst ---!
+    def shiftTemplateTime(self, phlist, time_shift):
+        if phlist is str():
+            phlist = list(phlist)
+        for file in phlist:
+            with fits.open(file, mode='update') as hdul:
+                hdul[2].data[0][0] += time_shift
+                hdul[2].data[0][1] += time_shift
+                times = hdul[1].data.field('TIME')
+                for i, t, in enumerate(times):
+                    hdul[1].data.field('TIME')[i] = t + time_shift
+                hdul.flush()
         return
 
     # created a number of FITS table containing all events and GTIs ---!
