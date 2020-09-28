@@ -196,7 +196,7 @@ for k in range(trials):
 
   event_bins = []
   tObj.table = p.getDataDir() + tcsv
-  tgrid = tObj.getTimeSlices()  # methods which returns time slice edges
+  tgrid = tObj.getTimeSlices(GTI=[tdelay, ttotal])  # methods which returns time slice edges
   # simulate ---!
   for i in range(tbin_stop):
     tObj.t = [tgrid[i], tgrid[i + 1]]
@@ -204,7 +204,7 @@ for k in range(trials):
       tObj.model = p.getDataDir() + 'run0406_ID000126_ebl_tbin%02d.xml' % i
     else:
       tObj.model = p.getDataDir() + 'run0406_ID000126_tbin%02d.xml' % i
-    event = p.getSimDir() + f + "_tbin%02d.fits" % i
+    event = p.getObsDir() + f + "_tbin%02d.fits" % i
     if reduce_flux != None:
       tObj.model = tObj.model.replace('_tbin', '_flux%s_tbin' % str(reduce_flux))
       event = event.replace('_tbin', '_flux%s_tbin' % str(reduce_flux))
@@ -218,7 +218,7 @@ for k in range(trials):
 
   if use_runs:
     print('handle data in runs of', run_duration, 's') if checks1 else None
-    event_all = p.getSimDir() + f + '.fits'
+    event_all = p.getObsDir() + f + '.fits'
     if reduce_flux != None:
       event_all = event_all.replace('.fits', '_flux%s.fits' % str(reduce_flux))
     tObj.input = event_bins
@@ -321,7 +321,7 @@ for k in range(trials):
         bins = tObj.getTimeBins(GTI=tObj.t, tgrid=tgrid)
         event_bins = []
         for bin in bins:
-          event_bins.append(p.getSimDir() + f + '_tbin%02d.fits' %bin)
+          event_bins.append(p.getObsDir() + f + '_tbin%02d.fits' %bin)
 
       print('event bins', event_bins) if checks2 else None
       # actual computation of obs list ---!
@@ -337,7 +337,7 @@ for k in range(trials):
 
       # --------------------------------- SELECTION --------------------------------- !!!
 
-      event_selected = event_list.replace(p.getSimDir(), p.getSelectDir()).replace('obs_', 'texp%ds_' %texp[i])
+      event_selected = event_list.replace(p.getObsDir(), p.getSelectDir()).replace('obs_', 'texp%ds_' %texp[i])
       prefix = p.getSelectDir() + 'texp%ds_' %texp[i]
       # select events ---!
       if os.path.isfile(event_selected):
@@ -552,7 +552,7 @@ for k in range(trials):
       os.system('rm ' + p.getDetDir() + '*ebl%06d*' % count)
 
   if int(count) != 1:
-    os.system('rm ' + p.getSimDir() + '*ebl%06d*' % count)
+    os.system('rm ' + p.getObsDir() + '*ebl%06d*' % count)
 
 print('\n\n!!! ================== END ================== !!!\n\n')
 
