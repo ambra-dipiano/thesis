@@ -12,3 +12,26 @@ Contains libs and scripts for my thesis project: detection of short gamma-ray bu
 8. sensitivity.py :: script for sensitivity computation with a given IRF
 9. templates.py :: script for plotting spectra and lightcurves of a given template
 10. wilks.py :: script for post-processing analysis of empty fields
+
+## Installation
+
+Choose a virtual environment name and create it with the following command: 
+```bash
+conda env create --name \<envname\> --file=environments.yml
+```
+The above command will also install the required depedencies.
+
+Test the ctools library with:
+```bash
+python -c 'import ctools; ctools.test()'
+python -c 'import cscripts; cscripts.test()'
+python -c 'import gammalib; gammalib.test()'
+```
+
+
+### cfitsio not found bug fix
+ctools 1.7.1 will look for cfitsio.so.5 but the current version of the anaconda package contains cfitsio.so.8 . 
+If the cfitsio library is not found, issue the following command:
+```bash
+mv \<environment path\>/lib/libcfitsio.so.8 \<environment path\>/lib/libcfitsio.so.5
+```
