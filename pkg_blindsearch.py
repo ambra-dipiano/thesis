@@ -169,6 +169,7 @@ class ConfigureXml() :
         self.__root = self.__cfg.dir.root['path']
         self.__workdir = self.__root + self.__cfg.dir.workdir['path']
         self.__datapath = self.__workdir + self.__cfg.dir.datapath['path']
+        self.__ebl = self.__workdir + self.__cfg.dir.datapath['ebl']
         self.__templates = self.__workdir + self.__cfg.dir.datapath['templates']
         self.__models = self.__workdir + self.__cfg.dir.datapath['models']
         self.__mergers = self.__workdir + self.__cfg.dir.datapath['mergers']
@@ -220,7 +221,7 @@ class ConfigureXml() :
         self.__makeDir(self.__templates)
         return self.__templates
     def setTemplatesDir(self, templates_dir):
-        self.__models = templates_dir
+        self.__templates = templates_dir
         self.__makeDir(templates_dir)
 
     # directory storing models data ---!
@@ -228,8 +229,16 @@ class ConfigureXml() :
         self.__makeDir(self.__mergers)
         return self.__mergers
     def setMergersDir(self, mergers_dir):
-        self.__models = mergers_dir
+        self.__mergers = mergers_dir
         self.__makeDir(mergers_dir)
+
+    # directory storing EBL tables ---!
+    def getEblDir(self):
+        self.__makeDir(self.__ebl)
+        return self.__ebl
+    def setEblDir(self, ebl_dir):
+        self.__ebl = ebl_dir
+        self.__makeDir(ebl_dir)
 
     # target directory for simulations ---!
     def getObsDir(self):
